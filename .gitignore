@@ -13,3 +13,5 @@ dist/
 *.wav
 *.exe
 research-c1/
+__pycache__/
+*.pyc
