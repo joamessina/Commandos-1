@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env.local
+*.log
+# Nunca se versionan archivos del juego (CLAUDE.md, regla 1 de CONSTRAINTS)
+*.DIR
+*.WAD
+*.wad
+*.RLE
+*.ANM
+*.ZOM
+*.avi
+*.wav
+*.exe
+research-c1/
