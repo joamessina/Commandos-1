@@ -1,0 +1,908 @@
+# Catálogo de clases del exe (RTTI)
+
+838 clases con vtable, 1108 vtables. Generado con `tools/rtti_c1.py` + `tools/rtti_families.py` sobre el exe de la raíz.
+Tamaño = bytes de código de sus métodos virtuales (sin contar funciones no virtuales que llaman). Herencia entre paréntesis.
+
+## Editor interno — 147 clases, 4090 métodos virtuales, 55,641 B
+
+- `CWinEditEPCasas` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 729 B
+- `ClassSubInterfaceAliado` (ClassSubInterface) — 40 mét., 641 B
+- `CWinEditSerEspia` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 636 B
+- `ClassWinEditVertex` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 33 mét., 627 B
+- `CWinEditPajaro` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 550 B
+- `ClassWinEditPuente12` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 536 B
+- `ClassWinEditEscala` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 503 B
+- `WinEditorPatrullaAux` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 459 B
+- `CWinEditPatrolSegment` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 446 B
+- `WinEditorAliado` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `WinEditorMisiones2` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `WinEditorIntendencia` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `WinEditItemMochila` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `WinEditorPatrulla` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditBomba` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditAveria` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditMina` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditInterfono` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditTanque` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `WinEditClassOido01` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditVista01` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditVista02` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditMotorAndante` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditMotorObjeto` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditMotorFoco` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditTileVar` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditAnchoVar` (ClassWinEditTileVar, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassWinEditSpriteVar` (ClassWinEditTileVar, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassWinEditBap1Banpe1` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditBap2Banpe2` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditBarrera` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditCasa` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `CWinEditDestSecs` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `CWinEditEmpujable` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `CWinEditGuardian` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditInterruptor12` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditPatrulla` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditPilotaje` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `CWinEditPPoints` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditStrTbl` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `CWinEditTip` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassWinEditTripLine` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `WinEditVariable` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `ClassEditCompuerta` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditSplash` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditLapa` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditEmbiste` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditIzarBandera` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditSocavon` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditDisparar` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditCasaLogica` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditSerEspia` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditSegnuelo` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditHangar05` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditCanon` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditInterruptor` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditCableGrua12` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAbrePaso` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditPuertaCandado` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditRecarga` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditRecogeArma` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuEscalar` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuJeringar` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuDisparar` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditManejaItem` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuCoger` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuUsaVeh` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuAlicate` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuBotiquin` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuInsignia` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuManejaCepo` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuManejaBomba` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuManejaSegnuelo` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAuGarfio` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditIngeniero10` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditRail` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditMicciona` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditSubmarino` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditCaeCarga12` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditTilesBarrera` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditPSTail` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditCharco` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditGasolina12` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditPSChispas` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditSerElectrocutado` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditBuscaAyuda` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditAvionA4` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditNidoMetra` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditUsaHabi` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditVista03` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditMotor` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditMotorMisil` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditMotorPerro` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditMotorAuto` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditMotorRail` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditTorreta` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditPerro` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditSensorSonido` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditTransmiteImpacto` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditCierraPuerta` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditCanonero` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditUniforme` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditOjoDistante` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditCtrlShuttle` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditCarcelAbierta` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditCInterfono` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassEditCBarrTren` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassWinEditVigilar` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 439 B
+- `WinEditorMochila` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 435 B
+- `WinEditorChild` (ClassWindowsDialogo, ClassWindowsReceptorMensajes, ClassReceptorMensajes…) — 32 mét., 431 B
+- `ClassWinEditSeguir` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 431 B
+- `WinEditorBicho` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 403 B
+- `ClassWinEditMacro` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 403 B
+- `ClassSubInterfaceAleman` (ClassSubInterface) — 40 mét., 401 B
+- `ClassMiVentana` (ClassVentana, ClassControl, ClassReceptorMensajes) — 21 mét., 397 B
+- `ClassWinTerminal` (ClassVentana, ClassControl, ClassReceptorMensajes) — 21 mét., 392 B
+- `ClassEditText` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassScrollBar` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassTitulo` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassSubInterfaceMultiple` (ClassSubInterface) — 38 mét., 353 B
+- `ClassWinDisplayDev` (ClassDisplayDevice, ClassReceptorMensajes) — 37 mét., 328 B
+- `NotifyMaster1` (NotifyMaster, INotify) — 9 mét., 221 B
+- `WEMMaster` (NotifyMaster, INotify) — 7 mét., 162 B
+- `NotifyMaster` (INotify) — 4 mét., 152 B
+- `ClassSubInterface`  — 38 mét., 124 B
+- `NotifySlave` (INotify) — 5 mét., 121 B
+- `WinEditorMisiones` (ClassWindowsDialogo, ClassWindowsReceptorMensajes, ClassReceptorMensajes) — 16 mét., 95 B
+- `ClassWindowsDialogo` (ClassWindowsReceptorMensajes, ClassReceptorMensajes) — 16 mét., 92 B
+- `DialogAnms` (ClassWindowsDialogo, ClassWindowsReceptorMensajes, ClassReceptorMensajes) — 16 mét., 92 B
+- `DialogBichos` (ClassWindowsDialogo, ClassWindowsReceptorMensajes, ClassReceptorMensajes) — 16 mét., 92 B
+- `DialogMisiones` (ClassWindowsDialogo, ClassWindowsReceptorMensajes, ClassReceptorMensajes) — 16 mét., 92 B
+- `DialogPlayRolling` (ClassWindowsDialogo, ClassWindowsReceptorMensajes, ClassReceptorMensajes) — 16 mét., 92 B
+- `DialogRecRolling` (ClassWindowsDialogo, ClassWindowsReceptorMensajes, ClassReceptorMensajes) — 16 mét., 92 B
+- `CWinEditAngle` (ClassWindowsDialogo, ClassWindowsReceptorMensajes, ClassReceptorMensajes) — 16 mét., 92 B
+- `ClassElementoListaAcciones` (ClassElementoLista) — 7 mét., 86 B
+- `ClassElementoLista`  — 7 mét., 63 B
+- `ClassElementoTexto` (ClassElementoLista) — 7 mét., 63 B
+- `ClassWindowsVentana` (ClassWindowsReceptorMensajes, ClassReceptorMensajes) — 10 mét., 44 B
+- `INotify`  — 1 mét., 42 B
+- `ClassEditorXYZ` (ClassReceptorMensajes) — 5 mét., 33 B
+- `ClassWindowsReceptorMensajes` (ClassReceptorMensajes) — 4 mét., 16 B
+- `ctorZonaSeleccion`  — 3 mét., 11 B
+- `ClassGestorWindows` (ClassReceptorMensajes) — 2 mét., 10 B
+- `ClassWinTermParser` (ClassWinParser, ClassReceptorMensajes) — 2 mét., 10 B
+- `ClassWinParser` (ClassReceptorMensajes) — 2 mét., 10 B
+- `ClassGestorDestructorVentanas` (ClassReceptorMensajes) — 2 mét., 10 B
+- `ClassVisionVista` (ClassReceptorMensajes) — 2 mét., 10 B
+
+## Simulación / bichos — 32 clases, 689 métodos virtuales, 15,891 B
+
+- `SimSeguidor` (SimBichoTerrestreBase, SimBichoBase, ISimBicho…) — 30 mét., 1,082 B
+- `SimBalsa` (SimBichoTerrestreBase, SimBichoBase, ISimBicho…) — 30 mét., 1,003 B
+- `SimSub` (SimBichoTerrestreBase, SimBichoBase, ISimBicho…) — 30 mét., 872 B
+- `SimAutoOrg` (SimBichoTerrestreBase, SimBichoBase, ISimBicho…) — 30 mét., 869 B
+- `SimAuto` (SimBichoTerrestreBase, SimBichoBase, ISimBicho…) — 30 mét., 856 B
+- `SimTanque` (SimBichoTerrestreBase, SimBichoBase, ISimBicho…) — 30 mét., 856 B
+- `SimBichoTerrestreBase` (SimBichoBase, ISimBicho, ISimInercias…) — 28 mét., 844 B
+- `SimRail` (SimBichoBase, ISimBicho, ISimInercias…) — 30 mét., 830 B
+- `SimLancha` (SimBichoTerrestreBase, SimBichoBase, ISimBicho…) — 30 mét., 789 B
+- `SimObjeto` (SimBichoBase, ISimBicho, ISimInercias…) — 30 mét., 771 B
+- `SimExplosion` (SimBichoBase, ISimBicho, ISimInercias…) — 30 mét., 762 B
+- `SimAve` (SimBichoBase, ISimBicho, ISimInercias…) — 30 mét., 742 B
+- `SimPasivo` (SimBichoBase, ISimBicho, ISimInercias…) — 30 mét., 646 B
+- `SimEscalador` (SimBichoBase, ISimBicho, ISimInercias…) — 30 mét., 625 B
+- `ClassBicho` (ClassElementos, ClassReceptorMensajes) — 24 mét., 612 B
+- `SimMisil` (SimBichoBase, ISimBicho, ISimInercias…) — 30 mét., 583 B
+- `SimBichoBase` (ISimBicho, ISimInercias, SimComparableBase…) — 28 mét., 573 B
+- `CBichoManejable` (ClassBicho, ClassElementos, ClassReceptorMensajes) — 29 mét., 537 B
+- `ClassBichoArrestado` (CBichoManejable, ClassBicho, ClassElementos…) — 29 mét., 518 B
+- `ClassBichoAliado` (CBichoManejable, ClassBicho, ClassElementos…) — 29 mét., 509 B
+- `SimPeaton` (SimBichoTerrestreBase, SimBichoBase, ISimBicho…) — 30 mét., 335 B
+- `ClassEXYZ` (ClassEditorXYZ, ClassReceptorMensajes) — 5 mét., 128 B
+- `CMochilaAliado` (ClassAccion) — 11 mét., 114 B
+- `CMisilRecogible` (ClassAccion) — 11 mét., 112 B
+- `SimBichoNulo` (ISimBicho) — 23 mét., 66 B
+- `ClassElementos` (ClassReceptorMensajes) — 12 mét., 61 B
+- `SimParachoquesBase` (ISimParachoques) — 4 mét., 55 B
+- `ISimBicho`  — 2 mét., 47 B
+- `ISimParachoques`  — 1 mét., 42 B
+- `ISimInercias`  — 1 mét., 42 B
+- `ISimComparable`  — 1 mét., 5 B
+- `SimComparableBase` (ISimComparable) — 1 mét., 5 B
+
+## Acciones de objetos/enemigos (ClassAc*, ctorAccion*) — 280 clases, 2130 métodos virtuales, 15,026 B
+
+- `ClassAcBanpe2` (ClassAcBap2, ClassAcBap, ClassAccion) — 44 mét., 460 B
+- `ClassAcBap2` (ClassAcBap, ClassAccion) — 44 mét., 460 B
+- `ClassAcExplotaBase` (ClassAccion) — 13 mét., 460 B
+- `ClassAcExplotaCasa` (ClassAcExplotaBase, ClassAccion) — 15 mét., 432 B
+- `ClassAcExplotaEstatico` (ClassAcExplotaBase, ClassAccion) — 15 mét., 432 B
+- `ClassAcExplotaPresa` (ClassAcExplotaBase, ClassAccion) — 15 mét., 432 B
+- `ClassAcExplotaVeh` (ClassAcExplotaBase, ClassAccion) — 15 mét., 432 B
+- `ClassAcBanpe1` (ClassAcBap, ClassAccion) — 44 mét., 403 B
+- `ClassAcBap` (ClassAccion) — 44 mét., 403 B
+- `ClassAcBap1` (ClassAcBap, ClassAccion) — 44 mét., 403 B
+- `ClassAcVigilante` (ClassAcBap, ClassAccion) — 44 mét., 245 B
+- `ClassAcFusilador` (ClassAcBap, ClassAccion) — 44 mét., 243 B
+- `ClassAcGeneral` (ClassAcBap, ClassAccion) — 44 mét., 228 B
+- `ClassAcUsuario` (ClassAccion) — 18 mét., 206 B
+- `ClassAcUsuarioGoto` (ClassAcUsuario, ClassAccion) — 28 mét., 167 B
+- `ClassAcAleman` (ClassAccion) — 11 mét., 151 B
+- `ClassAcSplash` (ClassAccion) — 11 mét., 144 B
+- `ClassAcRecogeArma` (ClassAccion) — 11 mét., 143 B
+- `ClassAcVehDescubierto` (ClassAccion) — 11 mét., 142 B
+- `ClassAcAveria` (ClassAccion) — 11 mét., 140 B
+- `ClassAcChocaTren` (ClassAccion) — 11 mét., 140 B
+- `ClassAcCogeBombas` (ClassAccion) — 11 mét., 140 B
+- `ClassAcEmbiste` (ClassAccion) — 11 mét., 140 B
+- `ClassAcIzarBandera` (ClassAccion) — 11 mét., 140 B
+- `ClassAcOjoDistante` (ClassAccion) — 11 mét., 140 B
+- `ClassAcRecarga` (ClassAccion) — 11 mét., 140 B
+- `ClassAcSensorSonido` (ClassAccion) — 11 mét., 140 B
+- `ClassAcSerEspia` (ClassAccion) — 11 mét., 140 B
+- `ClassAcShuttle` (ClassAccion) — 11 mét., 140 B
+- `ClassAcUniforme` (ClassAccion) — 11 mét., 140 B
+- `ClassAcBarcaMadera` (ClassAccion) — 11 mét., 138 B
+- `ClassAcBichoExpl` (ClassAccion) — 11 mét., 138 B
+- `ClassAcDejarRastro` (ClassAccion) — 11 mét., 138 B
+- `ClassAcVidaBreve` (ClassAccion) — 11 mét., 138 B
+- `ClassAcBoundAround` (ClassAccion) — 11 mét., 135 B
+- `ClassAcSerIncinerado` (ClassAccion) — 11 mét., 135 B
+- `ClassAcFocoDestruible` (ClassAccion) — 11 mét., 114 B
+- `ClassAcInterruptorFoco` (ClassAccion) — 11 mét., 114 B
+- `ClassAcDetenido` (ClassAccion) — 11 mét., 86 B
+- `ClassAcZodiac` (ClassAccion) — 11 mét., 65 B
+- `ClassAcAbrePaso` (ClassAccion) — 11 mét., 48 B
+- `ClassAcAnchoVariable` (ClassAccion) — 11 mét., 48 B
+- `ClassAcAscensor` (ClassAccion) — 11 mét., 48 B
+- `ClassAcAvestruz` (ClassAccion) — 11 mét., 48 B
+- `ClassAcAvion03` (ClassAccion) — 11 mét., 48 B
+- `ClassAcBarrera` (ClassAccion) — 11 mét., 48 B
+- `ClassAcBarrilExpl` (ClassAccion) — 11 mét., 48 B
+- `ClassAcBomba` (ClassAccion) — 11 mét., 48 B
+- `ClassAcBunker` (ClassAccion) — 11 mét., 48 B
+- `ClassAcBuscador` (ClassAccion) — 11 mét., 48 B
+- `ClassAcCanon` (ClassAccion) — 11 mét., 48 B
+- `ClassAcCanonero` (ClassAccion) — 11 mét., 48 B
+- `ClassAcCasa` (ClassAccion) — 11 mét., 48 B
+- `ClassAcCasaLogica` (ClassAccion) — 11 mét., 48 B
+- `ClassAcControladorBarrera` (ClassAccion) — 11 mét., 48 B
+- `ClassAcContrBarreraTren` (ClassAccion) — 11 mét., 48 B
+- `ClassAcCepo` (ClassAccion) — 11 mét., 48 B
+- `ClassAcContInterfono` (ClassAccion) — 11 mét., 48 B
+- `ClassAcCLancha` (ClassAccion) — 11 mét., 48 B
+- `ClassAcControlCompuerta` (ClassAccion) — 11 mét., 48 B
+- `CAcCtPuenteLev` (ClassAccion) — 11 mét., 48 B
+- `ClassAcCTanque` (ClassAccion) — 11 mét., 48 B
+- `ClassAcControlShuttle` (ClassAccion) — 11 mét., 48 B
+- `CAcEmpujable` (ClassAccion) — 11 mét., 48 B
+- `ClassAcEscoltado` (ClassAccion) — 11 mét., 48 B
+- `ClassAcEvitaTren` (ClassAccion) — 11 mét., 48 B
+- `ClassAcFelino` (ClassAccion) — 11 mét., 48 B
+- `ClassAcFoco` (ClassAccion) — 11 mét., 48 B
+- `ClassAcGallina` (ClassAccion) — 11 mét., 48 B
+- `ClassAcGranada` (ClassAccion) — 11 mét., 48 B
+- `ClassAcGuarda` (ClassAccion) — 11 mét., 48 B
+- `CAcGuardianPuerta` (ClassAccion) — 11 mét., 48 B
+- `ClassAcInterfono` (ClassAccion) — 11 mét., 48 B
+- `ClassAcInterruptor` (ClassAccion) — 11 mét., 48 B
+- `ClassAcInterruptor12` (ClassAccion) — 11 mét., 48 B
+- `ClassAcLapa` (ClassAccion) — 11 mét., 48 B
+- `ClassAcLider` (ClassAccion) — 11 mét., 48 B
+- `CAcMaquina` (ClassAccion) — 11 mét., 48 B
+- `ClassAcMetrallero` (ClassAccion) — 11 mét., 48 B
+- `ClassAcMina` (ClassAccion) — 11 mét., 48 B
+- `ClassAcMuerteAnimal` (ClassAccion) — 11 mét., 48 B
+- `ClassAcNidoMetralleta` (ClassAccion) — 11 mét., 48 B
+- `ClassAcPatrulla` (ClassAccion) — 11 mét., 48 B
+- `ClassAcPerro` (ClassAccion) — 11 mét., 48 B
+- `CAcPiedra` (ClassAccion) — 11 mét., 48 B
+- `ClassAcPilotaje` (ClassAccion) — 11 mét., 48 B
+- `ClassAcPresoChusma` (ClassAccion) — 11 mét., 48 B
+- `ClassAcPresoTraidor` (ClassAccion) — 11 mét., 48 B
+- `CAcPuenteLevadizo` (ClassAccion) — 11 mét., 48 B
+- `ClassAcPuertaAnmEvento` (ClassAccion) — 11 mét., 48 B
+- `ClassAcPuertaCandado` (ClassAccion) — 11 mét., 48 B
+- `ClassAcPuntoEmpuje` (ClassAccion) — 11 mét., 48 B
+- `ClassAcEscala` (ClassAccion) — 11 mét., 48 B
+- `ClassAcSegnuelo` (ClassAccion) — 11 mét., 48 B
+- `ClassAcSeguir` (ClassAccion) — 11 mét., 48 B
+- `ClassAcSerElectrocutado` (ClassAccion) — 11 mét., 48 B
+- `ClassAcSocavon` (ClassAccion) — 11 mét., 48 B
+- `ClassAcSpriteVar` (ClassAccion) — 11 mét., 48 B
+- `ClassAcSubmarino` (ClassAccion) — 11 mét., 48 B
+- `ClassAcTanque` (ClassAcPilotaje, ClassAccion) — 11 mét., 48 B
+- `ClassAcTestigo` (ClassAccion) — 11 mét., 48 B
+- `ClassAcTiroAlBlanco` (ClassAccion) — 11 mét., 48 B
+- `ClassAcTorreta` (ClassAccion) — 11 mét., 48 B
+- `ClassAcTransmiteImpacto` (ClassAccion) — 11 mét., 48 B
+- `ClassAcUsaHabitaculo` (ClassAccion) — 11 mét., 48 B
+- `ClassAcVigilar` (ClassAccion) — 11 mét., 48 B
+- `ClassAcpAndar` (ClassAccion) — 11 mét., 48 B
+- `ClassAcpPatrullero` (ClassAccion) — 11 mét., 48 B
+- `ClassAcpSargento` (ClassAccion) — 11 mét., 48 B
+- `ClassAcControlaFoco` (ClassAccion) — 11 mét., 46 B
+- `ClassAcGaviota` (ClassAccion) — 11 mét., 46 B
+- `ClassAcLanzallamas` (ClassAccion) — 11 mét., 46 B
+- `CAcPajaro` (ClassAccion) — 11 mét., 46 B
+- `ClassAcPisada` (ClassAccion) — 11 mét., 46 B
+- `ClassAcMisil` (ClassAccion) — 11 mét., 46 B
+- `CAcTabaco` (ClassAccion) — 11 mét., 46 B
+- `ClassAcPuff` (ClassAccion) — 11 mét., 46 B
+- `ClassAcDisparar` (ClassAccion) — 11 mét., 45 B
+- `ClassAcExplotaTilesBarrera` (ClassAccion) — 11 mét., 45 B
+- `ClassAcMuerte` (ClassAccion) — 11 mét., 45 B
+- `ClassAcPisar` (ClassAccion) — 11 mét., 45 B
+- `ClassAcPSChispas` (ClassAccion) — 11 mét., 45 B
+- `ClassAcPSTail` (ClassAccion) — 11 mét., 45 B
+- `?$ctorAccionTEditable@VCAcGuardianPuerta@@VCWinEditGuardian@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VCAcEmpujable@@VCWinEditEmpujable@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcBarrera@@VClassWinEditBarrera@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcBomba@@VClassWinEditBomba@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcCasa@@VClassWinEditCasa@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcControladorBarrera@@VClassEditCBarrTren@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcDisparar@@VClassEditDisparar@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcExplotaTilesBarrera@@VClassEditTilesBarrera@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcSplash@@VClassEditSplash@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcPatrulla@@VClassWinEditPatrulla@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcPilotaje@@VClassWinEditPilotaje@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcPSTail@@VClassEditPSTail@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcPSChispas@@VClassEditPSChispas@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcUsaHabitaculo@@VClassEditUsaHabi@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcVigilar@@VClassWinEditVigilar@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcAveria@@VClassWinEditAveria@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcInterruptor12@@VClassWinEditInterruptor12@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcEscala@@VClassWinEditEscala@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcPerro@@VClassEditPerro@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcLapa@@VClassEditLapa@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcControlCompuerta@@VClassEditCompuerta@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcOjoDistante@@VClassEditOjoDistante@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcBap1@@VClassWinEditBap1Banpe1@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcGeneral@@VClassWinEditBap1Banpe1@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcFusilador@@VClassWinEditBap1Banpe1@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcVigilante@@VClassWinEditBap1Banpe1@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcBanpe1@@VClassWinEditBap1Banpe1@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcBap2@@VClassWinEditBap2Banpe2@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcBanpe2@@VClassWinEditBap2Banpe2@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcPuertaCandado@@VClassEditPuertaCandado@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcContrBarreraTren@@VClassEditCBarrTren@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcSocavon@@VClassEditSocavon@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcInterruptor@@VClassEditInterruptor@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcMina@@VClassWinEditMina@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcInterfono@@VClassWinEditInterfono@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcContInterfono@@VClassEditCInterfono@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcTorreta@@VClassEditTorreta@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcCanonero@@VClassEditCanonero@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcMetrallero@@VClassEditCanonero@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcTanque@@VClassWinEditTanque@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcCanon@@VClassEditCanon@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcNidoMetralleta@@VClassEditNidoMetra@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcAnchoVariable@@VClassWinEditAnchoVar@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcSpriteVar@@VClassWinEditSpriteVar@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcSegnuelo@@VClassEditSegnuelo@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcSensorSonido@@VClassEditSensorSonido@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcControlShuttle@@VClassEditCtrlShuttle@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcShuttle@@VClassEditRail@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcRecarga@@VClassEditRecarga@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcRecogeArma@@VClassEditRecogeArma@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcEmbiste@@VClassEditEmbiste@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcSeguir@@VClassWinEditSeguir@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcUniforme@@VClassEditUniforme@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcSerEspia@@VCWinEditSerEspia@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcAbrePaso@@VClassEditAbrePaso@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcSerElectrocutado@@VClassEditSerElectrocutado@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcIzarBandera@@VClassEditIzarBandera@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcSubmarino@@VClassEditSubmarino@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcTransmiteImpacto@@VClassEditTransmiteImpacto@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcExplotaCasa@@VClassEditExplota@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcCasaLogica@@VClassEditCasaLogica@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcExplotaVeh@@VClassWinEditExplotaVehi@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcExplotaEstatico@@VClassEditExplota@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAcExplotaPresa@@VClassEditExplota@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUEscalar@@VClassEditAuEscalar@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUJeringuilla@@VClassEditAuJeringar@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUDisparar@@VClassEditAuDisparar@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUManejaItem@@VClassEditManejaItem@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUCoger@@VClassEditAuCoger@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUUsarVehiculo@@VClassEditAuUsaVeh@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUAlicate@@VClassEditAuAlicate@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUGarfio@@VClassEditAuGarfio@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUBotiquin@@VClassEditAuBotiquin@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUInsignia@@VClassEditAuInsignia@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUManejaCepo@@VClassEditAuManejaCepo@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUManejaBomba@@VClassEditAuManejaBomba@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionTEditable@VClassAUManejaSegnuelo@@VClassEditAuManejaSegnuelo@@` (ctorAccion) — 3 mét., 16 B
+- `?$ctorAccionT@VCAcCtPuenteLev@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcBichoExpl@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcPresoChusma@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcPresoTraidor@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcEscoltado@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcGallina@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcAvion03@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VCAcPajaro@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcGaviota@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VCAcPuenteLevadizo@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcPuntoEmpuje@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VCAcPiedra@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VCAcMaquina@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VCAcTabaco@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcBarrilExpl@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcpAndar@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcpSargento@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcpPatrullero@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcBuscador@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcPuertaAnmEvento@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcTiroAlBlanco@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcVidaBreve@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcBoundAround@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcMuerte@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcMuerteAnimal@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcAscensor@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcPisar@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcPisada@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcDetenido@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcDejarRastro@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcFelino@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcAvestruz@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcGuarda@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcChocaTren@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcBunker@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcCTanque@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcEvitaTren@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcCLancha@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcVehDescubierto@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcSerIncinerado@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcZodiac@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcBarcaMadera@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcCepo@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcGranada@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcPuff@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcLider@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcLanzallamas@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcTestigo@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcAleman@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcCogeBombas@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcMisil@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VCMochilaAliado@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VCChicaHolanda@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VCMisilRecogible@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcFoco@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcFocoDestruible@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAcInterruptorFoco@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUGoto@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAuBucear@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUAcuchillar@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUCachiporra@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUQuitaUniforme@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUCamuflarse@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUUsar@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUBeAtHome@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUCogeBarril@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUQuietorrr@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAULanzallamas@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUAgacharse@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUDisfraz@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUEsposas@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUTabaco@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUCogeTabacoDeMuerto@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUTomarControlAleman@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUEmpujar@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUArrestadoUsar@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUPutaDistrae@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAURobar@@` (ctorAccion) — 3 mét., 14 B
+- `?$ctorAccionT@VClassAUCogeMisil@@` (ctorAccion) — 3 mét., 14 B
+- `ctorAccion`  — 3 mét., 11 B
+
+## Interfaz / HUD / controles — 34 clases, 664 métodos virtuales, 11,998 B
+
+- `ClassVentanaDeslizante` (ClassControl, ClassReceptorMensajes) — 22 mét., 614 B
+- `ClassVentanaPropiedadesAccion001` (ClassVentanaPropiedades, ClassVentana, ClassControl…) — 22 mét., 405 B
+- `ClassVentanaPropiedades` (ClassVentana, ClassControl, ClassReceptorMensajes) — 22 mét., 405 B
+- `ClassVentanaPropiedadesAccion000` (ClassVentanaPropiedades, ClassVentana, ClassControl…) — 22 mét., 405 B
+- `ClassVentanaMdiFullScreen` (ClassControl, ClassReceptorMensajes) — 24 mét., 395 B
+- `ClassVentana` (ClassControl, ClassReceptorMensajes) — 21 mét., 392 B
+- `ClassVentanaDialogoFoco` (ClassVentana, ClassControl, ClassReceptorMensajes) — 21 mét., 392 B
+- `ClassDialogoModal` (ClassVentana, ClassControl, ClassReceptorMensajes) — 21 mét., 392 B
+- `ClassVentanaMenuLibreta` (ClassVentanaDeslizante, ClassControl, ClassReceptorMensajes) — 22 mét., 389 B
+- `ClassBoton` (ClassControl, ClassReceptorMensajes) — 21 mét., 388 B
+- `ClassBotonGrafico` (ClassBoton, ClassControl, ClassReceptorMensajes) — 21 mét., 388 B
+- `ClassBotonMochila` (ClassBoton, ClassControl, ClassReceptorMensajes) — 21 mét., 388 B
+- `ClassBotonInterface` (ClassBoton, ClassControl, ClassReceptorMensajes) — 21 mét., 388 B
+- `ClassControlVentanaDeslizante` (ClassControl, ClassReceptorMensajes) — 21 mét., 388 B
+- `ClassVentanaEngine` (ClassControl, ClassReceptorMensajes) — 21 mét., 388 B
+- `ClassVentanaPrincipal` (ClassControl, ClassReceptorMensajes) — 21 mét., 386 B
+- `ClassControl` (ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassBotonAnimacion` (ClassBoton, ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassButtonBar` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassDialog` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassGroupBox` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassVentanaTexto` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassVentanaMenuUsar` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassVentanaBalas` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassVentanaReloj` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassVentanaMenuDerecha` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassVentanaChat` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassVentanaCaras` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassVisorComandos` (ClassVisorMundo, ClassControl, ClassReceptorMensajes) — 21 mét., 366 B
+- `ClassVisorMundo` (ClassControl, ClassReceptorMensajes) — 21 mét., 366 B
+- `ClassElementoCursor` (ClassElementos, ClassReceptorMensajes) — 12 mét., 65 B
+- `ClassDC2D`  — 10 mét., 50 B
+- `ClassInterfaceControl` (ClassReceptorMensajes) — 2 mét., 30 B
+- `ClassInterfaceItem` (ClassReceptorMensajes) — 2 mét., 10 B
+
+## Menús y front-end — 71 clases, 616 métodos virtuales, 8,518 B
+
+- `ClassLineaNumerosBarraGameSpeed` (ClassLineaNumerosBarra, ClassLineaNumeros, ClassLineaVariable…) — 13 mét., 400 B
+- `ClassLineaNumerosBarraVolumenMusica` (ClassLineaNumerosBarra, ClassLineaNumeros, ClassLineaVariable…) — 13 mét., 377 B
+- `ClassLineaNumerosBarraVolumenEfectos` (ClassLineaNumerosBarra, ClassLineaNumeros, ClassLineaVariable…) — 13 mét., 377 B
+- `ClassLineaNumerosBarra` (ClassLineaNumeros, ClassLineaVariable, ClassLineaMenu) — 13 mét., 371 B
+- `ClassElemIntroScriptSTARTZOOMBITMAP` (ClassElemIntroScript) — 9 mét., 321 B
+- `ClassGestorMenus` (ClassReceptorMensajes) — 2 mét., 300 B
+- `ClassLineaOnOffParseHalt` (ClassLineaBotonMenu, ClassLineaMenu) — 13 mét., 247 B
+- `ClassLineaOnOffAmbiente` (ClassLineaBotonMenu, ClassLineaMenu) — 13 mét., 236 B
+- `ClassLineaOnOffVerbose` (ClassLineaBotonMenu, ClassLineaMenu) — 13 mét., 236 B
+- `ClassLineaOnOffWarnings` (ClassLineaBotonMenu, ClassLineaMenu) — 13 mét., 236 B
+- `ClassLineaOnOffInGameMusic` (ClassLineaBotonMenu, ClassLineaMenu) — 13 mét., 234 B
+- `ClassLineaBotonMenu` (ClassLineaMenu) — 13 mét., 207 B
+- `ClassElemIntroScriptSTARTFOCO` (ClassElemIntroScript) — 9 mét., 206 B
+- `ClassMenuMultiplayer` (ClassMenu) — 6 mét., 193 B
+- `ClassMenuJoinGame` (ClassMenu) — 6 mét., 193 B
+- `ClassMenuVideo` (ClassMenu) — 6 mét., 161 B
+- `ClassElemIntroduccionPantalla` (ClassElemIntroduccion) — 7 mét., 156 B
+- `ClassElemIntroScriptSTARTMM` (ClassElemIntroScript) — 9 mét., 151 B
+- `ClassElemIntroScriptWAITVIDEO` (ClassElemIntroScript) — 9 mét., 130 B
+- `ClassMenuNewGame` (ClassMenu) — 6 mét., 130 B
+- `ClassMenuPartidas` (ClassMenu) — 6 mét., 130 B
+- `ClassMenuOpciones` (ClassMenu) — 6 mét., 130 B
+- `ClassMenu`  — 6 mét., 126 B
+- `ClassElemIntroScriptWAITFADE` (ClassElemIntroScript) — 9 mét., 123 B
+- `ClassElemIntroScriptWAITZOOMBITMAP` (ClassElemIntroScript) — 9 mét., 123 B
+- `ClassElemIntroScriptMM` (ClassElemIntroScript) — 9 mét., 118 B
+- `ClassElemIntroScriptSTARTFADEOUT` (ClassElemIntroScript) — 9 mét., 117 B
+- `ClassMenuNewGameConfirmacion` (ClassMenu) — 6 mét., 97 B
+- `ClassMenuQuitGame` (ClassMenu) — 6 mét., 97 B
+- `ClassMenuNewUserConfirmacion` (ClassMenu) — 6 mét., 97 B
+- `ClassElemIntroScriptSTARTVIDEO` (ClassElemIntroScript) — 9 mét., 95 B
+- `ClassElemVideo` (ClassElemIntroduccion) — 7 mét., 94 B
+- `ClassMenuJoinGame_Not_Yet` (ClassMenu) — 6 mét., 93 B
+- `ClassElemIntroScriptSTARTBMP` (ClassElemIntroScript) — 9 mét., 88 B
+- `ClassElemIntroScriptSTARTBLENDFADE` (ClassElemIntroScript) — 9 mét., 86 B
+- `ClassElemIntroduccionBlendFade` (ClassElemIntroduccion) — 7 mét., 84 B
+- `ClassElemIntroScriptWAITWAVE` (ClassElemIntroScript) — 9 mét., 84 B
+- `ClassElemIntroScriptWAITWAVELEVEL` (ClassElemIntroScript) — 9 mét., 84 B
+- `ClassLineaPassword` (ClassLineaVisLit, ClassLineaMenu) — 12 mét., 84 B
+- `ClassLineaMenu`  — 11 mét., 80 B
+- `ClassElemIntroScriptWAITGOTO` (ClassElemIntroScript) — 9 mét., 75 B
+- `ClassElemIntroScriptWAITZOOM` (ClassElemIntroScript) — 9 mét., 75 B
+- `ClassElemIntroScriptVIDEO` (ClassElemIntroScript) — 9 mét., 73 B
+- `ClassLineaPartida` (ClassLineaMenu) — 9 mét., 72 B
+- `ClassBriefing` (ClassReceptorMensajes) — 2 mét., 67 B
+- `ClassIntroduccion` (ClassReceptorMensajes) — 2 mét., 67 B
+- `ClassLineaNumeros` (ClassLineaVariable, ClassLineaMenu) — 12 mét., 67 B
+- `ClassLineaLiterales` (ClassLineaVariable, ClassLineaMenu) — 12 mét., 67 B
+- `ClassLineaBrillo` (ClassLineaVariable, ClassLineaMenu) — 12 mét., 67 B
+- `ClassLineaSpeedRaton` (ClassLineaVariable, ClassLineaMenu) — 12 mét., 67 B
+- `ClassLineaCargaPartida` (ClassLineaPartida, ClassLineaMenu) — 11 mét., 64 B
+- `ClassLineaVisLit` (ClassLineaMenu) — 12 mét., 63 B
+- `ClassLineaUser` (ClassLineaVisLit, ClassLineaMenu) — 12 mét., 62 B
+- `ClassElemIntroScript`  — 9 mét., 61 B
+- `ClassElemIntroScriptBREAK` (ClassElemIntroScript) — 9 mét., 61 B
+- `ClassLineaVariable` (ClassLineaMenu) — 11 mét., 61 B
+- `ClassElemIntroScriptSETPOS` (ClassElemIntroScript) — 9 mét., 59 B
+- `ClassElemIntroScriptSETZOOM` (ClassElemIntroScript) — 9 mét., 59 B
+- `ClassElemIntroScriptSTOPWAVE` (ClassElemIntroScript) — 9 mét., 52 B
+- `ClassElemIntroScriptSETWAVELEVEL` (ClassElemIntroScript) — 9 mét., 52 B
+- `ClassElemIntroScriptSTARTWAVE` (ClassElemIntroScript) — 9 mét., 49 B
+- `ClassElemIntroScriptSTARTGOTO` (ClassElemIntroScript) — 9 mét., 45 B
+- `ClassElemIntroScriptSTARTZOOM` (ClassElemIntroScript) — 9 mét., 45 B
+- `ClassElemIntroScriptSTARTWAVELEVEL` (ClassElemIntroScript) — 9 mét., 45 B
+- `ClassLineaGrabaPartida` (ClassLineaCargaPartida, ClassLineaPartida, ClassLineaMenu) — 11 mét., 45 B
+- `ClassElemIntroduccionFadeOut` (ClassElemIntroduccion) — 7 mét., 44 B
+- `ClassElemIntroduccion`  — 7 mét., 22 B
+- `ClassCreditos` (ClassReceptorMensajes) — 2 mét., 10 B
+- `ClassPantallazos` (ClassReceptorMensajes) — 2 mét., 10 B
+- `ClassIntroScript` (ClassReceptorMensajes) — 2 mét., 10 B
+- `ClassHelpSystem` (ClassReceptorMensajes) — 2 mét., 10 B
+
+## Motores — 19 clases, 586 métodos virtuales, 7,505 B
+
+- `MotorVehiculo` (OrganoMotor, ClassOrgano) — 32 mét., 526 B
+- `MotorVehiculoBalsa` (MotorVehiculo, OrganoMotor, ClassOrgano) — 34 mét., 507 B
+- `MotorVehiculoCiclo` (MotorVehiculo, OrganoMotor, ClassOrgano) — 34 mét., 499 B
+- `MotorVehiculoLancha` (MotorVehiculo, OrganoMotor, ClassOrgano) — 34 mét., 499 B
+- `MotorVehiculoSub` (MotorVehiculo, OrganoMotor, ClassOrgano) — 34 mét., 499 B
+- `MotorVehiculoTanque` (MotorVehiculo, OrganoMotor, ClassOrgano) — 34 mét., 499 B
+- `MotorPajaro` (OrganoMotor, ClassOrgano) — 31 mét., 472 B
+- `MotorVehiculoAuto` (MotorVehiculo, OrganoMotor, ClassOrgano) — 34 mét., 397 B
+- `MotorPerro` (OrganoMotor, ClassOrgano) — 31 mét., 389 B
+- `MotorRail` (OrganoMotor, ClassOrgano) — 31 mét., 382 B
+- `MotorMisil` (OrganoMotor, ClassOrgano) — 31 mét., 370 B
+- `MotorObjeto` (OrganoMotor, ClassOrgano) — 31 mét., 368 B
+- `MotorGranada` (OrganoMotor, ClassOrgano) — 31 mét., 356 B
+- `OrganoMotor` (ClassOrgano) — 31 mét., 351 B
+- `MotorPasivo` (OrganoMotor, ClassOrgano) — 31 mét., 351 B
+- `MotorAliado` (OrganoMotor, ClassOrgano) — 31 mét., 324 B
+- `MotorAndante` (OrganoMotor, ClassOrgano) — 31 mét., 324 B
+- `MotorPablo` (OrganoMotor, ClassOrgano) — 31 mét., 324 B
+- `ClassMotorFoco` (ClassOrgano) — 9 mét., 68 B
+
+## Acciones del jugador (ClassAU*) — 35 clases, 903 métodos virtuales, 7,303 B
+
+- `ClassAUCogeTabacoDeMuerto` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 331 B
+- `ClassAUAlicate` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 322 B
+- `ClassAUBotiquin` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 297 B
+- `ClassAUTomarControlAleman` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 267 B
+- `ClassAUEscalar` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 257 B
+- `ClassAUArrestadoUsar` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 250 B
+- `ClassAUUsar` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 250 B
+- `ClassAUEsposas` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 249 B
+- `ClassAUCoger` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 240 B
+- `ClassAURobar` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 232 B
+- `ClassAUBeAtHome` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 231 B
+- `ClassAUPutaDistrae` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 230 B
+- `ClassAUGoto` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 227 B
+- `ClassAUQuitaUniforme` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 227 B
+- `ClassAUQuietorrr` (ClassAcUsuario, ClassAccion) — 21 mét., 221 B
+- `ClassAUAgacharse` (ClassAcUsuario, ClassAccion) — 21 mét., 219 B
+- `ClassAUCamuflarse` (ClassAcUsuario, ClassAccion) — 21 mét., 214 B
+- `ClassAUCachiporra` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 213 B
+- `ClassAUEmpujar` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 213 B
+- `ClassAUAcuchillar` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 212 B
+- `ClassAUJeringuilla` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 212 B
+- `ClassAUDisfraz` (ClassAcUsuario, ClassAccion) — 21 mét., 207 B
+- `ClassAUCogeBarril` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 192 B
+- `ClassAUGarfio` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 189 B
+- `ClassAULanzallamas` (ClassAcUsuario, ClassAccion) — 21 mét., 189 B
+- `ClassAUCogeMisil` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 187 B
+- `ClassAUTabaco` (ClassAcUsuario, ClassAccion) — 21 mét., 186 B
+- `ClassAUInsignia` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 179 B
+- `ClassAuBucear` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 156 B
+- `ClassAUManejaCepo` (ClassAcUsuario, ClassAccion) — 21 mét., 145 B
+- `ClassAUUsarVehiculo` (ClassAcUsuarioGoto, ClassAcUsuario, ClassAccion) — 28 mét., 145 B
+- `ClassAUManejaItem` (ClassAcUsuario, ClassAccion) — 21 mét., 121 B
+- `ClassAUDisparar` (ClassAcUsuario, ClassAccion) — 21 mét., 101 B
+- `ClassAUManejaSegnuelo` (ClassAcUsuario, ClassAccion) — 21 mét., 99 B
+- `ClassAUManejaBomba` (ClassAcUsuario, ClassAccion) — 21 mét., 93 B
+
+## Cámara / zonas de selección — 27 clases, 286 métodos virtuales, 4,392 B
+
+- `CRoutePoint` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 616 B
+- `CRoute` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 33 mét., 513 B
+- `CRouteDefList` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 431 B
+- `ClassCamaraActiva` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassComandoMenuArriba` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassComandoMenuArribaDerecha` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `ClassLinterna` (ClassControl, ClassReceptorMensajes) — 21 mét., 384 B
+- `CZonaSeleccionJuego` (CZonaSeleccion, ClassReceptorMensajes) — 7 mét., 306 B
+- `CZonaSeleccion` (ClassReceptorMensajes) — 5 mét., 160 B
+- `CZonaSeleccionAlambrada` (CZonaSeleccionJuego, CZonaSeleccion, ClassReceptorMensajes) — 7 mét., 154 B
+- `CRed_CamaraSeleccionGUI` (CRed_CamaraSeleccion, ClassReceptorMensajes) — 12 mét., 76 B
+- `CRed_CamaraGUI` (CRed_Camara, ClassReceptorMensajes) — 11 mét., 71 B
+- `CRed_AnteCamara` (ClassReceptorMensajes) — 3 mét., 68 B
+- `CRed_Camara` (ClassReceptorMensajes) — 3 mét., 68 B
+- `CRed_CamaraSeleccion` (ClassReceptorMensajes) — 3 mét., 68 B
+- `CRed_AnteCamaraGUI` (CRed_AnteCamara, ClassReceptorMensajes) — 10 mét., 66 B
+- `ClassPulsacionPendienteCamara` (ClassPulsacionPendiente) — 6 mét., 42 B
+- `ClassPulsacionPendienteOjo` (ClassPulsacionPendiente) — 6 mét., 31 B
+- `ClassPulsacionPendienteMuerte` (ClassPulsacionPendiente) — 6 mét., 31 B
+- `ClassVolMapa` (ClassVolumen) — 4 mét., 31 B
+- `ClassPulsacionPendienteInfo` (ClassPulsacionPendiente) — 6 mét., 29 B
+- `ClassPulsacionPendiente`  — 6 mét., 24 B
+- `CElemDinamicTraceFPOINT3D` (CElemDinamicTrace) — 2 mét., 18 B
+- `CElemDinamicTraceLINE3D` (CElemDinamicTrace) — 2 mét., 18 B
+- `CElemDinamicTrace`  — 2 mét., 16 B
+- `?$ctorZonaSeleccionT@VCZonaSeleccionAlambrada@@` (ctorZonaSeleccion) — 3 mét., 14 B
+- `?$ClassEnlace@VClassVolMapa@@`  — 1 mét., 5 B
+
+## Misión / intendencia / puntuación — 19 clases, 459 métodos virtuales, 2,866 B
+
+- `ClassIntendencia03` (ClassIntendencia) — 38 mét., 271 B
+- `ClassIntendencia07` (ClassIntendencia) — 38 mét., 241 B
+- `ClassIntendencia01` (ClassIntendencia) — 38 mét., 215 B
+- `ClassIntendencia02` (ClassIntendencia) — 38 mét., 210 B
+- `ClassIntendencia00` (ClassIntendencia) — 38 mét., 206 B
+- `ClassGestorPorZonas_Sonidos` (ClassGestorPorZonas) — 10 mét., 205 B
+- `ClassIntendencia09` (ClassIntendencia) — 38 mét., 203 B
+- `ClassIntendencia04` (ClassIntendencia) — 38 mét., 191 B
+- `ClassIntendencia05` (ClassIntendencia) — 38 mét., 188 B
+- `ClassIntendencia08` (ClassIntendencia) — 38 mét., 187 B
+- `ClassIntendencia06` (ClassIntendencia) — 38 mét., 186 B
+- `ClassIntendencia`  — 38 mét., 183 B
+- `ClassGestorPorZonas_Explosiones` (ClassGestorPorZonas) — 10 mét., 144 B
+- `ClassGestorPorZonas`  — 10 mét., 144 B
+- `INotificadorCambiosSectores`  — 1 mét., 42 B
+- `ClassNotificadorSectores` (INotificadorCambiosSectores) — 6 mét., 30 B
+- `ClassGestorEstadosVarios` (ClassReceptorMensajes) — 2 mét., 10 B
+- `ClassMissionScriptBlock`  — 1 mét., 5 B
+- `EditorScriptBlock` (ClassMissionScriptBlock) — 1 mét., 5 B
+
+## Impacto / daño / explosiones — 13 clases, 118 métodos virtuales, 2,192 B
+
+- `ReceptorImpactosPorNumeroAcumulativo` (ReceptorImpactosPorNumero, IReceptorImpactos) — 6 mét., 479 B
+- `ClassEditExplota` (WinEditVariable, WinEditorChild, ClassWindowsDialogo…) — 32 mét., 439 B
+- `ClassWinEditExplotaVehi` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 435 B
+- `AnimLlamaradasTiles` (IAnimLlamaradas) — 6 mét., 142 B
+- `ReceptorImpactosDef` (IReceptorImpactos) — 6 mét., 142 B
+- `ReceptorImpactosPresa` (ReceptorImpactosPorNumero, IReceptorImpactos) — 6 mét., 138 B
+- `ReceptorImpactosPorNumero` (IReceptorImpactos) — 6 mét., 134 B
+- `ReceptorImpactosVeh` (ReceptorImpactosPorNumero, IReceptorImpactos) — 6 mét., 94 B
+- `IAnimLlamaradas`  — 2 mét., 47 B
+- `IReceptorImpactos`  — 2 mét., 47 B
+- `IProductorDano`  — 2 mét., 47 B
+- `AnimLlamaradasDinamico` (IAnimLlamaradas) — 6 mét., 26 B
+- `ProductorDanoDef` (IProductorDano) — 6 mét., 22 B
+
+## Colisión (Parachoques) — 16 clases, 113 métodos virtuales, 1,743 B
+
+- `ParachoquesObjeto` (SimParachoquesBase, ISimParachoques) — 7 mét., 250 B
+- `ParachoquesDuroAuto` (SimParachoquesBase, ISimParachoques) — 7 mét., 247 B
+- `ParachoquesDuroTanque` (SimParachoquesBase, ISimParachoques) — 7 mét., 166 B
+- `ParachoquesDuroBalsa` (SimParachoquesBase, ISimParachoques) — 7 mét., 164 B
+- `ParachoquesDuroLancha` (SimParachoquesBase, ISimParachoques) — 7 mét., 124 B
+- `ParachoquesDuroSub` (SimParachoquesBase, ISimParachoques) — 7 mét., 124 B
+- `ParachoquesPeaton` (SimParachoquesBase, ISimParachoques) — 7 mét., 115 B
+- `ParachoquesDuroMisil` (SimParachoquesBase, ISimParachoques) — 7 mét., 111 B
+- `ParachoquesAve` (SimParachoquesBase, ISimParachoques) — 7 mét., 92 B
+- `ParachoquesDuroSeguidor` (SimParachoquesBase, ISimParachoques) — 7 mét., 70 B
+- `ParachoquesRail` (SimParachoquesBase, ISimParachoques) — 7 mét., 65 B
+- `ParachoquesBlandoSeguidor` (SimParachoquesBase, ISimParachoques) — 7 mét., 65 B
+- `ParachoquesEscalador` (SimParachoquesBase, ISimParachoques) — 7 mét., 42 B
+- `ParachoquesNulo` (ISimParachoques) — 8 mét., 36 B
+- `ParachoquesExplosion` (SimParachoquesBase, ISimParachoques) — 7 mét., 36 B
+- `ParachoquesPasivo` (SimParachoquesBase, ISimParachoques) — 7 mét., 36 B
+
+## Librería estándar C++ (std) — 27 clases, 85 métodos virtuales, 1,382 B
+
+- `?$basic_filebuf@DU?$char_traits@D@std@@@std` (?$basic_streambuf@DU?$char_traits@D@std@@@std) — 14 mét., 293 B
+- `?$ctype@D@std` (ctype_base@std, facet@locale@std) — 11 mét., 236 B
+- `?$basic_streambuf@DU?$char_traits@D@std@@@std`  — 14 mét., 158 B
+- `?$codecvt@DDH@std` (codecvt_base@std, facet@locale@std) — 8 mét., 115 B
+- `invalid_argument@std` (logic_error@std, exception@std) — 2 mét., 53 B
+- `out_of_range@std` (logic_error@std, exception@std) — 2 mét., 53 B
+- `bad_cast@std` (exception@std) — 2 mét., 52 B
+- `bad_typeid@std` (exception@std) — 2 mét., 52 B
+- `__non_rtti_object@std` (bad_typeid@std, exception@std) — 2 mét., 52 B
+- `bad_exception@std` (exception@std) — 2 mét., 52 B
+- `exception@std`  — 2 mét., 46 B
+- `_Locimp@locale@std` (facet@locale@std) — 1 mét., 33 B
+- `type_info`  — 1 mét., 33 B
+- `codecvt_base@std` (facet@locale@std) — 4 mét., 20 B
+- `runtime_error@std` (exception@std) — 2 mét., 19 B
+- `failure@ios_base@std` (runtime_error@std, exception@std) — 2 mét., 19 B
+- `logic_error@std` (exception@std) — 2 mét., 19 B
+- `length_error@std` (logic_error@std, exception@std) — 2 mét., 19 B
+- `bad_alloc@std` (exception@std) — 2 mét., 18 B
+- `facet@locale@std`  — 1 mét., 5 B
+- `ctype_base@std` (facet@locale@std) — 1 mét., 5 B
+- `ios_base@std` (?$_Iosb@H@std) — 1 mét., 5 B
+- `?$basic_ostream@DU?$char_traits@D@std@@@std` (?$basic_ios@DU?$char_traits@D@std@@@std, ios_base@std, ?$_Iosb@H@std) — 1 mét., 5 B
+- `?$basic_ios@DU?$char_traits@D@std@@@std` (ios_base@std, ?$_Iosb@H@std) — 1 mét., 5 B
+- `?$basic_istream@DU?$char_traits@D@std@@@std` (?$basic_ios@DU?$char_traits@D@std@@@std, ios_base@std, ?$_Iosb@H@std) — 1 mét., 5 B
+- `?$basic_ofstream@DU?$char_traits@D@std@@@std` (?$basic_ostream@DU?$char_traits@D@std@@@std, ?$basic_ios@DU?$char_traits@D@std@@@std, ios_base@std…) — 1 mét., 5 B
+- `?$basic_ifstream@DU?$char_traits@D@std@@@std` (?$basic_istream@DU?$char_traits@D@std@@@std, ?$basic_ios@DU?$char_traits@D@std@@@std, ios_base@std…) — 1 mét., 5 B
+
+## Render / dibujo / vídeo — 21 clases, 99 métodos virtuales, 1,296 B
+
+- `ClassDisplayDevice` (ClassReceptorMensajes) — 37 mét., 249 B
+- `ClassWin32`  — 4 mét., 233 B
+- `ClassDxWin` (ClassWin32) — 4 mét., 141 B
+- `ClassRenderDevice2d`  — 7 mét., 134 B
+- `obitvfile` (obits) — 3 mét., 92 B
+- `ClassTile`  — 2 mét., 63 B
+- `obits`  — 3 mét., 48 B
+- `ibits`  — 2 mét., 47 B
+- `sExpandJPEG`  — 1 mét., 42 B
+- `Dibu` (ClassVolDinamic, ClassVolumen) — 4 mét., 31 B
+- `ClassVolDinamic` (ClassVolumen) — 4 mét., 31 B
+- `DibuTile` (Dibu, ClassVolDinamic, ClassVolumen) — 4 mét., 31 B
+- `DibuPoly` (Dibu, ClassVolDinamic, ClassVolumen) — 4 mét., 31 B
+- `ibitstream` (ibits) — 3 mét., 27 B
+- `ibitsmem` (ibits) — 3 mét., 25 B
+- `ClassVolumen`  — 4 mét., 21 B
+- `ibitvfile` (ibits) — 3 mét., 19 B
+- `obitstream` (obits) — 3 mét., 11 B
+- `ClassModoVideo` (ClassReceptorMensajes) — 2 mét., 10 B
+- `ClassListaRender`  — 1 mét., 5 B
+- `VFILE_ej` (sExpandJPEG) — 1 mét., 5 B
+
+## Sonido — 9 clases, 76 métodos virtuales, 1,181 B
+
+- `MSS_SoundLib` (ISoundLib) — 24 mét., 768 B
+- `NullSoundLib` (ISoundLib) — 24 mét., 98 B
+- `MSS_SampleInstance` (ISampleInstance) — 6 mét., 71 B
+- `SonidoGenerico`  — 6 mét., 52 B
+- `ISampleInstance`  — 2 mét., 47 B
+- `ISampleMaster`  — 2 mét., 47 B
+- `ISoundLib`  — 2 mét., 47 B
+- `MSS_SampleMaster` (ISampleMaster) — 5 mét., 34 B
+- `NullSampleMaster` (ISampleMaster) — 5 mét., 17 B
+
+## Partículas / efectos / paleta — 19 clases, 65 métodos virtuales, 1,069 B
+
+- `sPalFadeInOut` (sPalFX) — 4 mét., 222 B
+- `ClassNightColorFilter` (ClassColorFilter) — 1 mét., 170 B
+- `ClassDefaultColorFilter@ClassRecurPAL` (ClassColorFilter) — 1 mét., 144 B
+- `sPalGlow` (sPalFX) — 4 mét., 117 B
+- `ClassPSystem`  — 4 mét., 59 B
+- `ClassPSystem3d`  — 4 mét., 59 B
+- `ClassColorFilter`  — 1 mét., 42 B
+- `sPalFX`  — 4 mét., 35 B
+- `ClassLightConeVolDynamic` (ClassVolDinamic, ClassVolumen) — 4 mét., 31 B
+- `ClassWaterTail` (ClassPSystem) — 6 mét., 30 B
+- `ClassBlood` (ClassPSystem) — 4 mét., 20 B
+- `ClassCascada` (ClassPSystem) — 4 mét., 20 B
+- `ClassFireBolt` (ClassPSystem) — 4 mét., 20 B
+- `ClassFountain` (ClassPSystem3d) — 4 mét., 20 B
+- `ClassSmoke` (ClassPSystem) — 4 mét., 20 B
+- `ClassSplash` (ClassPSystem3d) — 4 mét., 20 B
+- `ClassTrainSmoke` (ClassPSystem) — 4 mét., 20 B
+- `ClassChispas`  — 2 mét., 10 B
+- `ClassPalFX`  — 2 mét., 10 B
+
+## Núcleo del motor — 14 clases, 75 métodos virtuales, 1,016 B
+
+- `ClassLista` (ClassControl, ClassReceptorMensajes) — 24 mét., 480 B
+- `ClassEngine` (ClassReceptorMensajes) — 16 mét., 261 B
+- `ClassEngineJuego` (ClassEngine, ClassReceptorMensajes) — 16 mét., 189 B
+- `ClassProgramaJuego` (ClassPrograma) — 4 mét., 16 B
+- `ClassReceptorMensajes`  — 2 mét., 13 B
+- `ClassGestorErrorAlCargar` (ClassReceptorMensajes) — 2 mét., 10 B
+- `ClassGestorErrorAlCargarRolling` (ClassReceptorMensajes) — 2 mét., 10 B
+- `ClassPrograma`  — 3 mét., 7 B
+- `?$ClassEnlace@UStructReconstruccion@@`  — 1 mét., 5 B
+- `?$NodoListaEnlazada@VNodoPilas@@UPilaEjecucion@@`  — 1 mét., 5 B
+- `NodoPilas` (?$NodoListaEnlazada@VNodoPilas@@UPilaEjecucion@@) — 1 mét., 5 B
+- `?$ClassEnlace@VClassVolDinamic@@`  — 1 mét., 5 B
+- `?$NodoListaEnlazada@VNodoEjecucion@@UGrupoEjecucion@@`  — 1 mét., 5 B
+- `NodoEjecucion` (?$NodoListaEnlazada@VNodoEjecucion@@UGrupoEjecucion@@) — 1 mét., 5 B
+
+## Red / multijugador — 6 clases, 80 métodos virtuales, 858 B
+
+- `LLRedMPAD` (I_LLRed) — 27 mét., 366 B
+- `LLRedCSKT` (I_LLRed) — 27 mét., 258 B
+- `CRed_JuegoGUI` (CRed_Juego) — 10 mét., 94 B
+- `I_LLRed`  — 13 mét., 88 B
+- `CRed_Juego`  — 1 mét., 42 B
+- `CRed_MyReceptor` (ClassReceptorMensajes) — 2 mét., 10 B
+
+## Otras — 8 clases, 65 métodos virtuales, 846 B
+
+- `ClassWinBichoMore` (WinEditorChild, ClassWindowsDialogo, ClassWindowsReceptorMensajes…) — 32 mét., 435 B
+- `CChicaHolanda` (ClassAccion) — 11 mét., 140 B
+- `ClassEXY@ClassWinEditTripLine` (ClassEditorXYZ, ClassReceptorMensajes) — 5 mét., 127 B
+- `ClassAccion`  — 11 mét., 114 B
+- `sParticleColTab`  — 2 mét., 10 B
+- `sMangera`  — 2 mét., 10 B
+- `sVolumenTails`  — 1 mét., 5 B
+- `sColorPalAnim`  — 1 mét., 5 B
+
+## Órganos (vista, oído, memoria) — 8 clases, 78 métodos virtuales, 313 B
+
+- `ClassOido01` (OrganoOido, ClassOrgano) — 9 mét., 68 B
+- `ClassVista01` (OrganoVista, ClassOrgano) — 11 mét., 47 B
+- `ClassVista02` (OrganoVista, ClassOrgano) — 11 mét., 47 B
+- `OrganoVista` (ClassOrgano) — 11 mét., 37 B
+- `ClassMemoria01` (OrganoMemoria, ClassOrgano) — 9 mét., 33 B
+- `ClassOrgano`  — 9 mét., 27 B
+- `OrganoMemoria` (ClassOrgano) — 9 mét., 27 B
+- `OrganoOido` (ClassOrgano) — 9 mét., 27 B
+
+## Órganos (editables) — ctorOrgano* — 21 clases, 63 métodos virtuales, 276 B
+
+- `?$ctorOrganoTEditable@VClassOido01@@VWinEditClassOido01@@` (ctorOrgano) — 3 mét., 16 B
+- `?$ctorOrganoTEditable@VMotorGranada@@VClassEditMotor@@` (ctorOrgano) — 3 mét., 16 B
+- `?$ctorOrganoTEditable@VMotorRail@@VClassEditMotorRail@@` (ctorOrgano) — 3 mét., 16 B
+- `?$ctorOrganoTEditable@VMotorPasivo@@VClassEditMotor@@` (ctorOrgano) — 3 mét., 16 B
+- `?$ctorOrganoTEditable@VMotorPablo@@VClassEditMotor@@` (ctorOrgano) — 3 mét., 16 B
+- `?$ctorOrganoTEditable@VMotorMisil@@VClassEditMotorMisil@@` (ctorOrgano) — 3 mét., 16 B
+- `?$ctorOrganoTEditable@VMotorPerro@@VClassEditMotorPerro@@` (ctorOrgano) — 3 mét., 16 B
+- `?$ctorOrganoTEditable@VMotorPajaro@@VClassEditMotor@@` (ctorOrgano) — 3 mét., 16 B
+- `?$ctorOrganoTEditable@VClassMotorFoco@@VClassWinEditMotorFoco@@` (ctorOrgano) — 3 mét., 16 B
+- `ctorOrgano`  — 3 mét., 11 B
+- `?$ctorOrganoTEditable@VClassVista01@@VClassWinEditVista01@@` (ctorOrgano) — 3 mét., 11 B
+- `?$ctorOrganoTEditable@VClassVista02@@VClassWinEditVista02@@` (ctorOrgano) — 3 mét., 11 B
+- `?$ctorOrganoTEditable@VMotorAliado@@VClassEditMotor@@` (ctorOrgano) — 3 mét., 11 B
+- `?$ctorOrganoTEditable@VMotorAndante@@VClassWinEditMotorAndante@@` (ctorOrgano) — 3 mét., 11 B
+- `?$ctorOrganoTEditable@VMotorVehiculoAuto@@VClassEditMotorAuto@@` (ctorOrgano) — 3 mét., 11 B
+- `?$ctorOrganoTEditable@VMotorVehiculoCiclo@@VClassEditMotorAuto@@` (ctorOrgano) — 3 mét., 11 B
+- `?$ctorOrganoTEditable@VMotorVehiculoTanque@@VClassEditMotor@@` (ctorOrgano) — 3 mét., 11 B
+- `?$ctorOrganoTEditable@VMotorVehiculoBalsa@@VClassEditMotor@@` (ctorOrgano) — 3 mét., 11 B
+- `?$ctorOrganoTEditable@VMotorVehiculoLancha@@VClassEditMotor@@` (ctorOrgano) — 3 mét., 11 B
+- `?$ctorOrganoTEditable@VMotorVehiculoSub@@VClassEditMotor@@` (ctorOrgano) — 3 mét., 11 B
+- `?$ctorOrganoTEditable@VMotorObjeto@@VClassWinEditMotorObjeto@@` (ctorOrgano) — 3 mét., 11 B
+
+## Pathfinding / búsqueda — 8 clases, 27 métodos virtuales, 212 B
+
+- `GridSeekAroundObstacles` (GridSeek) — 3 mét., 48 B
+- `GridSeek`  — 3 mét., 48 B
+- `SeekToPoint` (GridSeekAroundObstacles, GridSeek) — 4 mét., 39 B
+- `SeekBackToPath` (GridSeekAroundObstacles, GridSeek) — 4 mét., 16 B
+- `SeekToNextSec` (GridSeekAroundObstacles, GridSeek) — 4 mét., 16 B
+- `BuscadorAuxiliar`  — 3 mét., 15 B
+- `BuscadorRegresoACamino` (BuscadorAuxiliar) — 3 mét., 15 B
+- `BuscadorPuntoAPunto` (BuscadorAuxiliar) — 3 mét., 15 B
+
+## Guardado / carga de partidas — 4 clases, 11 métodos virtuales, 175 B
+
+- `SavR` (ISavRW) — 3 mét., 60 B
+- `InMemorySavRW` (ISavRW) — 3 mét., 55 B
+- `ISavRW`  — 2 mét., 47 B
+- `SavW` (ISavRW) — 3 mét., 13 B
