@@ -2,6 +2,8 @@
 
 Port al navegador de **Commandos: Beyond the Call of Duty** (Commandos 1, 1998–99, Pyro Studios/Eidos), por ingeniería inversa. El jugador carga SUS archivos; el repo nunca contiene assets.
 
+**En un chat nuevo, leé primero `tasks/estado.md` (estado actual, cómo correr, trampas, hechos verificados) y `tasks/prioridades.md` (qué sigue). Usá como máximo 2 agentes a la vez.**
+
 **Antes de hacer nada, leé `docs/traspaso-desde-commandos2.md`**: resume el método, las reglas del usuario y las lecciones del proyecto hermano (Commandos 2, `D:\Joaquin\commandos2-web`, ~35 docs de formatos y motor).
 
 ## Reglas del usuario (Joaquín; español rioplatense, directo)

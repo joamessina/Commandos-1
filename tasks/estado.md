@@ -1,0 +1,25 @@
+# Estado y traspaso (2026-10-28) — leer esto primero en un chat nuevo
+
+Port al navegador de **Commandos: Beyond the Call of Duty** (Legacy/CD) por ingeniería inversa. Repo: `github.com/joamessina/Commandos-1` (rama `main`, al día en `862e64b`). Reglas del usuario: `CLAUDE.md` (nada inventado, investigar antes de implementar, español rioplatense, commits locales con `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`, push solo si lo pide).
+
+## 1. Dónde estamos
+Visor de mapa + **4 comandos animados** (misión 0) que caminan/corren con la velocidad real del exe. NO es todavía un juego: sin enemigos, colisiones, rutas, HUD ni sonido.
+- Hecho: contenedor `WAR_MP.DIR`, `WAD`/`RLE`, `VOL` (mapa), `ANM`, gramática `.CLAVE [ ]`, animador, caminata del Sim, proyección, bucle 20 Hz, carga de aliados de las 11 misiones. 66 tests (99 % líneas, 94 % ramas). `npm run verify:real`: 1227 archivos, 245 WAD, 166 ANM, 9 mapas; hash TS == Python en los mapas comparados.
+- Plan: `tasks/prioridades.md` (Q1…Q4 de implementación e investigación; estado de cada ítem arriba de su tabla). **Próximo recomendado: (A) suelo y colisión con los `.SEC`** (R4 ya cerrada, sin investigar más) y **(B) enemigos que patrullan**; luego R3 (rutas) y R2 (z-order) con UN agente a la vez.
+
+## 2. Cómo se trabaja
+- Datos: **Legacy** (`D:\SteamLibrary\steamapps\common\Commandos Beyond the Call of Duty\Legacy`). Lógica: **exe de la raíz** (el de Legacy tiene el DRM de Steam, código cifrado; no se intenta quitar). 1226/1227 archivos de datos son idénticos entre ambos.
+- Correr: `npm run dev` (puerto 5173; botón "Cargar GAME_DIR (solo desarrollo)" lee `GAME_DIR` de `.env.local`, ignorado por git y ausente del build). Checks: `npm run typecheck`, `lint`, `test`; `GAME_DIR=… npm run verify:real` contra el juego.
+- Capas: `src/formats` (bytes→datos) → `src/engine` → `src/render` → `src/app`. TS estricto, ESLint sin `eslint-disable`, umbral 90 % en `formats`+`engine`. Tests solo con bytes sintéticos (`src/testing/builders.ts`): **ningún byte del juego entra al repo**.
+- Investigación en `D:\Joaquin\research-c1\` (NO versionada): `x\` (archivos extraídos), `ghidra\all2\` (37 026 funciones decompiladas), `exe_index2.pkl`, `rtti.json`, `class_methods.tsv`, `strings.tsv`, `png\`. Se regenera con `tools/inventario.py`, `tools/ghidra_*.cmd`, `tools/exe_index.py`, `tools/rtti_c1.py`. Leer una función: `py -I tools/showfn.py D:\Joaquin\research-c1\ghidra\all2 <hex>`.
+- Trampas: heredocs con `\` rompen Git Bash (usar Write/Edit); `Write` exige `Read` previo; `py -I` aísla paquetes de usuario (capstone/pefile se usan sin `-I` desde una carpeta neutra); el proyecto de Ghidra se bloquea si hay dos instancias.
+- **Agentes: máximo 2 a la vez** (el usuario lo pidió: se "fuma" la sesión). Cada ronda de 2 agentes costó ~500 000 tokens. Pedirles informe temprano y tope de ~35 consultas; **verificar sus datos clave contra el exe/los archivos** (ya erraron: `CARISMA`, tipos de `ANM`, `.TIL`, direcciones de cos/sin).
+
+## 3. Mapa de documentos
+`docs/inventario.md` (archivos y formatos) · `docs/formats-texto-y-modelo.md` · `docs/formats-graficos.md` (RLE/WAD/ANM) · `docs/exe-lectura.md` (qué se leyó del exe y qué no) · `docs/exe-clases.md` (838 clases RTTI) · `docs/engine/*.md` (8 informes por subsistema: armas, IA, percepción, movimiento, acciones del jugador, gráficos/mapa, UI/misiones/guardado, sonido/parsers) · `docs/research/q1-movimiento.md` y `q1-render.md` · `tasks/plan.md`, `tasks/prioridades.md`.
+
+## 4. Hechos verificados que más se usan
+20 ciclos/s (MAXFPS=0x14) · proyección `px=x`, `py=0.6428·y−0.7660·z` (19 edificios, mediana 0,3 px) · andar 2,5 u/ciclo, correr COMANDO/CONDUC 6,0 y el resto 5,0, agua ×0,5 · caminata: rampa 0.8/0.96/0.992 de la velocidad pedida, frenado `v'=d/ceil(d/v)`, giro máx 45°/ciclo · `ANM`: paso=(trunc(n·t/b)+trunc(n·d/a)) mod n, fotograma=trunc(ang·n/360+0.5), 8 direcciones con espejo, ángulo 0=+x, 90=+y · tiles del `.VOL` con guion inicial (`-RUINA`, `-EXPLO`) NO se dibujan (edificios sanos al inicio) · BMP crudo = textura repetida (módulo ancho y alto) · `CARISMA` = prioridad de órdenes a órganos, no hay pila de acciones · el juego NO lee los `.TIL` · energía por personaje (COMANDO 200, FRANCOT 100, LANCHERO 160, ARTIFIC 130, CONDUC 130, ESPIA 160).
+
+## 5. Abierto / conocido
+Sin leer: orden de dibujo de personajes contra edificios, cámara real, algoritmo de rutas (`TPathTool`), `CHOQ*.VOL` vs sectores, combate/alarma de enemigos, camuflaje, HUD, mapeo de sonido en detalle. Discrepancia: alcance de la ballesta (200 en el informe de armas vs 800 en la tabla `0x8143C0`). Atajos con `shortcut:` en el código: suelo plano, sin colisión/rutas, z-order por y, pose de reposo, velocidad de scroll, controles (clic derecho = mover) tomados del juego conocido y no leídos del exe. Medir el original en vivo (R6) requiere abrir el juego: consultar antes.
