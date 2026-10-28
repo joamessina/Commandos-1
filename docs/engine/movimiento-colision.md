@@ -122,3 +122,8 @@ Suma de impulsos->velocidad (`FUN_00573600/575F60`); trig exacta de `FUN_0070B65
 - **Jugador**: `ClassAcUsuarioGoto` usa el bit `0x40` de `bicho+0x23C` para tumbado (ARRASTRARSE, sin correr) y `bicho+0x23C>>6&1` en la selección de sector transitable (`FUN_0053A250`).
 - **UI**: `ClassLineaNumerosBarraGameSpeed` (opción velocidad de juego), campo del bucle `param_1[0x13e]`.
 - **Gráficos**: handlers del flujo ANM = cadenas `NUM_SEQUENCES %l / SEQUENCE %s,%l,%l,%l / NLSEQUENCE / CHAINSEQUENCE %s,%l,%l,%l,%s,%s / FRAME %l / SPRITE %s,%l,%l,%l / SIZESPRITE / NHOTSPOTS / HOTSPOT / ANCLAJES / ANCLAJE / ANCLAJESEC` (`FUN_004E4100`); `SEQUENCE`=cíclica (`0x4E3CF0`), `NLSEQUENCE`=no cíclica (`0x4E3D30`).
+
+
+## Correcciones tras la investigación Q1 (2026-10-28; ver `docs/research/q1-movimiento.md`)
+- §4 estaba mal: el motor llama `Mover(v·cosφ, v·sinφ, 0, Δ, 0)` con φ = rumbo al destino en mundo (`atan2`, grados 0..360) y Δ solo el giro; no es `cos Δ`/`sin Δ` en marco local.
+- La amortiguación ×0.3 y la mezcla 0.8/0.2 solo dan rampa de arranque (0.8, 0.96, 0.992…) y deriva al soltar: **la velocidad en régimen es exactamente la pedida**. Andar del jugador 2,5 u/ciclo (`0x793CE8`, verificado = 2.5 f); correr 6,0 (COMANDO, CONDUC) o 5,0 (resto; tabla `0x815198`, verificada); agachado/arrastrarse = 2,5; agua tipo 1 y 3 ×0,5; soldado patrullando = `.VELOCIDADTRAMO` o `.VEL` de la ruta o 1,5.

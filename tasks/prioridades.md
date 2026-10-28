@@ -24,7 +24,7 @@ Lo que pide la misión 0 (medido en `MAPA0000.MIS`): 82 macros de 18 tipos (todo
 | I9 | Selección y comandos básicos: seleccionar, agacharse, tumbarse, correr, cursor contextual | Se maneja a un comando como en el original |
 | I10 | Enemigos con **patrullas** (22 rutas) y órganos: vista (cono 800/150/70°/90), oído (48 ruidos con radio), memoria | Un guardia patrulla y reacciona a lo que ve/oye |
 | I11 | Mensajes entre acciones + prioridad `CARISMA` (órdenes a órganos) | La IA de `BANPE1/BAP1/BAP2` funciona |
-| I12 | Daño, muerte y armas del jugador (pistola 40, fusil 100…; energía 100) | Se puede matar y morir |
+| I12 | Daño, muerte y armas del jugador (pistola 40, fusil 100…; energía **por personaje**: COMANDO 200, FRANCOT 100, LANCHERO 160, ARTIFIC 130, CONDUC 130, ESPIA 160; tabla `0x815198`) | Se puede matar y morir |
 | I13 | Objetos de la misión 0: minas, barriles, bombas (`BOMBAACT` radio 250), escaleras, cuerpos, `AcAscensor` | Cada uno hace lo que hace en el original |
 | I14 | **Destrucción de edificios**: `acExplotaCasa` + `CAMBIATILES` + volúmenes `*EXP1` | La bomba del zapador o un barril derriba un edificio y cambian los sprites |
 | I15 | Fin de misión y puntuación (`Intendencia00`, estrellas por tiempo y energía) | Se gana y se pierde la misión 0 |
@@ -39,6 +39,8 @@ Menús, briefing y créditos · tutorial `.ROL` · partidas guardadas (`.SAV` es
 ## B. INVESTIGACIÓN
 
 ### Q1 — Lo que traba la ruta crítica (cada una destraba un ítem de arriba)
+**Estado (2026-10-28):** R1 ✅ cerrada por código · R4 ✅ estructura y consultas · R5 ✅ (patio = error nuestro, corregido) · R2 🔶 proyección cerrada, falta z-order de personajes y cámara · R3 ⬜ · R6 ⬜. Informes: `docs/research/q1-movimiento.md`, `docs/research/q1-render.md`.
+
 | # | Pregunta | Destraba | Dónde mirar | Cómo se sabe que está resuelta |
 |---|---|---|---|---|
 | R1 | **Velocidad efectiva real de caminata/carrera/gateo del jugador**: ¿`StdVel` pelado o filtrado por inercia/amortiguación? ¿qué `SETVEL` emite el jugador? (los agentes no lo cerraron) | I6 | `FUN_00573600`, `FUN_00575F60`, `FUN_005DCF70`, `FUN_0066B240` (`Sim::Mover`), emisor de `MSGO_MOTOR_SETVEL` | Número por ciclo para andar/correr/arrastrarse, **medido** contra el original corriendo (`sample_game.py` sobre el exe de la raíz) |

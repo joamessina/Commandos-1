@@ -104,3 +104,6 @@ Datos (MAPA0000): ceros en AGUA/BASE/NONAME; en edificios son 4–6 enteros de r
 
 ## 7. NO LEÍDO (resumen)
 Constructor de la matriz de cámara; cámara/viewport/scroll; orden de dibujo bichos↔volúmenes y regla de oclusión; hotspot/sombra de bicho; cuerpo de `FUN_006459C0` para `d>16`; consumidor de EXTRAINFO y del bit 0x01 de flags de tile; tablas de luz y `ClassColorFilter/Night/PalFX`; origen del 1,2 % negro residual del patio; `CHOQ0000.VOL` y `.SEC` del patio (no hizo falta).
+
+
+> **Nota del coordinador (2026-10-28):** las direcciones `0x7A5B00` y `0x7A9350` que este informe da para cos50°/sin50° **no contienen esos floats** (se leyó basura); la proyección `py = 0,6428·y − 0,7660·z` sí está verificada empíricamente (19 edificios, mediana 0,3 px). Buscar las constantes reales si hace falta.
