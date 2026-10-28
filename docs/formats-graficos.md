@@ -2,6 +2,12 @@
 
 Verificación reproducible: `py -I tools/rle_check.py <DATOS>`, `tools/wad_check.py`, `tools/bnm_dump.py --all <ELEM>`, `tools/wad_render.py` (PNG para mirar). Datos extraídos con `tools/inventario.py`.
 Cada afirmación lleva **[exe]** (leída en el decompilado del exe de la raíz) y/o **[datos]** (verificada en todos los archivos).
+> **Correcciones posteriores (2026-10-27, lectura del exe por agentes; ver `docs/engine/graficos-mapa.md`):**
+> - Tipo 7 **no** "activa anclajes": es `NHOTSPOTS`; tipo 8 es `HOTSPOT (x,y,k)` (máx. 5 por fotograma), no un anclaje. Los anclajes son los tipos 9/10/11 (`ANCLAJES/ANCLAJE/ANCLAJESEC`). Tipos: 0 NUM_SEQUENCES · 1 SEQUENCE (cíclica) · 2 NLSEQUENCE (no cíclica) · 3 CHAINSEQUENCE (2 enlaces) · 4 FRAME · 5 SPRITE · 6 SIZESPRITE.
+> - Ranuras de los tipos 1–3: `a` = período en **distancia** (unidades de mapa por ciclo, locomoción) y `b` = período en **ticks** de 1/20 s; paso = `(trunc(n·t/b) + trunc(n·d/a)) mod n`. Mi hipótesis de "velocidad" para ANDAR 33/CORRER 55 era incompleta: es distancia por ciclo de animación.
+> - Cabecera de 400 B del WAD = `int32[100]` (tabla de ranuras de paleta; en 168 de 245 archivos es basura de memoria que el cargador no usa). Campos del sprite: +0x48 alto, +0x4C ancho, +0x50 bits, +0x54 compresión (4 = RLE, 0 = crudo). Los 506 `.BMP` cumplen `len = h·(w+2)+1`.
+> - El mapa gráfico lo dibuja el **`.VOL`** (polígonos con TILE `x,y,w,h,sx,sy,g,"sprite","flags"`); los `.TIL` **no los lee el juego** (`NTILE` no existe en el exe). `.SEC` (NIBS) cerrado al byte en los 11 archivos.
+
 
 ## 1. `.RLE` suelto (88 archivos) — 88/88 [datos]
 BMP 8 bpp con `biCompression = 4` (no estándar). **Paleta siempre 256 × 4 B** en 54..1078 aunque `biClrUsed` diga otra cosa (en 5 archivos dice 29/50/171).
@@ -46,8 +52,8 @@ Tipos (cada tipo tiene siempre la misma cantidad de ranuras en los 166 archivos)
 | 4 | `[n]` | un paso con `n` fotogramas (8 = direcciones; 1 = sin dirección) |
 | 5 | `[sprite.RLE, hx, hy, espejo]` | fotograma; (hx, hy) hot-spot con signo; `espejo = 1` ⇒ volteo horizontal (solo se guardan 5 de las 8 direcciones: 3 reutilizan sprites espejados) |
 | 6 | `[sprite.RLE, hx, hy, w, h, espejo]` | fotograma con caja (w, h) |
-| 7 | `[1]` | activa los puntos de anclaje en los pasos siguientes |
-| 8 | `[x, y, k]` | **punto de anclaje** por fotograma, tipo `k` (FUMAR: brasa `k=5`; `0,0,0` = ninguno) |
+| 7 | `[n]` | `NHOTSPOTS` (corregido, ver nota arriba) |
+| 8 | `[x, y, k]` | `HOTSPOT` por fotograma, tipo `k` (FUMAR: brasa `k=5`; `0,0,0` = ninguno) |
 | 9 | `[]` | (1 vez, en LEON) |
 | 10, 11 | `[a, b]` | pares de vectores por fotograma (animales: LEON) |
 - Para animaciones de locomoción (ANDAR 33, CORRER 55, CORRER_DESNUDO 52) la ranura 2 del tipo 1 parece una **velocidad**; para el resto la ranura 3 parece la **duración total en ticks** (FUMAR 20 pasos → 80 = 4 por paso; RECOGER 4 → 8). **[hip]** — falta confirmar en el exe qué campo del manejador la consume.

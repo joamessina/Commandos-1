@@ -1,0 +1,672 @@
+id	nombre	recibe(compara id; clases por vecindad de direccion)	usa/envia
+1	MSG_CAMBIADIR		
+2	MSG_DESINSERTAACCION		
+3	MSG_CHOQUE	Elementos	
+4	MSG_CHOQUE_COSA	Elementos	
+5	MSG_DESTRUIR		?69e,AcBoundAround,AcPisar,AcPresoTraidor,AcPuff,AcSplash,CAcPiedra,Intendencia04...(+1)
+6	MSG_MOVETO		
+7	MSG_MOVETOVIRTUAL		
+8	MSG_FINMOVETO		
+9	MSG_EMPILAACCIONES		
+10	MSG_DESEMPILATODASACCIONES		
+11	MSG_MORIR		
+12	MSG_FINMORIR		
+13	MSG_ACTIVAACCIONMORIR		
+14	MSG_ACTIVAACCIONMOVETO		
+15	MSG_ACTIVAACCIONSELECCIONAR		
+16	MSG_ACTIVAACCIONPATRULLA		
+17	MSG_PATRULLA		
+18	MSG_ACTIVAACCIONSTOP		
+19	MSG_STOP		
+20	MSG_FINSTOP		
+21	MSG_ATACA		
+22	MSG_ACTIVAACCIONATACA		
+23	MSG_FINATACA		
+24	MSG_QUITAVIDA		
+25	MSG_SPRITE		
+26	MSG_FINSPRITE		
+27	MSG_DISPARA		
+28	MSG_GIRAPOS		
+29	MSG_GIRANEG		
+30	MSG_GIRAPOSOBJ		
+31	MSG_GIRANEGOBJ		
+32	MSG_FINDISPARA		
+33	MSG_GRABAMISS		
+34	MSG_GRABADEF		
+35	MSG_CARGAMISS		
+36	MSG_BOTON1	BotonGrafico,IntroScript,VentanaCaras,VentanaEngine,VisorComandos	
+37	MSG_BOTON2	IntroScript,VisorComandos	
+38	MSG_BOTON1RELEASE	VentanaMenuLibreta	
+39	MSG_BOTON2RELEASE	BotonGrafico,Briefing,VentanaMenuLibreta,VisorComandos	
+40	MSG_BOTON1CANCEL		
+41	MSG_BOTON2CANCEL	GestorPorZonas_Sonidos	
+42	MSG_MOUSEMOVE		
+43	MSG_BOTON1DBLCLK		
+44	MSG_BOTON2DBLCLK		
+45	MSG_BOTON1VIRTUAL	GestorPorZonas_Sonidos,VentanaEngine	
+46	MSG_BOTON2VIRTUAL	AUEsposas,AUGarfio,GestorPorZonas_Sonidos,PulsacionPendiente,SubInterfaceAliado,VentanaEngine	AUCachiporra,AUCogeMisil,AUUsarVehiculo
+47	MSG_BOTON1DBLCLKVIRTUAL	GestorPorZonas_Sonidos	
+48	MSG_BOTON2DBLCLKVIRTUAL		
+49	MSG_BOTON1RELEASEVIRTUAL		
+50	MSG_BOTON2RELEASEVIRTUAL	GestorPorZonas_Sonidos	
+51	MSG_MOUSEMOVEVIRTUAL	GestorPorZonas_Sonidos	
+52	MSG_BOTON1SELECCION	GestorPorZonas_Sonidos,VentanaEngine,VisionVista	
+53	MSG_BOTON2SELECCION	GestorPorZonas_Sonidos,VentanaEngine	
+54	MSG_BOTON1DBLCLKSELECCION	GestorPorZonas_Sonidos	
+55	MSG_BOTON2DBLCLKSELECCION		
+56	MSG_BOTON1RELEASESELECCION		
+57	MSG_BOTON2RELEASESELECCION	GestorPorZonas_Sonidos	
+58	MSG_MOUSEMOVEVIRTUALSELECCION	GestorPorZonas_Sonidos	
+59	MSG_SYSKEYUP	VentanaEngine	
+60	MSG_KEYUP	VentanaEngine	
+61	MSG_KEYDOWN	IntroScript,VentanaEngine,VisionVista	
+62	MSG_CHAR	VentanaEngine	
+63	MSG_VIDEOINIT	GestorPorZonas_Sonidos,IntroScript	
+64	MSG_PROGRAMCLOSE		
+65	MSGW_SHORTCUT		
+66	MSGW_CLOSE		
+67	MSGW_DESTROYCHILD		
+68	MSGW_MOVE		
+69	MSGW_SIZE		
+70	MSGW_GETCURSOR		
+71	MSGW_COMMAND	VentanaEngine,VisorComandos	VentanaCaras,VentanaMenuLibreta
+72	MSGW_CLOSEMODAL		
+73	MSG_CIERRAMAPPEADOR		
+74	MSG_TERMINAL		
+75	MSG_PRINTSTR		GestorDestructorVentanas
+76	MSG_ENDCOMMAND		
+77	MSG_INSERTCOMMAND		
+78	MSG_NOTIFICARELOJCADAXTIEMPO		
+79	MSG_NOTIFICARELOJDENTRODEXTIEMPO		
+80	MSG_DESREGISTRAMENSAJERO	GestorPorZonas_Sonidos,VentanaEngine,VisorComandos	
+81	MSG_SELECCIONAALIADO	GestorPorZonas_Sonidos	
+82	MSG_FORMATOESCRITORIO	VentanaEngine	
+83	MSG_FINALIZACREDITOS	VentanaEngine	
+84	MSG_TRACEVOL_ELEMENTOSTODOS		
+85	MSG_TRACEVOL_ELEMENTOSEJECUTABLES		
+87	MSG_TRACEVOL_ELEMENTOSCHOCABLES		
+88	MSG_TRACEVOL_ELEMENTOSSELECCIONABLES		
+89	MSG_TRACEVOL_ELEMENTOSVISIBLES		
+90	MSG_TRACEVOL_ELEMENTOSESTATICODINAMICOS		
+91	MSG_TRACEVOL_ELEMENTOSDETECTEXPLOSION		
+92	MSG_TRACEVOL_STATIC		
+93	MSG_TRACEVOL_DINAMIC		
+94	MSG_TRACEVOL_SECTORES		
+96	MSG_TRACEVOL_ELEMENTOS		
+97	MSG_TRACEVOL_CAMINOS	VisorComandos	
+98	MSG_TRACEVOL_TILES		
+100	MSG_METODOCURSOR		
+101	MSG_DRAWCURSORMUNDO		
+102	MSG_SETNIVELLUZPOS		
+103	MSG_SETNIVELLUZNEG		
+104	MSG_TRACEVOL_POLY		
+105	MSG_TRACEVOL_MINBOX		
+106	MSG_TRACEVOL_TILEBOX		
+107	MSG_TRACEVOL_VERTEX		
+108	MSG_SETANGXROTVISORMUNDO		
+109	MSG_SETANGXROTVISORMUNDOOFFSET		
+110	MSG_CREAEDITOR		
+111	MSG_TRACEUSUARIO	GestorPorZonas_Sonidos	
+112	MSG_INVENCIBLE	GestorPorZonas_Sonidos,PulsacionPendiente,SubInterfaceAliado	
+113	MSG_SHOWFPS	GestorPorZonas_Sonidos	
+114	MSG_SHOWFPSESTADISTICA	GestorPorZonas_Sonidos	
+115	MSG_DEBUGINFORED	CRed_MyReceptor	
+116	MSG_DEBUGINFOREDMSG		
+117	MSG_LIMITEDFPS		GestorPorZonas_Sonidos
+118	MSG_SETTINGCHANGE	GestorPorZonas_Sonidos	
+119	MSG_GETTOOLTIP	BotonGrafico,Briefing,Elementos,VentanaMenuLibreta	
+120	MSG_XORLOCKMARGENES		
+121	MSG_ULTIMOENGINE		
+122	MSG_COMPORTAMIENTO		
+123	MSG_TRAYECTORIA		
+124	MSG_FINTRAYECTORIA		
+125	MSG_PAUSA		
+126	MSG_FINPAUSA		
+127	MSG_COMPDEFINIDO		
+128	MSG_FINCOMPDEFINIDO		
+129	MSG_ABREPUERTA		
+130	MSG_PUERTAABIERTA		
+131	MSG_CIERRAPUERTA		
+132	MSG_PUERTACERRADA		
+133	MSG_QUIEROENTRAR		
+134	MSG_HASENTRADO		
+135	MSG_QUIEROSALIR		
+136	MSG_HASSALIDO		
+137	MSG_EXPULSAHUESPEDES		
+138	MSG_MIRAR		
+139	MSG_CUADRATE		
+140	MSG_ELEMENTOVISIBLE		
+141	MSG_PUNTOALCANZADO		
+142	MSG_VIGILA		
+143	MSG_FINVIGILA		
+144	MSG_ANIMA		
+145	MSG_FINANIMA		
+146	MSG_NOMBREANIMA		
+147	MSG_ALARMA		
+148	MSG_ATACAENEMIGO		
+149	MSG_FINATACAENEMIGO		
+150	MSG_DISPARAR		
+151	MSG_MUERE		
+152	MSG_FINELEMENTO		
+153	MSG_DARALARMA		
+154	MSG_FINCREASOLDADOS		
+155	MSG_CREASOLDADO		
+156	MSG_IRA		
+157	MSG_GETINFOINTERFACE		
+158	MSG_TOMAR_CONTROL_BICHO		
+159	MSG_GET_BICHO_CONTROLADOR		
+160	MSG_GET_ACCION_CONDUCTORA		
+161	MSG_GET_TIPO_VEHICULO		
+162	MSG_ITEM_ACTIVADO	AUGarfio	AUCogeMisil,AUUsarVehiculo,SubInterfaceAleman,SubInterfaceAliado
+163	MSG_SOY_UN_VEHICULO	CBichoManejable	AcCanon,AcOjoDistante
+164	MSG_SOY_LA_ZODIAK	CBichoManejable	AUCoger
+165	MSG_PON_A_BUCEAR	CBichoManejable	AUUsarVehiculo
+166	MSG_SOY_UN_SEGNUELO	CBichoManejable	AUCoger,AUPutaDistrae,AcSegnuelo
+167	MSG_SEGNUELO_ONOFF	AcSegnuelo	AUManejaSegnuelo
+168	MSG_SOY_UN_CEPO	AUManejaSegnuelo,CBichoManejable	AcCepo
+169	MSG_SOY_UN_CUERPO_RECOGIBLE	AUGarfio,CBichoManejable	AUCoger
+170	MSG_SOY_UN_MISIL_RECOGIBLE	AUCogeMisil,CBichoManejable	AUCoger,CMisilRecogible
+171	MSG_BOCINAZO		AcPatrulla
+172	MSG_SOY_UNA_CASA	CBichoManejable	AcCasaLogica
+173	MSG_SOY_UN_BARRIL	AUCogeMisil,CBichoManejable	AcBichoExpl
+174	MSG_SOY_UNA_ESCALA	AUEsposas,CBichoManejable	AcSegnuelo
+175	MSG_SOY_UNA_BOMBA	AUManejaBomba,CBichoManejable	AUCoger,AcBomba,AcMina
+176	MSG_MANIPULA_BOMBA	AcBomba,AcMina	AUManejaBomba,AUManejaCepo
+177	MSG_ACTIVA_BOMBA	AcBomba	
+178	MSG_FINMUERE		
+179	MSG_GETINFOITEM	InterfaceItem	
+180	MSG_USARELEMENTOINTERFACE		
+181	MSG_ACTUAUSAR		
+182	MSG_ACTUAITEMMOCHILA		
+183	MSG_INTERCAMBIO_ITEM	AUEmpujar	BichoAliado
+184	MSG_RESTAURA_ITEMS_MOCHILA	BichoAliado	CMochilaAliado
+185	MSG_SELECCIONADO		
+186	MSG_DESORGANIZAR	CBichoManejable,Elementos	AcAveria,AcGaviota,AcMuerteAnimal,ReceptorImpactosVeh
+187	MSG_DESACTUAR	BichoAliado,CBichoManejable,Elementos	AcAveria,AcCasaLogica,AcGaviota,AcMuerteAnimal,Intendencia04,ReceptorImpactosPorNumeroAcumulativo,ReceptorImpactosVeh
+188	MSG_QUITA_ACCION	Elementos	IAnimLlamaradas
+189	MSG_MOTOR_BLOQUEADO		
+190	MSGA_MOTOR_COMIENZA_PAUSA		
+191	MSGA_MOTOR_ACABA_PAUSA		
+192	MSGI_COMIENZA_DEMO06		
+193	MSG_TELEPORTSELECCIONADO	GestorPorZonas_Sonidos,PulsacionPendiente,SubInterfaceAliado	
+194	MSG_DESTRUYEOBJETOVENTANA	GestorDestructorVentanas	CRoutePoint,WindowsReceptorMensajes
+195	MSG_RECIEN_SOLTADO	Elementos	
+196	MSG_GRABASCRIPT	CRed_MyReceptor,GestorPorZonas_Sonidos	
+197	MSG_CARGASCRIPT	GestorPorZonas_Sonidos	?571,CRed_MyReceptor,MenuVideo
+198	MSG_FINALROLLINGDEMO	GestorPorZonas_Sonidos	
+199	MSG_WINDOWSMISIONES	GestorPorZonas_Sonidos	
+200	MSG_WINDOWSANMS	GestorPorZonas_Sonidos	
+201	MSG_WINDOWSRECROLLING	GestorPorZonas_Sonidos	
+202	MSG_WINDOWSPLAYROLLING	GestorPorZonas_Sonidos	
+203	MSG_XORPAUSAJUEGO	GestorPorZonas_Sonidos	
+204	MSG_XORPAUSAJUEGOVUELTAAVUELTA	CRed_MyReceptor,GestorPorZonas_Sonidos	
+205	MSG_MODOJUEGO	GestorPorZonas_Sonidos	
+206	MSG_MODOCREDITOS	GestorPorZonas_Sonidos	
+207	MSG_MODOVISIONVISTAS	GestorPorZonas_Sonidos	
+208	MSG_MODOMENUS	GestorPorZonas_Sonidos	?571
+209	MSG_MODOPAUSA	CRed_MyReceptor,GestorPorZonas_Sonidos	
+210	MSG_MODOINTRODUCCION	GestorPorZonas_Sonidos	
+211	MSG_MODOGAMEOVER	CRed_MyReceptor,GestorPorZonas_Sonidos	Intendencia08
+212	MSG_MODOGAMEOVERREPLAY	CRed_MyReceptor,GestorPorZonas_Sonidos	Intendencia08
+213	MSG_MODOCONGRATULATIONS	CRed_MyReceptor,GestorPorZonas_Sonidos	CamaraActiva,Intendencia08
+214	MSG_MODOCONGRATULATIONSTUTORIAL	GestorPorZonas_Sonidos	CamaraActiva,Intendencia08
+215	MSG_MODOENDGAME	CRed_MyReceptor,GestorPorZonas_Sonidos	CamaraActiva,Intendencia08
+216	MSG_MODOENDGAME_PREMATURO	GestorPorZonas_Sonidos	CamaraActiva,Intendencia08
+217	MSG_MODOBRIEFING	GestorPorZonas_Sonidos	VentanaCaras
+218	MSG_MODOVIDEO	GestorPorZonas_Sonidos	
+219	MSG_MODOVIDEOHELP	GestorPorZonas_Sonidos	
+220	MSG_MODOVIDEOFINAL	GestorPorZonas_Sonidos	EngineJuego
+221	MSG_MODOVIDEOTUTORIAL	GestorPorZonas_Sonidos	MenuVideo
+222	MSG_MODOHELP	GestorPorZonas_Sonidos	
+223	MSG_MODOOTHERMISSIONS	GestorPorZonas_Sonidos	MenuVideo
+224	MSG_DRAWUPDATEFROMPARENT	BotonGrafico,Briefing,VentanaCaras,VentanaMenuLibreta	?69c,ComandoMenuArriba,ComandoMenuArribaDerecha,Linterna,VentanaBalas,VentanaChat,VentanaMenuDerecha,VentanaPrincipal...(+1)
+225	MSG_DRAWUPDATEFROMCHILD	BotonGrafico,Briefing,ComandoMenuArribaDerecha,Linterna,VentanaBalas,VentanaCaras,VentanaChat,VentanaEngine...(+4)	BotonInterface,ComandoMenuArriba,VentanaMenuUsar
+226	MSG_CLIPPINGAREAMUNDO	BotonGrafico,Briefing,ComandoMenuArribaDerecha,Linterna,VentanaBalas,VentanaCaras,VentanaChat,VentanaMenuDerecha...(+3)	ComandoMenuArriba,PulsacionPendienteMuerte
+227	MSG_RESETFROMINTERFACE	BotonGrafico,Briefing,ComandoMenuArribaDerecha,Linterna,VentanaBalas,VentanaCaras,VentanaChat,VentanaMenuDerecha...(+3)	?69c
+228	MSG_RESETFROMINTERFACENEWMISSION	BotonGrafico,Briefing,ComandoMenuArribaDerecha,Linterna,VentanaBalas,VentanaCaras,VentanaChat,VentanaMenuDerecha...(+3)	
+229	MSG_WINDOWSBICHOS	GestorPorZonas_Sonidos	
+230	MSG_XORCHAT	CRed_JuegoGUI	
+231	MSG_PAGEUPCHAT	GestorPorZonas_Sonidos	
+232	MSG_PAGEDOWNCHAT	GestorPorZonas_Sonidos	
+233	MSG_CHARGEINTERFACEIZDADCHA	GestorPorZonas_Sonidos	
+234	MSG_PAGEUPDEBUGOUTPUT	GestorPorZonas_Sonidos	
+235	MSG_PAGEDOWNDEBUGOUTPUT	GestorPorZonas_Sonidos	
+236	MSG_SHOWDEBUGOUTPUT	GestorPorZonas_Sonidos	
+237	MSG_WRITEDEBUGOUTPUT	GestorPorZonas_Sonidos	
+238	MSG_INTERFACEONOFF	GestorPorZonas_Sonidos	
+239	MSG_SPECIALRUN		GestorPorZonas_Sonidos
+240	MSG_PETICIONCARGAFASENUMERO	GestorPorZonas_Sonidos	DialogMisiones
+241	MSG_CREATEMSGTRACER		
+242	MSG_GETBICHOSVISTOS	Vista02	
+243	MSG_VISIONDINAMICA	GestorPorZonas_Sonidos,VisionVista	?69a,AcTiroAlBlanco,PulsacionPendienteOjo
+244	MSG_CAMBIO_SECTOR		AcCanon,MotorFoco
+245	MSG_INCREMENTAR_SENSIBILIDAD	CRed_MyReceptor	
+246	MSG_DECREMENTAR_SENSIBILIDAD	CRed_MyReceptor	
+247	MSG_AJUSTAR_SENSIBILIDAD	CRed_MyReceptor	
+248	MSG_ILUMINATE		
+249	MSG_COGE_TABACO_DE_BICHO	CBichoManejable	
+250	MSG_COGE_PAQUETE_TABACO	CBichoManejable	
+251	MSG_COGE_CAJETILLA_DE_MUERTO		
+252	MSG_GETTOOLTIPFROMANIMACION	VentanaCaras	BotonGrafico
+253	MSG_TIENES_MALETIN		CBichoManejable,Intendencia07
+254	MSG_ULTIMOJUEGO		
+254	MSGA_PRIMERO		
+255	MSGA_VIGILANCIA		
+256	MSGA_VIGILANCIA_HACIA		
+257	MSGA_CURIOSEA		
+258	MSGA_MOTOR_ORDENCUMPLIDA		
+259	MSGA_MOTOR_ORDENRECHAZADA		
+260	MSGA_MOTOR_PUNTOALCANZADO	?62a,AcControladorBarrera,AcGaviota,AcPSChispas,AcPatrulla,AcPresoTraidor,AcSeguir,AcTorreta...(+2)	AcAveria,AcShuttle,MotorAndante,MotorGranada,MotorPablo,MotorPajaro,MotorPasivo,MotorPerro...(+3)
+261	MSGA_MOTOR_BUSCADORSECTORALCANZADO	?62a	MotorAndante,MotorPablo,OrganoMotor
+262	MSGA_MOTOR_DESTINOINALCANZABLE	?62a,AUInsignia,AUPutaDistrae,AUTabaco,AcAvestruz,AcBap2,AcFoco,AcGaviota...(+6)	MotorAliado,MotorAndante,MotorPerro,MotorRail,MotorVehiculoCiclo,OrganoMotor
+263	MSGA_MOTOR_CRISIS	?62a,AUInsignia,AUPutaDistrae,AUTabaco,AcAvestruz,AcBap2,AcFoco,AcGaviota...(+6)	MotorAliado,MotorAndante,MotorPablo,MotorPerro
+264	MSGA_VIGILANCIA_OFF		
+265	MSGA_ATACA_ENEMIGO		
+266	MSGA_PATRULLA		
+267	MSGA_CAMBIA_RUTA		
+268	MSGA_PATRULLA_OFF		
+269	MSGA_CURIOSEA_OFF		
+270	MSGA_SONIDO	AcContInterfono,AcControladorBarrera	WinEditOido01
+271	MSGA_SONIDO_AMBIENTE	AcContInterfono,AcControladorBarrera,CAcCtPuenteLev,Elementos	AcBarrilExpl
+272	MSGA_SONIDO_ATENCION	AcAvestruz,AcBap2,AcFoco,AcGaviota,AcGranada,CAcPiedra	OrganoOido
+273	MSGA_SONIDO_PELIGRO	AcAvestruz,AcBap2,AcFoco,AcGallina,AcGaviota,AcGranada,AcGuarda,AcMetrallero...(+6)	AcBuscador,AcCanonero,AcCasa,AcSensorSonido
+274	MSGA_SONIDO_PANICO	AcAvestruz,AcBap2,AcFoco,AcGallina,AcGaviota,AcGranada,AcGuarda,AcMetrallero...(+5)	AcBuscador,AcCanonero,AcCasa,AcSensorSonido
+275	MSGA_VISTA_ELEMENTOVISIBLE	AcAvestruz,AcBap2,AcBarrilExpl,AcBuscador,AcCanonero,AcCasa,AcCepo,AcCogeBombas...(+15)	AcBunker,AcChocaTren,AcControlCompuerta,AcOjoDistante,Vista02
+276	MSGA_MAREA		
+277	MSGA_PARARGOTOUSER		
+278	MSGA_ACTUASOBREPUNTO	AUAcuchillar,AUBotiquin,AUCachiporra,AUCogeMisil,AUCogeTabacoDeMuerto,AUEmpujar,AUEsposas,AUGarfio...(+10)	?69a,AUDisfraz
+279	MSGA_ACTUASOBREELEMENTO	AUAcuchillar,AUArrestadoUsar,AUBotiquin,AUCachiporra,AUCogeMisil,AUCogeTabacoDeMuerto,AUDisfraz,AUEmpujar...(+12)	?69a,SubInterfaceAliado
+280	MSGA_ACTUASOBREPUNTODBLCLK	AUAcuchillar,AUBotiquin,AUCachiporra,AUCogeMisil,AUCogeTabacoDeMuerto,AUEmpujar,AUEsposas,AUGarfio...(+10)	?69a,AUDisfraz
+281	MSGA_ACTUASOBREELEMENTODBLCLK	AUAcuchillar,AUArrestadoUsar,AUBotiquin,AUCachiporra,AUCogeMisil,AUCogeTabacoDeMuerto,AUDisfraz,AUEmpujar...(+11)	?69a,SubInterfaceAliado
+282	MSGA_MULTIPLEACTUASOBREPUNTO	PulsacionPendiente,SubInterfaceAliado	
+283	MSGA_MULTIPLEACTUASOBREPUNTODBLCLK	PulsacionPendiente,SubInterfaceAliado	
+284	MSGA_ACTUASOBREZONASELECCION	PulsacionPendiente,SubInterfaceAliado	?69a
+285	MSGA_ACTUASOBREZONASELECCIONDBLCLK	PulsacionPendiente,SubInterfaceAliado	?69a
+286	MSGA_VEYUSA		
+287	MSGA_IDENTIFICATE	AcBichoExpl	
+288	MSGA_INTERRUPTOR	AcPuertaAnmEvento	AcInterruptor,AcInterruptorFoco,AcIzarBandera
+289	MSGA_BARRERA_ABRE	AcBarrilExpl,AcControlCompuerta	AcContrBarreraTren,AcControladorBarrera
+290	MSGA_BARRERA_BAJA	AcBarrilExpl,AcControlCompuerta	AcContrBarreraTren,AcPuertaCandado
+291	MSGA_BARRERA_BAJADA	AcControladorBarrera	AcBarrera,AcControlCompuerta
+292	MSGA_TEST_BARRERA	AcBarrilExpl,AcControlCompuerta	AcContrBarreraTren,AcControladorBarrera
+293	MSGA_VEO_ELE	AcBarrilExpl,AcControladorBarrera	AcCepo
+294	MSGA_SETDUENO	AcBarrilExpl,AcControlCompuerta	AcContrBarreraTren
+295	MSGA_CONDUCIENDO		
+296	MSGA_PREGUNTA_BANDO	AcCanonero,AcOjoDistante	
+297	MSGA_ACTIVAR_TERMINATOR		
+298	MSGA_LLAMAR_INTERFONO		AcInterfono
+299	MSGA_ACTIVAR_CHARCO_GASOLINA		
+300	MSGA_ERES_UN_SOCAVON		AcChocaTren,AcSocavon
+301	MSGA_HAY_EXPLOSION		
+302	MSGA_ECHAR_CHARLA	AcBap2,AcMetrallero,AcpPatrullero	AUInsignia,AcPresoTraidor
+303	MSGA_PUTA_ECHAR_CHARLA	AcBap2,AcMetrallero	AURobar
+304	MSGA_NO_AGUANTO_CHARLA	AUTabaco	AUInsignia,AUPutaDistrae,AcBap2,CAcMaquina
+305	MSGA_TE_ROBO		AURobar
+306	MSGA_ESCALA_GET_PUNTOS		AUArrestadoUsar,AUUsar,AcSegnuelo
+307	MSGA_DESACTIVAR_ESCALA	AcSegnuelo	Intendencia01,Intendencia02
+308	MSGA_SHUTTLE_GOTOPUNTO	AcShuttle	AcControlShuttle
+309	MSGA_SHUTTLE_GETPUNTO	AcShuttle	AcControlShuttle
+310	MSGA_SHUTTLE_PARATE	AcShuttle	
+311	MSGA_SHUTTLE_HEPARADO		AcAscensor,AcShuttle
+312	MSGA_ACTIVA_ASCENSOR	AcAveria	AUCogeMisil,AUGarfio,AUUsarVehiculo
+313	MSGA_RECARGA_ARMA	AUEmpujar	AcRecogeArma
+314	MSGA_RECOGE_ARMA	AUEmpujar	AcEscala
+315	MSGA_RECOGE_BOMBAS	AUManejaBomba	AcCogeBombas
+316	MSGA_ESCALAMURO	AUEsposas	SubInterfaceAleman,SubInterfaceAliado
+317	MSGA_ALIADO_PARA_EL_MOTOR		CBichoManejable
+318	MSGA_EXPLOTA_AVISAME_AL_EXPLOTAR	ReceptorImpactosPorNumeroAcumulativo	AcCasaLogica
+319	MSGA_EXPLOTA_AHORAEXPLOTO	AcCasaLogica	ProductorDanoDef
+320	MSGA_BURBUJAS_ON	AcPSTail	
+321	MSGA_BURBUJAS_OFF		AcMisil,AcPSTail
+322	MSGA_BURBUJAS_REALEND	CAcTabaco	AcBoundAround,AcPSChispas,AcPSTail
+323	MSGA_GET_PUNTOESTANCIA		
+324	MSGA_ABRIR_PUERTACANDADO	AcPuertaCandado	
+325	MSGA_ABRIR_PUERTACANDADO_SIEMPRE	AcPuertaCandado	Intendencia05,InterfaceControl
+326	MSGA_CERRAR_PUERTACANDADO		AcPuertaCandado
+327	MSGA_REGISTRAR_CASALOGICA		
+328	MSGA_HE_MUERTO		
+329	MSGA_ACTIVAEXPLOSIONBARRERA		
+330	MSGA_VIGILAR_ON	AcVigilar	?$Enlace@UStructReconstruccion@@,AcBap1,AcBap2,AcBarcaMadera,AcBunker,AcCLancha,AcCTanque,AcCanonero...(+10)
+331	MSGA_VIGILAR_OFF	AcVigilar	AcBap1,AcGeneral
+332	MSGA_FIJAR_VISTA	AcVigilar	?$Enlace@UStructReconstruccion@@,AcBap,AcBap1,AcCLancha,AcCTanque,AcFelino,AcFusilador,AcInterfono...(+4)
+333	MSGA_ENEMIGO_VISTO		AcVigilar
+334	MSGA_PISADA_VISTA		AcVigilar
+335	MSGA_ALEMAN_VISTO		AcVigilar
+336	MSGA_ALEMANATACANDO_VISTO		AcVigilar
+337	MSGA_SENUELO_VISTO		AcVigilar
+338	MSGA_CASA_VISTA		AcVigilar
+339	MSGA_VEHICENEMIGO_VISTO		AcVigilar
+340	MSGA_ENEMIGO_PERDIDODEVISTA	AcpPatrullero,CAcGuardianPuerta	AcZodiac
+341	MSGA_SET_ANGULO_BARRIDO	AcVigilar	AcAvion03,AcBap,AcBap2,AcBarcaMadera,AcFoco,AcTiroAlBlanco
+342	MSGA_RESTAURAR_ANGULO_BARRIDO	AcVigilar	AcBap2,AcBarcaMadera,AcPerro,AcTiroAlBlanco
+343	MSGA_LOOKSCAN_FACTOR		AcBap1,AcBap2,AcVigilar,AcpAndar,AcpPatrullero
+344	MSGA_NV_ENEMIGO_VISTO		AcVigilar
+345	MSGA_NV_MUERTO_VISTO		AcVigilar
+346	MSGA_NV_ESPOSADO_VISTO		AcVigilar
+347	MSGA_NV_TABACO_VISTO		AcVigilar
+348	MSGA_NV_PISADA_VISTA		AcVigilar
+349	MSGA_NV_NUEVA_PISADA_VISTA		AcVigilar
+350	MSGA_NV_ALEMAN_VISTO		AcVigilar
+351	MSGA_NV_ALEMANATACANDO_VISTO		AcVigilar
+352	MSGA_NV_SENUELO_VISTO		AcVigilar
+353	MSGA_NV_CASA_VISTA		AcVigilar
+354	MSGA_NV_VEHICENEMIGO_VISTO		AcVigilar
+355	MSGA_NV_ANIMALPELIGROSO_VISTO		AcVigilar
+356	MSGA_NV_DESNUDO_VISTO		AcVigilar
+357	MSGA_NV_ATONTADO_VISTO		AcVigilar
+358	MSGA_INICIO_ARRESTO	AcBap2,AcGuarda,AcMina	
+359	MSGA_FIN_CONTROL_ARRESTADO	BichoAliado,BichoArrestado	CBichoManejable,InterfaceItem
+360	MSGA_FIN_ARRESTO	AcBap2,AcGallina,AcGuarda,AcMina	BichoArrestado
+361	MSGA_ESTAS_DESESPOSADO		
+362	MSGA_ARRESTADO_MUERTO	AcBap2	
+363	MSGA_CHIVATO_VIO_PELIGRO	AcBap2	AcPresoTraidor
+364	MSGA_ERES_EMPUJADO	AcPuntoEmpuje	AUEmpujar
+365	MSGA_EMPUJON		
+366	MSGA_ME_ESTAS_IMPACTANDO	AcBap1	AUEsposas
+367	MSGA_NODEJARSUBIR		AcZodiac
+368	MSGA_PASAALGO		
+369	MSGA_APUNTAR_ON		
+370	MSGA_APUNTAR_AT	AcDisparar	AcBap,AcFusilador,AcpPatrullero,AcpSargento,CAcGuardianPuerta
+371	MSGA_APUNTAR_OFF	AcDisparar	AcBap1,AcBap2,AcBarcaMadera,AcFusilador,AcGeneral,AcVigilante,AcpPatrullero,AcpSargento...(+1)
+372	MSGA_DISPARAR_ON	AcDisparar	AcBap1,AcGallina,AcMetrallero,AcpPatrullero,CAcGuardianPuerta,ReceptorImpactosDef
+373	MSGA_DISPARAR_SILENCIADOR_ON	AcDisparar	AcpSargento
+374	MSGA_DISPARAR_SIN_OBJETIVO		AcBap1,AcDisparar
+375	MSGA_DISPARAR_OFF	AcDisparar,ReceptorImpactosDef	AcBap2,AcBarcaMadera,AcFusilador,AcGeneral,AcMetrallero,AcVigilante,AcpPatrullero,AcpSargento...(+1)
+376	MSGA_ENEMIGO_MUERTO		
+377	MSGA_HAS_SIDO_DESCUBIERTO	AcChocaTren	AcBap2,AcBunker,AcCanonero,AcMetrallero,AcSerIncinerado,AcpSargento,CAcGuardianPuerta
+378	MSGA_HAS_USADO_ALGO_QUE_PUEDE_DESCUBRIRTE	AcChocaTren,AcSerIncinerado	AcPuertaCandado
+379	MSGA_ALTO	CBichoManejable	AcBap2,AcpSargento
+380	MSGA_BUSCADOR_ISON	AcCanon	
+381	MSGA_BUSCADOR_IR		
+382	MSGA_BUSCADOR_ANULA_SI_ALEMANES_EN_RUTA	AcCanon	AcPresoChusma
+383	MSGA_BUSCADOR_IRA	AcCanon	AcBap2,AcCLancha,AcContInterfono,AcGallina,AcGuarda,AcMetrallero,AcPresoChusma,AcPresoTraidor...(+5)
+384	MSGA_BUSCADOR_IRA_SINESCALAS	AcCanon	?$Enlace@UStructReconstruccion@@,AcFelino,AcPerro
+385	MSGA_BUSCADOR_IRA_CONESCALAS	AcCanon	
+386	MSGA_BUSCADOR_STOP	AcCanon	?$Enlace@UStructReconstruccion@@,AcAvestruz,AcBap1,AcBap2,AcCLancha,AcDetenido,AcFelino,AcGallina...(+9)
+387	MSGA_BUSCADOR_PAUSA	AcCanon	
+388	MSGA_BUSCADOR_RECALC		
+389	MSGA_BUSCADOR_LLEGADA	AcAvestruz,AcBap2,AcContInterfono,AcFoco,AcGaviota,AcGuarda,AcMetrallero,AcPSChispas...(+5)	
+390	MSGA_BUSCADOR_CRISIS_POR_SABOTAJE_EN_SECTOR	AcAvestruz,AcBap2,AcFoco,AcGaviota,AcGuarda,AcMetrallero,AcPSChispas,AcPresoTraidor...(+4)	AcCanon
+391	MSGA_ENTRAS_EN_ESCALERA	AcBap2,AcMetrallero	AcBuscador
+392	MSGA_SALES_DE_ESCALERA	AcBap2,AcMetrallero	AcBuscador
+393	MSGA_ALARMA_ENCIENDE		
+394	MSGA_ALARMA_APAGA		
+395	MSGA_ALARMA_DESTRUYE		
+396	MSGA_IMPACTO	AUCogeMisil,AUGarfio,AcAveria,AcAvestruz,AcBap2,AcBichoExpl,AcBomba,AcBuscador...(+22)	AcTransmiteImpacto,ReceptorImpactosVeh,ibitstream
+397	MSGA_IMPACTO_SALVAJE	AcBap2,AcBichoExpl,AcGuarda,AcMuerte,AcMuerteAnimal,AcSocavon,ReceptorImpactosPorNumeroAcumulativo	AUGarfio,AcAveria,AcFusilador,AcMina,AcTransmiteImpacto,Intendencia02,VentanaMenuUsar
+398	MSG_ACTUASOBRE	AcBarrilExpl,AcBichoExpl,AcBomba,AcCasaLogica,AcCepo,AcControlCompuerta,AcEscala,AcInterfono...(+11)	AUBeAtHome,AUCoger,AUUsarVehiculo,AcCanon,AcControlShuttle,AcInterruptor,AuBucear,CAcCtPuenteLev
+399	MSG_SET_INVENCIBLE	AcMuerte	AcpSargento,MiVentana,ReceptorImpactosPorNumeroAcumulativo
+400	MSGA_COLISION_DINAMICA	?62a,AUArrestadoUsar,AUCachiporra,AUJeringuilla,AUTabaco,AUUsar,AcAvestruz,AcBap1...(+18)	AUEsposas,AcContInterfono,AcLanzallamas,AcPresoTraidor,CAcEmpujable,Elementos
+401	MSGA_COLISION_SECTOR		Bicho
+402	MSGA_COLISION_MURO	AcLanzallamas,CAcTabaco	Bicho
+403	MSGA_COLISION_VERTICE		Bicho
+404	MSGA_COLISION_DINAMICA_COSA	?62a	Elementos
+405	MSGA_CONTENEDOR_LIBERAME		
+406	MSGA_ENTRAENCONTENEDOR		Bicho
+407	MSGA_SACADECONTENEDOR		
+408	MSGA_ENTRADAENCONTENEDOR	AcBomba,AcMina,AcZodiac	AcCepo,AcPSTail,AcSegnuelo,Bicho
+409	MSGA_SALIDADECONTENEDOR	AcBichoExpl,AcBomba,AcCepo,AcMina,AcPSTail,AcSegnuelo,AcZodiac	AUCoger,AUInsignia
+410	MSGA_ACTUAITEMMOCHILA		
+411	MSGA_ACTUAUSAR		
+412	MSGA_USARELEMENTO		
+413	MSGA_GETOBJVISTA	Elementos,Vista02	CElemDinamicTrace
+414	MSGA_GETOBJVISTAAMPLITUD	AcVigilar,Vista02	CElemDinamicTrace
+415	MSGA_GETOBJVISTAQUESITOS	Vista02	Elementos,PulsacionPendienteMuerte,VisionVista
+416	MSGA_GETOBJVISTAAMPLITUDQUESITOS	AcVigilar,Vista02	VisionVista
+417	MSGA_GETTIMERINTERFACE		
+418	MSGA_ACTUALIZAINTERFACE		
+419	MSGA_ARGG	AUCogeMisil,AUGarfio,AcBarrilExpl,AcBoundAround,AcCanon,AcCasa,AcCasaLogica,AcContInterfono...(+19)	AUBotiquin,AcAvestruz,AcBap2,AcBuscador,AcControlaFoco,AcControladorBarrera,AcFoco,AcGuarda...(+6)
+420	MSGA_MOTOR_YASOYQUITABLE		?610,AcMuerte,AcMuerteAnimal
+421	MSGA_DESAPARECE	AcControlCompuerta	AcAveria
+422	MSGA_EN_CHARCO_GASOLINA		
+423	MSGA_CHISPAS_ON	AcPSChispas	AcChocaTren,AcPuff
+424	MSGA_CHISPAS_OFF		AcChocaTren,AcPSChispas,AcPuff
+425	MSGA_HE_VISTO_EL_TESTIGO		AcTestigo,Vista02
+426	MSGA_ACTIVAR_TESTIGO	AcTestigo	PulsacionPendienteOjo
+427	MSGA_DESACTIVAR_TESTIGO	AcTestigo	
+428	MSGA_GET_ESTADO_TESTIGO	AcTestigo	
+429	MSGA_GET_ENTRADA_CASA	AcCasaLogica	Intendencia00
+430	MSGA_CASA_GET_NREGENSOLDIERS	AcCasaLogica	AcpSargento,Intendencia00
+431	MSGA_CASA_SUBSTRACT_NREGENSOLDIERS	AcCasaLogica	Intendencia00
+432	MSGA_ENTRAR_HABITACULO	AcUsuario	AUCoger,AUGarfio,AcBarcaMadera,AcCanonero,AcDetenido,AcPresoChusma,AcPresoTraidor,AcSeguir...(+6)
+433	MSGA_INSERTA_EN_HABITACULO	AcUsuario	AcPilotaje,Bicho
+434	MSGA_SIMULA_ENTRADA_ALIADO		
+435	MSGA_DESINSERTA_DE_HABITACULO	AcUsuario	AcPilotaje
+436	MSGA_SALIR_HABITACULO	AcUsuario	AUBeAtHome,AUCogeMisil,AUCoger,AUGarfio,AUInsignia,AUUsarVehiculo,AcBarcaMadera,AcCanonero...(+9)
+437	MSGA_SALIR_HABITACULO_SIN_LIM_ARRESTADO	AcUsuario	InterfaceItem
+438	MSGA_INTERCAMBIA_POS	AcUsuario	AcUsaHabitaculo
+439	MSGA_POS_SUBIDA	AcUsuario	AUArrestadoUsar,AUBeAtHome,AUUsar,AUUsarVehiculo,AcBap1,AcDetenido,AcPatrulla,AcPresoChusma...(+4)
+440	MSGA_GETINFO_HABITACULO	AcCasaLogica	AcCanonero,AcOjoDistante,AcVigilar,Bicho,VisionVista
+441	MSGA_ESPERA_OBSTACULO		AcPatrulla,AcPilotaje
+442	MSGA_PARADA_VEHICULO		
+443	MSGA_ENTRADA_HABITACULO	AUUsarVehiculo,AcCanonero,AcCasa,AcCogeBombas,AcControlShuttle,AcDisparar,AcMetrallero,AcMina...(+3)	AcUsuario
+444	MSGA_SALIDA_HABITACULO	AUUsarVehiculo,AcBap2,AcpPatrullero	AcMetrallero,AcMina,AcUsuario,AcpSargento
+445	MSGA_ENTRA_EN_HABITACULO	AcCanon,AcOjoDistante,AcShuttle	AcCasaLogica,AcUsuario
+446	MSGA_SALIDA_DE_HABITACULO	AcCasaLogica,AcTorreta,AcVidaBreve	AcUsuario
+447	MSGA_VEHICULO_HA_ATROPELLADO		
+448	MSGA_VEHICULO_HA_APLASTADO		
+449	MSGA_HABILIDAD_CONDUCTORA		AcUsaHabitaculo,AcUsuario
+450	MSGA_PUEDO_DISPARAR		AcTanque
+451	MSGA_TREN_CORREQUETEPILLO	ReceptorImpactosDef	
+452	MSGA_DISFRAZATE	AcSerIncinerado	AcUniforme
+453	MSGA_DISFRAZATE_DE_BICHO	AcSerIncinerado	AURobar
+454	MSGA_PONTE_EL_DISFRAZ	AcSerIncinerado	AUDisparar
+455	MSGA_ESTOYDISFRAZADO	AUInsignia,CBichoManejable	
+456	MSGA_DISFRAZ_VISIBLE	AUDisfraz	
+457	MSGA_ANDAR_PAUSE	AcpAndar	AcDetenido
+458	MSGA_ANDAR_UNPAUSE	AcpAndar	AcDisparar
+459	MSGA_ANDAR_STOP	AcpAndar	AcDetenido,AcpPatrullero,AcpSargento
+460	MSGA_ANDAR_SETVEL	AcpAndar	AcpSargento
+461	MSGA_ANDAR_SETRADIO	AcpAndar	
+462	MSGA_ANDAR_FOLLOW	AcpAndar	AcDetenido,AcDisparar,AcpPatrullero
+463	MSGA_ANDAR_BADFOLLOW	AcDisparar	AcpAndar
+464	MSGA_ANDAR_FARGOTO	AcpPatrullero	
+465	MSGA_ANDAR_GETINFO	AcpAndar	
+466	MSGA_ANDAR_IRA	AcpAndar	AcDetenido,AcpPatrullero,AcpSargento
+467	MSGA_ANDAR_IRA_ALCANZADO	AcDisparar,AcpPatrullero,AcpSargento	AcpAndar
+468	MSGA_ANDAR_CRISIS	AcpPatrullero,AcpSargento	AcpAndar
+469	MSGA_LIDER_GETPOSFOLLOW	CAcMaquina	AcSeguir
+470	MSGA_LIDER_REPOS		AcLider,AcSeguir
+471	MSGA_LIDER_FOLLOWERDEAD		AcSeguir,CAcMaquina
+472	MSGA_PATRULLA_PAUSE	AcPatrulla	?$Enlace@UStructReconstruccion@@,AcBap2,AcCLancha,AcCTanque,AcContInterfono,AcFelino,AcGallina,AcGuarda...(+6)
+473	MSGA_PATRULLA_UNPAUSE	AcPatrulla	?$Enlace@UStructReconstruccion@@,AcBap1,AcCLancha,AcCogeBombas,AcControlShuttle,AcFelino,AcGallina,AcGeneral...(+5)
+474	MSGA_PATRULLA_GETNEXTPOINT	AcPatrulla	?$Enlace@UStructReconstruccion@@,AcFelino
+475	MSGA_PATRULLA_SETVELFACTOR		
+476	MSGA_PATRULLA_SETVEL	AcPatrulla	AcBap2
+477	MSGA_PATRULLA_VELNORMAL	AcPatrulla	AcBap2
+478	MSGA_PATRULLA_INVERT_ROUTE	AcPatrulla	AcAvion03,AcEscoltado,AcFoco,AcPresoChusma,AcPresoTraidor,AcpSargento,CAcGuardianPuerta,CAcPiedra
+479	MSGA_ROUTE_CHANGED		AcPatrulla
+480	MSGA_SEGUIR_RUTA_STOP		AcpSargento
+481	MSGA_SEGUIR_RUTA_START		
+482	MSGA_SEGUIR_RUTA_PAUSE		
+483	MSGA_SEGUIR_RUTA_UNPAUSE		
+484	MSGA_SEGUIR_RUTA_TERMINADA		
+485	MSGA_PISADA_GETINFO	AcPisada	
+486	MSGA_REGISTER_SOLDIER		Intendencia
+487	MSGA_UNREGISTER_SOLDIER		
+488	MSGA_ORDEN_INITIALIZEPATROL		Intendencia08
+489	MSGA_ORDEN_STARTATHOME	AcpPatrullero	AcpSargento,Intendencia00
+490	MSGA_ORDEN_PATROL_EXIT	AcpPatrullero	AcpSargento,Intendencia00,Intendencia08
+491	MSGA_ORDEN_PATROL_GOHOME	AcpPatrullero	AcpSargento
+492	MSGA_ORDEN_MUEVETE	AcDisparar,AcpPatrullero	AcpSargento
+493	MSGA_ORDEN_IRAPORALIADO	AcpPatrullero	AcpSargento
+494	MSGA_ORDEN_ATACARALIADO	AcpPatrullero	AcpSargento
+495	MSGA_ORDEN_ATACARALIADO_ATHOME		AcpPatrullero,AcpSargento
+496	MSGA_ORDEN_SETSARGENT	AcpPatrullero	AcpSargento
+497	MSGA_ORDEN_RELEASE_HOSTAGES		AcpSargento
+498	MSGA_ORDEN_KILL_HOSTAGES		AcpSargento
+499	MSGA_ORDEN_GET_MORESOLDIERS		AcpSargento
+500	MSGA_PUEDES_FUMAR	AcpAndar,AcpPatrullero	AcpSargento
+501	MSGA_NO_PUEDES_FUMAR	AcpPatrullero	AcpAndar,AcpSargento
+502	MSGA_ORDEN_FUMA	AcpPatrullero	AcpSargento
+503	MSGA_ORDEN_DEJA_DE_FUMAR	AcpPatrullero	AcpSargento
+504	MSGA_HAS_SIDO_DETENIDO	AcDisparar,BichoAliado,CBichoManejable	AcpSargento
+505	MSGA_SIGUES_DETENIDO	AcDisparar	AcFusilador,AcpSargento
+506	MSGA_ME_ESCAPO	AcDisparar	CBichoManejable,SubInterfaceAleman,SubInterfaceAliado
+507	MSGA_PRESO_ESCAPADO		AcDetenido
+508	MSGA_ORDEN_DETENIDO		
+509	MSGA_ORDEN_ENTRA_EN_CARCEL	AcDisparar	
+510	MSGA_REPORT_ENDDETENIDO		AcDetenido
+511	MSGA_REPORT_PRESO		AcDisparar
+512	MSGA_AUTOREPORT_PRESO		
+513	MSGA_REPORT_PATROLHERIDO		AcpPatrullero
+514	MSGA_REPORT_PATROLMUERTO		AcpPatrullero
+515	MSGA_REPORT_ENEMIGOVISTO		AcpPatrullero
+516	MSGA_REPORT_ENEMIGOPERDIDO		AcpPatrullero
+517	MSGA_REPORT_ENEMIGOAPUNTADO		AcpPatrullero
+518	MSGA_REPORT_ENEMIGOATHOME		AcpPatrullero
+519	MSGA_REPORT_NUEVOENEMIGOATHOME		AcpPatrullero
+520	MSGA_REPORT_TARGET_INALCANZABLE		AcpPatrullero
+521	MSGA_REPORT_PISADA_VISTA		AcpPatrullero
+522	MSGA_REPORT_HOSTAGES_TAKEN		
+523	MSGA_REPORT_PATROL_IN		AcpPatrullero
+524	MSGA_REPORT_PATROL_OUT		AcpPatrullero
+525	MSGA_REPORT_PATROL_LAPIDADO		AcpPatrullero
+526	MSGA_METRALLETA_DISPARA		
+527	MSGA_METRALLETA_FIN_DISPARO		
+528	MSGA_ESCALA_GETINFO	AcSegnuelo	AUEsposas,Intendencia01,Intendencia02,Intendencia04
+529	MSGA_ESCALA_GET_ESCALABLE		
+530	MSGA_ESCALA_SET_ESCALABLE		
+531	MSGA_OBJETO_RECOGER	AcSegnuelo,AcZodiac	AUManejaItem
+532	MSGA_DESEO_TRANSMIGRAR		
+533	MSGA_VAS_A_SER_TRANSMIGRADO	AcCanon,AcDisparar,AcPatrulla,AcPisar,AcUsuario,AcVigilar,Accion,AcpAndar	CElemDinamicTraceFPOINT3D
+534	MSGA_TRANSMIGRATE	AcCanon,AcDisparar,AcPatrulla,AcVigilar,Accion,AcpAndar	AcPisar,CElemDinamicTraceFPOINT3D
+535	MSGA_FIN_TRANSMIGRACION	AcBarrilExpl,AcBomba,AcCanon,AcDisparar,AcMuerte,AcPatrulla,AcUsuario,AcpAndar...(+2)	CElemDinamicTraceFPOINT3D
+536	MSGA_DESENFUNDAR		
+537	MSGA_ENFUNDAR		
+538	MSGA_APUNTAR		
+539	MSGA_DESAPUNTAR		
+540	MSGA_DISPARAR		
+541	MSGA_ARMA_DESENFUNDADA	AcChocaTren,AcSerIncinerado	AUAcuchillar,AUCachiporra,AUDisparar,AUGarfio,AUJeringuilla,AUManejaItem,CBichoManejable
+542	MSGA_ARMA_APUNTADA		
+543	MSGA_ARMA_DISPARADA		
+544	MSGA_ARMA_ENFUNDADA	AcSerIncinerado	AUAcuchillar,AUCachiporra,AUDisparar,AUEsposas,AUInsignia,AUJeringuilla,AcChocaTren,CBichoManejable
+545	MSGA_ARMA_OCUPADA		
+546	MSGA_OCUPA_ARMA		AcOjoDistante,CAcMaquina
+547	MSGA_ARMAEST_APUNTAR		AcCanonero,CAcMaquina
+548	MSGA_ARMAEST_GIROALCANZADO		AcCanon,AcCanonero,AcNidoMetralleta,CAcMaquina
+549	MSGA_NO_DEJES_MANCHA_SANGRE	AcMuerte	Intendencia
+550	MSGA_PILOTO_GOTOVEL		AcPatrulla,AcPerro,BuscadorAuxiliar
+551	MSGA_PILOTO_PARAR		AUUsarVehiculo,AcPatrulla,AcPerro,AcZodiac,BuscadorAuxiliar
+552	MSGA_PILOTO_GIRAR		AcPerro
+553	MSGA_PILOTO_DISPARAPUNTO	AcSubmarino,AcTanque,AcTorreta	AUUsarVehiculo,AcCLancha,AcCTanque
+554	MSGA_PILOTO_DISPARABICHO	AcTorreta	
+555	MSGA_ASIGNA_ANCHO	AcAnchoVariable,AcSpriteVar	AcControlCompuerta,AcPuntoEmpuje
+556	MSGA_ASIGNA_ALTO	AcSpriteVar	
+557	MSGA_TRIGGER_REACT	AcAvion03,AcControlShuttle,AcGallina,AcGranada,AcGuarda,AcPSChispas,AcPatrulla,AcPresoTraidor...(+1)	AcPuertaCandado,Intendencia08
+558	MSGA_TRIPLINE	AcSerElectrocutado	AcSerIncinerado,WinTermParser
+559	MSGA_CORTA_ALAMBRE	AcAbrePaso	
+560	MSGA_CAMBIAESTADOITEM	CBichoManejable	AcSerEspia
+561	MSGA_HACE_CORTABLE		AcAbrePaso
+562	MSGA_ACTIVA_PISADAS	AcDejarRastro	AcSerEspia,CChicaHolanda
+563	MSGA_DESACTIVA_PISADAS		AcDejarRastro,AcSerEspia,CChicaHolanda
+564	MSGA_BANDERA_IZADA		
+565	MSGA_DESACTIVAR_ACCION_SECUNDARIA	AcControladorBarrera,AcTorreta,CAcCtPuenteLev	AcBap2
+566	MSGA_REACTIVAR_ACCION_SECUNDARIA	AcControladorBarrera,CAcCtPuenteLev	AcBap1,AcTorreta
+567	MSGA_ACCION_SECUNDARIA_ACTIVA	AcBap2	AcContInterfono,AcControladorBarrera,AcTiroAlBlanco,CAcCtPuenteLev
+568	MSGA_ACCION_SECUNDARIA_INACTIVA	AcBap2	AcContInterfono,AcControladorBarrera,CAcCtPuenteLev
+569	MSGA_DONDE_ESTA_TU_OBJETIVO	AcAvestruz,AcBap2,AcBunker,AcBuscador,AcCanonero,AcCasa,AcCogeBombas,AcControlShuttle...(+7)	
+570	MSGA_ENEMIGO_LOCALIZADO		
+571	MSGA_COMUNICACION_PAREJA	AcVigilante	
+572	MSGA_VETE_A_LA_CARCEL		AcEscoltado,AcVigilante
+573	MSGA_PARATE	AcEscoltado	AcVigilante
+574	MSGA_CONTINUA_ANDANDO	AcEscoltado	AcVigilante
+575	MSGA_CABLE_CORTADO		
+576	MSGA_ULTIMO_PASAJERO_MUERTO		AcPilotaje,AcZodiac
+577	MSGA_QUITASOCAVON		AcBichoExpl,AcBomba,Intendencia
+578	MSGA_LANZALLAMAS_ON	AcLanzallamas	AUManejaItem
+579	MSGA_LANZALLAMAS_OFF	AcLanzallamas	AUManejaItem
+580	MSGA_LANZALLAMAS_FIN		AUManejaItem
+581	MSGA_MI_VISTA_ES_INTERESANTE	?584	AcBap2,AcBunker,AcCLancha,AcCTanque,AcCanonero,AcGuarda,AcMetrallero,AcPerro...(+2)
+582	MSGA_VERME_ES_INTERESANTE		
+583	MSGA_MI_VISTA_Y_VERME_ES_INTERESANTE		
+584	MSGA_MI_VISTA_YANO_ES_INTERESANTE	?584	AcBap2,AcBunker,AcCLancha,AcCTanque,AcCanonero,AcGuarda,AcMetrallero,AcPerro...(+2)
+585	MSGA_VERME_YANO_ES_INTERESANTE		
+586	MSGA_MI_VISTA_Y_VERME_YANO_ES_INTERESANTE		
+587	MSGA_ESTOY_PINCHADA		AcZodiac
+588	MSGA_HAS_SIDO_ESPOSADO	AcBap2,AcGuarda,AcMetrallero,AcPSChispas,BichoArrestado,CAcGuardianPuerta	AUEsposas
+589	MSGA_ME_HAS_ESPOSADO	CBichoManejable	AcBap1,AcGuarda,AcMetrallero,AcPresoTraidor
+590	MSGA_PUEDO_IR_A_COGERTE	AcTanque	AcBap,AcPresoTraidor
+591	MSGA_ESTOY_YENDO_A_COGERTE	AcTanque	AcBap2,AcPresoTraidor
+592	MSGA_YA_NO_VOY_A_COGERTE	AcTanque	AcBarcaMadera
+593	MSGA_NO_VENGAS	AcBap1	AcTanque,CAcTabaco
+594	MSGA_SETMODE_TUTORIAL	AcMuerte,AcMuerteAnimal	Intendencia08
+595	MSGA_SACA_ALEMAN_DE_HABITACULO		
+596	MSGA_PEDRADA	AcAvestruz,AcBap2,AcFoco,AcGaviota,AcGuarda,AcMuerte,AcMuerteAnimal,AcPSChispas...(+1)	AcGallina,CAcPiedra
+597	MSGA_CACHIPORRAZO	AcBap2,AcGuarda,AcMetrallero,AcPSChispas,AcpPatrullero,BichoArrestado,CAcGuardianPuerta	AUCamuflarse,AcMina
+598	MSGA_ESTAS_DESNUDO	AcBap2,AcGuarda,AcMetrallero,AcMina,CAcGuardianPuerta	AURobar
+599	MSGA_MAQUINA_NECESITA_SER_ATENDIDA	AcBap1	CAcMaquina
+600	MSGA_ERES_ATENDIDA	CAcMaquina	AcBarcaMadera
+602	MSG_SUSTITUYE_BICHO	AUAcuchillar,AUCachiporra,AUCogeTabacoDeMuerto,AUEmpujar,AUGarfio,AUJeringuilla,AUQuitaUniforme,AUTabaco...(+12)	AcGallina,AcMina,sColorPalAnim
+603	MSG_TE_TOMO_DE_TARGET	Elementos	AcBap2,AcpSargento
+604	MSG_TE_DEJO_DE_TARGET	Elementos	AcBap2,AcpSargento
+605	MSG_MIRA_HACIA	AcBap2	CAcMaquina
+606	MSGA_APAGAENCIENDE_FOCO	AcFoco	AcInterruptorFoco
+607	MSGA_APAGA_FOCO	AcFoco	
+608	MSGA_ENCIENDE_FOCO	AcFoco	
+609	MSGA_DESTRUYE_FOCO		AcFoco,AcFocoDestruible
+5000	MSGO_MOTOR_GETSIMBICHO		ModoVideo
+5001	MSGO_MOTOR_GETPUNTOSTRACE		
+5002	MSGO_MOTOR_GETENMARCHA		ModoVideo,MotorAndante,MotorGranada,MotorPajaro,MotorRail
+5003	MSGO_MOTOR_GETVEL		AUUsarVehiculo,AcContInterfono,ModoVideo
+5004	MSGO_MOTOR_GETVELXYZ		ModoVideo
+5005	MSGO_MOTOR_ORDEN		
+5006	MSGO_MOTOR_CANCELAORDEN		
+5007	MSGO_MOTOR_BORRAFISICA		AUCogeBarril,AUCoger,AUInsignia,AUManejaBomba,AUManejaCepo,AUManejaItem,AUPutaDistrae,AcPatrulla...(+7)
+5008	MSGO_MOTOR_SETCATEGORIAVALOR		AcpSargento,ModoVideo
+5009	MSGO_MOTOR_GETCATEGORIAVALOR		AcpSargento,ModoVideo
+5010	MSGO_MOTOR_OFF		AcMuerte,AcMuerteAnimal,AcZodiac,ModoVideo
+5011	MSGO_MOTOR_ON	ModoVideo	AcMuerteAnimal
+5012	MSGO_MOTOR_SETVEL	OrganoOido	AcGallina,AcMisil,AcPatrulla,AcPerro,AcPresoChusma,AcPresoTraidor,AcSeguir,AcpAndar...(+2)
+5013	MSGO_MOTOR_SETDIR	ModoVideo	
+5014	MSGO_MOTOR_SETANG	ModoVideo	?$Enlace@UStructReconstruccion@@,AUArrestadoUsar,AUCoger,AUDisparar,AUEmpujar,AUEscalar,AUEsposas,AUJeringuilla...(+37)
+5015	MSGO_MOTOR_GOTO	OrganoOido	AcAscensor,AcBap2,AcBuscador,AcControladorBarrera,AcLanzallamas,AcMisil,AcPerro,AcSeguir...(+6)
+5016	MSGO_MOTOR_BUSCADORGOTOPUNTO		ModoVideo
+5017	MSGO_MOTOR_BUSCADORGOTOSECTOR		ModoVideo
+5018	MSGO_MOTOR_SETPRECISION	MotorAndante,MotorGranada,MotorPajaro,MotorPerro,MotorVehiculoCiclo,OrganoOido	
+5019	MSGO_MOTOR_PARAR	ModoVideo,OrganoOido	AUManejaItem,AcAscensor,AcAvestruz,AcBap1,AcBuscador,AcCLancha,AcCTanque,AcContInterfono...(+20)
+5020	MSGO_MOTOR_GETDIR		ModoVideo
+5021	MSGO_MOTOR_SETTREPAR	MotorAndante,MotorGranada,MotorPajaro	?627,?628,?629,?62a,AUEscalar,AUEsposas,BuscadorPuntoAPunto
+5022	MSGO_MOTOR_GETTREPAR	MotorAndante,MotorGranada,MotorPajaro	?627,?629,AUEscalar,AcBuscador,Bicho
+5023	MSGO_MOTOR_FIJAR	MotorObjeto	
+5024	MSGO_MOTOR_SOLTAR	MotorObjeto	
+5025	MSGO_MOTOR_EVITAR		
+5026	MSGO_MOTOR_EXPANDIR		
+5027	MSGO_MOTOR_EXPLOTAR	MotorGranada,MotorObjeto	ISimComparable
+5028	MSGO_MOTOR_SETVELVEC	MotorGranada	
+5029	MSGO_MOTOR_SETRAIL	MotorRail	AcAveria,AcIzarBandera,AcShuttle
+5030	MSGO_MOTOR_SIGUEA		
+5031	MSGO_MOTOR_SETTESTS	MotorAndante,MotorGranada,MotorPajaro,MotorPerro	
+5032	MSGO_MOTOR_SETBUCEAR	MotorAndante	AUUsarVehiculo,AuBucear
+5033	MSGO_MOTOR_GETSECTORESPISADOS	MotorAndante,MotorVehiculoBalsa	AUGoto,AUUsarVehiculo,AuBucear
+5034	MSGO_MOTOR_FUEGO	MotorMisil	AcMisil
+5035	MSGO_VEO_ELE	Vista02	AcBap2,AcContrBarreraTren,AcGuarda,AcMetrallero,AcPresoTraidor
+5036	MSGO_VISTA_IMAGEN		
+5037	MSGO_VISTA_MIRAR	Vista02	
+5038	MSGO_VISTA_GETBICHOSVISTOS		
+5039	MSGO_VISTA_SETANGCABEZA	Vista02	AUArrestadoUsar,AUCoger,AUDisparar,AURobar,AUUsar,AcBap1,AcBunker,AcCanonero...(+7)
+5040	MSGO_VISTA_SETANGCABEZA_CHANGEMOD	Vista02	AcZodiac
+5041	MSGO_VISTA_SETOFFSET	Vista02	
+5042	MSGO_VISTA_SETVIS	Vista02	AcAvestruz,AcBap2,AcBarrera,AcBunker,AcCLancha,AcCTanque,AcCanonero,AcChocaTren...(+15)
+5043	MSGO_VISTA_CLEARVIS	Vista02	AcBap1,AcpPatrullero,AcpSargento
+5044	MSGO_VISTA_ZOOMIN	Vista02	AcBap1,AcBap2,AcVigilar
+5045	MSGO_VISTA_ZOOMOUT	Vista02	AcBap1
+5046	MSGO_VISTA_SETALCANCENORMAL	Vista02	
+5047	MSGO_VISTA_SETALCANCE	Vista02	
+5048	MSGO_VISTA_SETFACTORALCANCE	Vista02	AcpAndar
+5049	MSGO_VIGILAR_ON		
+5050	MSGO_VIGILAR_OFF		
+5051	MSGO_FIJAR_VISTA		
+5052	MSGO_OIDO_SONIDO	WinEditOido01	
+5053	MSGO_OIDO_ESCUCHA	WinEditOido01	
+5054	MSGO_MEM_GETNITEMS	OrganoOido	
+5055	MSGO_MEM_PONITEM	OrganoOido	
+5056	MSGO_MEM_GETITEM	OrganoOido	
+5057	MSGO_COLISION_DINAMICA		
+5058	MSGO_COLISION_DINAMICA_COSA		Elementos
+5059	MSGO_COLISION_SECTOR		
+5060	MSGO_COLISION_MURO		
+5061	MSGO_COLISION_VERTICE		
+5062	MSGO_ENTRAOSALE_DE_HABITACULO		AcUsuario,MotorVehiculoBalsa
+5063	MSGO_ARGG	ModoVideo	AcExplotaPresa,AcExplotaVeh,AcMuerteAnimal,CBichoManejable
+5064	MSGO_ULTIMO		
