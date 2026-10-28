@@ -15,3 +15,5 @@ dist/
 research-c1/
 __pycache__/
 *.pyc
+coverage/
+.env.local

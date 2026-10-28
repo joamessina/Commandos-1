@@ -9,17 +9,17 @@ Estado: ✅ hecho · 🔶 en curso · ⬜ pendiente. Las hipótesis se marcan **
 | 0.1 | Contenedor `WAR_MP.DIR` leído y verificado | Tabla + datos cierran con el tamaño del archivo, 0 huecos | ✅ (Python) |
 | 0.2 | Inventario de todos los archivos y formatos | `docs/inventario.md` | ✅ |
 | 0.3 | Exe legible decompilado (raíz) | `research-c1\ghidra\all\*.c` + índice por string | 🔶 |
-| 0.4 | Scaffold TS (Vite, Vitest, ESLint estricto, dep-cruiser) con las constraints de C2 | `npm run check:task` en verde con 1 test | ⬜ |
-| 0.5 | El jugador **carga sus archivos** (File System Access / `<input>`); el repo no lleva assets | Carga `WAR_MP.DIR` en el navegador sin servidor; ningún byte del juego en git | ⬜ |
-| 0.6 | Lector del contenedor en TS (puerto de `tools/inventario.py`) con TDD | Mismo recuento y offsets que Python en los 1227 archivos reales | ⬜ |
+| 0.4 | Scaffold TS (Vite, Vitest, ESLint estricto, dep-cruiser) con las constraints de C2 | `npm run check:task` en verde con 1 test | ✅ (falta dep-cruiser, Stryker, size-limit, gitleaks/osv/semgrep) |
+| 0.5 | El jugador **carga sus archivos** (File System Access / `<input>`); el repo no lleva assets | Carga `WAR_MP.DIR` en el navegador sin servidor; ningún byte del juego en git | ✅ (carpeta Legacy vía `webkitdirectory`) |
+| 0.6 | Lector del contenedor en TS (puerto de `tools/inventario.py`) con TDD | Mismo recuento y offsets que Python en los 1227 archivos reales | ✅ `npm run verify:real` |
 
 ## Nivel 1 — Ver el mundo (gráficos y mapa)
 | # | Objetivo | Terminado cuando |
 |---|---|---|
-| 1.1 | Decodificar `RLE` / `BMP` / paleta | Cada `RLE` extraído se dibuja igual que en el juego (comparar contra un `BMP` de referencia) |
-| 1.2 | Cerrar formato `WAD` (sprites 16 bpp, fondos `Fase000N.WAD`, caras, fuentes) | 236 + 9 `WAD` parsean con tamaños que cierran al byte |
-| 1.3 | Parser de la sintaxis `.CLAVE [ … ]` (`MIS`, `MAC`, `DAT`, `cfg`) | 117 archivos → árbol; re-serializado equivale al original |
-| 1.4 | Mapa: `TIL` + `VOL` + `Fase000N.WAD` → render isométrico con cámara/scroll | La fase 0 se ve completa y recorrible |
+| 1.1 ✅ | Decodificar `RLE` / `BMP` / paleta | Cada `RLE` extraído se dibuja igual que en el juego (comparar contra un `BMP` de referencia) |
+| 1.2 ✅ | Cerrar formato `WAD` (sprites 16 bpp, fondos `Fase000N.WAD`, caras, fuentes) | 236 + 9 `WAD` parsean con tamaños que cierran al byte |
+| 1.3 🔶 | Parser de la sintaxis `.CLAVE [ … ]` (`MIS`, `MAC`, `DAT`, `cfg`) | 117 archivos → árbol; re-serializado equivale al original |
+| 1.4 🔶 | Mapa: `.VOL` + `Fase000N.WAD` (los `.TIL` no los usa el juego) → vista del mapa estático | La fase 0 se ve completa. **Hecho** (`src/render/map.ts`, píxel a píxel igual al render de referencia). Falta: estados de edificios destruidos, agua animada, z-order, cámara del juego |
 | 1.5 | `ANM` (`BNM `): secuencias, fotogramas, hot-spots | 166 `ANM` parsean; un soldado "ANDAR" se anima en las 8 direcciones **[hip]** |
 
 **Hito A:** abrir el navegador, cargar archivos, ver el mapa de la fase 0 con un personaje animado.

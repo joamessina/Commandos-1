@@ -1,0 +1,26 @@
+{
+  "name": "commandos1-web",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Port al navegador de Commandos: Beyond the Call of Duty. El jugador carga sus propios archivos; el repo no contiene assets.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run --coverage",
+    "check:fast": "npm run typecheck && npm run lint",
+    "check:task": "npm run check:fast && npm run test",
+    "verify:real": "node --experimental-strip-types scripts/verify-real.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "^5.0.5",
+    "eslint": "^10.13.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Commandos 1 web</title>
+    <style>
+      :root { color-scheme: dark; --bg: #14161a; --fg: #d9dde3; --muted: #8a919c; --line: #2a2e35; --accent: #c9a24a; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, sans-serif; }
+      header { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+      h1 { font-size: 15px; margin: 0; font-weight: 600; color: var(--accent); }
+      label { color: var(--muted); }
+      select, input[type='file'], button { background: #1d2026; color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; }
+      #status { color: var(--muted); padding: 8px 16px; min-height: 2.4em; }
+      #status.error { color: #e0826f; }
+      #view { overflow: auto; height: calc(100vh - 110px); border-top: 1px solid var(--line); }
+      canvas { display: block; image-rendering: pixelated; }
+      .hint { padding: 16px; color: var(--muted); max-width: 70ch; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Commandos 1 — visor de mapa</h1>
+      <label>Carpeta del juego (Legacy): <input id="dir" type="file" webkitdirectory /></label>
+      <button id="dev" hidden>Cargar GAME_DIR (solo desarrollo)</button>
+      <label>Mapa: <select id="map" disabled></select></label>
+      <label><input id="water" type="checkbox" checked /> ocultar agua</label>
+      <label>Zoom: <select id="zoom"><option value="0.25">25 %</option><option value="0.5" selected>50 %</option><option value="1">100 %</option></select></label>
+    </header>
+    <div id="status">Elegí la carpeta del juego. Los archivos no salen de tu navegador.</div>
+    <div id="view"><div class="hint">Esto es un visor del mapa estático (sin personajes, enemigos ni estados de edificios): hoy el juego no es jugable.</div></div>
+    <script type="module" src="/src/app/main.ts"></script>
+  </body>
+</html>

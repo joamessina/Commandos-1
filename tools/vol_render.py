@@ -84,5 +84,8 @@ if __name__ == '__main__':
                         else:
                             b = img[dy * Wd + dx]; img[dy * Wd + dx] = tuple(b[k] // 2 for k in range(3)) + (255,)
     print('sprites no encontrados en el WAD:', miss)
+    if '--hash' in sys.argv:
+        import hashlib
+        print('md5', hashlib.md5(bytes(c for px in img for c in px)).hexdigest()); sys.exit()
     R.png(sys.argv[3], Wd, Hd, img)
     print('->', sys.argv[3])
