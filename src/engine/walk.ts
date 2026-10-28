@@ -3,8 +3,8 @@
  * docs/research/q1-movimiento.md §R1: motor FUN_005D7D90/FUN_005DCF70 (rumbo, frenado), Sim FUN_0066BB20 (v*=0.3),
  * FUN_00575F60 (empuje mínimo), FUN_005734A0 (mezcla 0.8/0.2), FUN_0057E6E0 (límites y pos += v), FUN_00574200 (vprev).
  * Unidades: mapa por ciclo de lógica; el juego corre a 20 ciclos/s.
- * shortcut: sin colisiones, rampas, agua ni escalones (el Sim real prueba el movimiento hasta 3 veces y desliza),
- *           cuándo mejorar: al portar CHOQ*.VOL y los sectores (.SEC).
+ * shortcut: el paso bloqueado por un sector (`blocked`) se anula entero; el Sim real prueba el movimiento hasta 3 veces
+ *           (FUN_0057E520, NO leída) y no se sabe si desliza; sin CHOQ*.VOL ni rampas. Cuándo mejorar: al leer FUN_0057E520.
  */
 
 export interface Vec {
@@ -58,9 +58,10 @@ export interface StepResult {
 
 /**
  * Un ciclo de lógica. `target` null = no hay destino (Mover(0,0,0,0,0)): solo actúa la deriva del Sim.
- * `v` = velocidad pedida (SETVEL).
+ * `v` = velocidad pedida (SETVEL). `speedMul` = factor del terreno (agua 0.5: velocidad y giro, FUN_005D7D90).
+ * `blocked(x, y)` = el Sim no deja pisar el punto de destino de este ciclo.
  */
-export function stepBody(b: Body, target: Vec | null, v: number): StepResult {
+export function stepBody(b: Body, target: Vec | null, v: number, speedMul = 1, blocked?: (x: number, y: number) => boolean): StepResult {
   // ---- motor ----
   let nx = 0;
   let ny = 0;
@@ -74,9 +75,10 @@ export function stepBody(b: Body, target: Vec | null, v: number): StepResult {
     else {
       const phi = norm360((Math.atan2(dy, dx) * 180) / Math.PI);
       if (d2 > 1.5 * BODY_RADIUS * BODY_RADIUS) b.angTarget = phi;
-      dAng = norm180(b.angTarget - b.ang);
+      dAng = norm180(b.angTarget - b.ang) * speedMul;
       let vp = v;
       if (d2 < 16 * v * v && v > 0.001) vp = Math.sqrt(d2) / Math.ceil(Math.sqrt(d2) / v); // frenado: llega justo en N ciclos
+      vp *= speedMul;
       nx = vp * Math.cos((phi * Math.PI) / 180);
       ny = vp * Math.sin((phi * Math.PI) / 180);
     }
@@ -104,6 +106,7 @@ export function stepBody(b: Body, target: Vec | null, v: number): StepResult {
     vx = (vx / sp) * BODY_RADIUS; // FUN_0066BCD0: paso máximo = radio del cilindro
     vy = (vy / sp) * BODY_RADIUS;
   }
+  if ((vx !== 0 || vy !== 0) && blocked?.(b.x + vx, b.y + vy)) vx = vy = 0;
   const turn = Math.abs(dAng) < 0.001 ? 0 : Math.max(-MAX_TURN, Math.min(MAX_TURN, dAng));
   b.x += vx;
   b.y += vy;

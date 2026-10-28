@@ -111,3 +111,53 @@ export function anmSeq(type: 1 | 2 | 3, name: string, steps: number, a: number, 
   }
   return [head, ...body];
 }
+
+export interface SecSector {
+  verts: number[];
+  plane?: [number, number, number];
+  type?: number;
+  flags?: number;
+  name?: string;
+}
+
+export interface SecSpec {
+  verts: [number, number][];
+  a: SecSector[];
+  b?: SecSector[];
+  /** Vecino por arista de cada sector A (TW1); por defecto -1. */
+  tw1?: number[][];
+  /** Enlaces TW2 {sA, aristaA, sB + nA, aristaB}; undefined = sin sección TW2. */
+  tw2?: [number, number, number, number][];
+  tw3?: number[];
+}
+
+const f32 = (...v: number[]): number[] => [...new Uint8Array(new Float32Array(v).buffer)];
+
+function secList(l: SecSector[]): number[] {
+  return [
+    ...u32(l.length),
+    ...l.flatMap((s) => {
+      const name = s.name ?? '';
+      const flags = s.flags ?? 0;
+      return [
+        ...u32(s.verts.length), ...f32(...(s.plane ?? [0, 0, 0])), ...u32(s.type ?? 0, 7, 9, flags, name.length), ...str(name, name.length),
+        ...(flags & 0x20 ? f32(1, 2) : []), ...u32(...s.verts),
+      ];
+    }),
+  ];
+}
+
+/** `.SEC` sintético; `tail` reemplaza todo lo que sigue a los pares (para probar errores). */
+export function secBytes(s: SecSpec, tail?: number[]): Uint8Array {
+  const tw1 = s.a.flatMap((x, i) => s.tw1?.[i] ?? x.verts.map(() => -1));
+  return new Uint8Array([
+    ...str('NIBS', 4), ...u32(s.verts.length), ...f32(...s.verts.flat()), ...secList(s.a), ...secList(s.b ?? []),
+    ...u32(1, 1, 0, 0, 0), // 1 grupo: 1 ítem, nombre vacío, (lista 0, sector 0)
+    ...u32(0), // pares
+    ...(tail ?? [
+      ...str('TW1', 3), ...u32(...tw1.map((v) => v >>> 0)),
+      ...(s.tw2 ? [...str('TW2', 3), ...s.tw2.flatMap((t) => u32(...t)), ...u32(0xffffffff)] : []),
+      ...(s.tw3 ? [...str('TW3', 3), ...u32(...s.tw3)] : []),
+    ]),
+  ]);
+}

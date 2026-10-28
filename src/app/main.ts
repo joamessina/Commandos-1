@@ -3,14 +3,16 @@
  * DATOS/recursos/bmps/map_mp/Fase000N.wad. Nada se sube ni se hace fetch: todo se lee con la File API.
  * Controles: clic izquierdo = elegir comando / caminar; clic derecho = caminar; Mayús+clic o doble clic derecho = correr;
  * flechas o WASD = mover la cámara; 1-4 = elegir comando; Inicio = centrar en el elegido.
- * shortcut: suelo plano (z fijo, sin sectores), sin colisiones ni rutas, orden de dibujo por y de los pies (R2 pendiente);
+ * shortcut: el suelo y el paso salen de los sectores (.SEC), pero sin rutas (R3: el comando empuja contra las paredes), orden de dibujo por y de los pies (R2 pendiente);
  *           los controles (derecho = mover) son los del original según el juego conocido, NO leídos del exe todavía.
  */
 import { parseAnm } from '../formats/anm.ts';
 import { entryBytes, parseContainer, type DirEntry } from '../formats/container.ts';
+import { parseSec } from '../formats/sec.ts';
 import { parseVol } from '../formats/vol.ts';
 import { parseWad, type Wad } from '../formats/wad.ts';
 import { loadAllies } from '../engine/mission.ts';
+import { SectorMap } from '../engine/sectors.ts';
 import { project, unproject, Unit } from '../engine/unit.ts';
 import { composeMap } from '../render/map.ts';
 import { SpriteCache } from '../render/sprites.ts';
@@ -113,13 +115,15 @@ async function load(): Promise<void> {
   map.getContext('2d')?.putImageData(new ImageData(img.pixels, img.width, img.height), 0, 0);
 
   const units: UnitView[] = [];
+  const secBytes = bytes(`DATOS/MISIONES/MAPA${n}.SEC`);
+  const sectors = secBytes ? new SectorMap(parseSec(secBytes)) : null;
   const mis = bytes(`DATOS/MISIONES/MAPA${n}.MIS`);
   for (const a of mis ? loadAllies(new TextDecoder('latin1').decode(mis)) : []) {
     const anm = bytes(`DATOS/RECURSOS/ELEM/${a.anim.toUpperCase()}.ANM`);
     const w = bytes(`DATOS/RECURSOS/ELEM/${a.anim.toUpperCase()}.WAD`);
     if (!anm || !w) continue;
     const uWad: Wad = parseWad(w);
-    units.push({ unit: new Unit(a.token, parseAnm(anm), a.x, a.y, a.z, a.angle), sprites: new SpriteCache(uWad) });
+    units.push({ unit: new Unit(a.token, parseAnm(anm), a.x, a.y, a.z, a.angle, sectors), sprites: new SpriteCache(uWad) });
   }
   const first = units[0]?.unit;
   const p = first ? project(first.body.x, first.body.y, first.z) : { px: img.width / 2, py: img.height / 2 };

@@ -10,6 +10,8 @@ import { join } from 'node:path';
 import { entryBytes, parseContainer } from '../src/formats/container.ts';
 import { parseAnm } from '../src/formats/anm.ts';
 import { loadAllies } from '../src/engine/mission.ts';
+import { groundZ, SectorMap, validTarget } from '../src/engine/sectors.ts';
+import { parseSec } from '../src/formats/sec.ts';
 import { parseVol } from '../src/formats/vol.ts';
 import { parseWad } from '../src/formats/wad.ts';
 import { composeMap } from '../src/render/map.ts';
@@ -68,4 +70,38 @@ if (anms !== 166) throw new Error('se esperaban 166 ANM');
 for (const e of entries.filter((x) => /MAPA\d{4}\.MIS$/i.test(x.path)).sort((a, b) => a.path.localeCompare(b.path))) {
   const al = loadAllies(new TextDecoder('latin1').decode(entryBytes(dir, e)));
   console.log(`${e.path.slice(-12)}: ${al.length.toString()} aliados ${al.map((x) => x.token).join(',')}`);
+  // cada aliado debe caer en un sector transitable y su z del .MIS debe coincidir con el plano del sector
+  const se = entries.find((x) => x.path.toUpperCase() === e.path.toUpperCase().replace(/\.MIS$/, '.SEC'));
+  if (se) {
+    const map = new SectorMap(parseSec(entryBytes(dir, se)));
+    const res = al.map((a) => {
+      const sec = map.atZ(a.x, a.y, a.z);
+      return sec ? { ok: validTarget(sec), dz: groundZ(sec, a.x, a.y) - a.z } : { ok: false, dz: NaN };
+    });
+    console.log(`  sectores: ${res.filter((r) => r.ok).length.toString()}/${al.length.toString()} en sector transitable; dz(plano - .MIS) = ${res.map((r) => r.dz.toFixed(1)).join(', ')}`);
+  }
 }
+
+// SEC: los 11 archivos cierran al byte; totales contra docs/research/q1-movimiento.md §R4 (suma de tipos = 9 336; NTrans 3975; B 26)
+let secs = 0;
+let nSectors = 0;
+let nB = 0;
+let nTrans = 0;
+let edges = 0;
+let outsideA = 0;
+for (const e of entries.filter((x) => x.path.toUpperCase().endsWith('.SEC'))) {
+  const s = parseSec(entryBytes(dir, e));
+  secs++;
+  nSectors += s.sectors.length;
+  nB += s.sectors.length - s.nA;
+  for (const [i, x] of s.sectors.entries()) {
+    if (x.rawFlags & 4) nTrans++;
+    for (const v of x.neighbors) {
+      if (v === -1) continue;
+      edges++;
+      if (i < s.nA && v >= s.nA) outsideA++;
+    }
+  }
+}
+console.log(`SEC: ${secs.toString()} archivos, ${nSectors.toString()} sectores (${nB.toString()} superpuestos), ${nTrans.toString()} NTrans, ${edges.toString()} aristas con vecino (${outsideA.toString()} de A hacia B)`);
+if (secs !== 11 || nSectors !== 9336 || nB !== 26 || nTrans !== 3975) throw new Error('los SEC no coinciden con los totales del informe R4');
