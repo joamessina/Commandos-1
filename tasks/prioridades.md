@@ -7,6 +7,7 @@ Lo que pide la misión 0 (medido en `MAPA0000.MIS`): 82 macros de 18 tipos (todo
 ## A. IMPLEMENTACIÓN
 
 ### Q1 — Ya: es la ruta crítica para ver y mover un comando
+**Estado (2026-10-28):** I1 ✅ (`src/formats/clave.ts`) · I2 ✅ (`anm.ts` 166/166 + `anim.ts`) · I3 🔶 (bucle a 20 Hz y cámara por teclado hechos; falta límites/scroll del original) · I4 🔶 (se cargan los aliados, incl. anidados; faltan los otros 78 elementos) · I5 ⬜ · I6 🔶 (caminar/correr con la velocidad real, **sin** colisión ni rutas) · I7 ⬜.
 | # | Qué | Por qué es urgente | Listo cuando | Depende de |
 |---|---|---|---|---|
 | I1 | **Parser `.CLAVE [ ]` en TS** (`MIS`, `MAC`, `DAT`, `cfg`) con tests | Sin él no se instancia nada: ni comandos, ni enemigos, ni objetos. Gramática ya cerrada (`sonido-parsers.md`, verificada en 117/117) | Árbol de las 19 `MIS` y 96 `MAC`; `$Variable` resuelta contra la instancia | — |

@@ -8,6 +8,8 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { entryBytes, parseContainer } from '../src/formats/container.ts';
+import { parseAnm } from '../src/formats/anm.ts';
+import { loadAllies } from '../src/engine/mission.ts';
 import { parseVol } from '../src/formats/vol.ts';
 import { parseWad } from '../src/formats/wad.ts';
 import { composeMap } from '../src/render/map.ts';
@@ -47,4 +49,23 @@ for (const f of loose.sort()) {
   const img = composeMap(vol, wad, { skipWater: true });
   const md5 = createHash('md5').update(img.pixels).digest('hex');
   console.log(`MAPA${n} ${img.width.toString()}x${img.height.toString()} polys=${vol.polys.length.toString()} tiles=${vol.polys.reduce((a, p) => a + p.tiles.length, 0).toString()} sin_sprite=${img.missing.toString()} md5=${md5}`);
+}
+
+// ANM: los 166 flujos parsean con pasos y conteos coherentes
+let anms = 0;
+let seqs = 0;
+let frames = 0;
+for (const e of entries.filter((x) => x.path.toUpperCase().endsWith('.ANM'))) {
+  const a = parseAnm(entryBytes(dir, e));
+  anms++;
+  seqs += a.sequences.size;
+  for (const s of a.sequences.values()) for (const st of s.steps) frames += st.length;
+}
+console.log(`ANM: ${anms.toString()} archivos, ${seqs.toString()} secuencias, ${frames.toString()} fotogramas`);
+if (anms !== 166) throw new Error('se esperaban 166 ANM');
+
+// Misiones: los aliados de cada .MIS (la misión 0 los tiene anidados dentro de otro elemento)
+for (const e of entries.filter((x) => /MAPA\d{4}\.MIS$/i.test(x.path)).sort((a, b) => a.path.localeCompare(b.path))) {
+  const al = loadAllies(new TextDecoder('latin1').decode(entryBytes(dir, e)));
+  console.log(`${e.path.slice(-12)}: ${al.length.toString()} aliados ${al.map((x) => x.token).join(',')}`);
 }

@@ -76,3 +76,38 @@ export function must<T>(v: T | undefined): T {
   if (v === undefined) throw new Error('valor ausente');
   return v;
 }
+
+/** Registro BNM: los slots `{ s: 'texto' }` son punteros a cadenas en los datos del registro. */
+export interface BnmRec {
+  type: number;
+  slots: (number | { s: string })[];
+}
+
+export function bnm(recs: BnmRec[], opts: { tail?: number[]; noEnd?: boolean } = {}): Uint8Array {
+  const out: number[] = [0x42, 0x4e, 0x4d, 0x20];
+  for (const r of recs) {
+    let data: number[] = [];
+    let mask = 0;
+    const vals = r.slots.map((s, i) => {
+      if (typeof s === 'number') return s;
+      mask |= 1 << i;
+      const at = data.length;
+      data = [...data, ...Array.from(s.s, (c) => c.charCodeAt(0)), 0];
+      return at;
+    });
+    out.push(...u32(((r.type << 24) | (vals.length << 16) | data.length) >>> 0), ...u32(mask), ...vals.flatMap((v) => u32(v >>> 0)), ...data);
+  }
+  if (opts.noEnd !== true) out.push(...u32(0xff000000));
+  return new Uint8Array([...out, ...(opts.tail ?? [])]);
+}
+
+/** Secuencia ANM de prueba: cabecera + pasos con `dirs` fotogramas cada uno ("<nombre><paso><dir>.RLE", espejo en dirs impares). */
+export function anmSeq(type: 1 | 2 | 3, name: string, steps: number, a: number, b: number, dirs: number, links: [string, string] = ['', '']): BnmRec[] {
+  const head: BnmRec = { type, slots: [{ s: name }, steps, a, b, ...(type === 3 ? [{ s: links[0] }, { s: links[1] }] : [])] };
+  const body: BnmRec[] = [];
+  for (let s = 0; s < steps; s++) {
+    body.push({ type: 4, slots: [dirs] });
+    for (let d = 0; d < dirs; d++) body.push({ type: 5, slots: [{ s: `${name}${s.toString()}${d.toString()}.RLE` }, -10 - d, -30, d % 2] });
+  }
+  return [head, ...body];
+}
