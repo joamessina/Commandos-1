@@ -40,7 +40,7 @@ Menús, briefing y créditos · tutorial `.ROL` · partidas guardadas (`.SAV` es
 ## B. INVESTIGACIÓN
 
 ### Q1 — Lo que traba la ruta crítica (cada una destraba un ítem de arriba)
-**Estado (2026-10-28):** R1 ✅ cerrada por código · R4 ✅ estructura y consultas · R5 ✅ (patio = error nuestro, corregido) · R2 🔶 proyección cerrada, falta z-order de personajes y cámara · R3 ⬜ · R6 ⬜. Informes: `docs/research/q1-movimiento.md`, `docs/research/q1-render.md`.
+**Estado (2026-10-28):** R1 ✅ cerrada por código · R4 ✅ estructura y consultas · R5 ✅ (patio = error nuestro, corregido) · R2 🔶 proyección cerrada y mecanismo de orden hallado (pintor por pares entre volúmenes, regla cilindro↔cilindro leída; falta el polígono de edificios y la cámara) · R3 ✅ estructura (A* sobre sectores, filtros, márgenes 11/4; falta detalle del embudo y del avance de puntos) · R6 ⬜ (requiere abrir el juego). Informes: `docs/research/q1-movimiento.md`, `q1-render.md`, `q1-rutas.md`, `q1-orden-dibujo.md`.
 
 | # | Pregunta | Destraba | Dónde mirar | Cómo se sabe que está resuelta |
 |---|---|---|---|---|

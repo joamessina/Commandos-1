@@ -1,0 +1,46 @@
+# Q1 — R3: pathfinding (`TPathTool`)
+
+Fuente: exe de la raíz, decompilado en `D:\Joaquin\research-c1\ghidra\all2` (`py -I tools/showfn.py D:/Joaquin/research-c1/ghidra/all2 <hex>`). **[hecho]** = leído con dirección; **[hip]** = hipótesis; **NO LEÍDO**.
+Estado: **estructura completa del buscador (A* sobre sectores) y de sus reglas de paso; suavizado y seguimiento leídos a nivel de diseño, no byte a byte.** No se probó contra el original en vivo (R6), así que ninguna ruta está comparada con la real.
+
+## Flujo [hecho]
+`ClassAcUsuarioGoto` → `FUN_00628470(x,y,z,sector, agua, agachado)` → `TPathTool::buscaCamino` `FUN_00627490`:
+1. Sector origen = `bicho+0xE4`; sector destino = `FUN_005F6C60(x,y)` si no viene dado (el destino debe estar en un sector que contenga el punto).
+2. Si ya está a menos de 2 u (`d² < 4.0`, `0x7941BC`) del destino → "ignorado (ya estaba en el destino)". Si el destino coincide con el de la ruta vigente y el origen no cambió, se reutiliza.
+3. `FUN_00624B90` (buscador) → cadena de sectores `{sector, índice de arista de salida, w1, w2, bits}` (0x14 B por paso). `0` = éxito.
+4. `FUN_006262E0` arma los **puntos de ruta** (inicio, intermedios, destino) y llama al suavizado `FUN_00625AF0`; `FUN_00626710(i)` fija el punto actual.
+5. Cada ciclo `mandaGoto` (`FUN_00629EF0`) → estado 0 `FUN_00628720`: manda al motor `BUSCADORGOTOPUNTO` (punto) o `GotoSector` (si el punto cae en un sector con arista especial); contador de atasco `+0x14`: si el motor no avanza (distancia² al punto < `0x79BD10`) lo incrementa; **a los 9 ciclos atascado re-planifica** (`FUN_006281A0`). Estados `1` y `2` = escalera/trepar (`MSGO_MOTOR_SETTREPAR/GETTREPAR`).
+
+## Buscador `FUN_00624B90` [hecho]
+Entradas: mapa de sectores, posición de inicio (x,y,z) y sector, destino (x,y,z) y sector, **filtro** (`código`, `contexto`) y salida.
+- Origen o destino nulos → fallo (−1). Mismo sector → ruta de 1 paso.
+- **Atajo de línea recta** `FUN_00624840`: recorre la recta inicio→destino arista a arista (`FUN_00624530`: busca la arista por donde sale el segmento); en cada arista cruzada llama al filtro y exige `(w1+w2)² ≤ largo²`. Si llega al sector destino, esa cadena es la ruta (no hay A*).
+- **A\*** si la recta falla. Nodo = 0x2C B: `[0] sector, [1] g, [2] h, [3]/[4] enlaces de la lista, [5] padre, [6] arista de entrada, [7..9] w1,w2,bits`; el nodo de un sector se guarda en `sector+0x70` (un nodo por sector; se limpia al final en `FUN_006244D0`). Pool de nodos acotado (`DAT_00874E9C`); si se agota, se deja de expandir ese nodo.
+  - Se saca el nodo de **menor f = g + h** (lista ordenada por `FUN_00623FF0`; ante empate sale primero el más viejo).
+  - Para cada arista del sector con vecino (`+0x18 ≠ 0`): filtro → `(w1+w2)² ≤ largo²` → vecino.
+  - **g(vecino) = g(nodo) + dist(punto medio de la arista de entrada, punto medio de la arista de salida) × `sector.costo(+0x1C)`**; la entrada del primer sector es el punto de inicio (`FUN_00624370`: puntos medios = (v0+v1)·0.5, `0x794660`). **h = distancia en planta del centroide (`+8,+0xC`) del vecino al destino** (`FUN_00624470`).
+  - Si el vecino aún no tiene nodo: se crea y se inserta ordenado. Si ya lo tiene y el g nuevo es menor: se **actualiza el nodo sin reordenar la lista** y sin reabrirlo.
+  - **Corta en cuanto genera el sector destino** (no al sacarlo): la ruta no es necesariamente la óptima.
+- Reconstruye la cadena desde el destino por los padres (`FUN_00624050`).
+
+## Filtro de aristas (callbacks) [hecho]
+Dos variantes, elegidas por `FUN_00628470`: a pie (`FUN_006112B0`, contexto `{0xC, fn, agachado}`) y agua (`FUN_00611470`, contexto `{8, fn}`).
+- **A pie** `FUN_00611220(ctx, sector, arista)` devuelve "bloqueada" salvo que el **vecino** cumpla: tipo ≠ 3 (DEEPWATER), sin **NTrans (0x4)** ni **NCamin (0x8)**, `FUN_00610D40(15, 20)` verdadero (escalón, abajo), y (agachado o sin **SoloAg 0x400**).
+- `FUN_00610D40(subida=15, bajada=20)`: si ni el sector ni el vecino son inclinados (`flags&1`): `z_centroide_vecino` ∈ [`z_sector − 20`, `z_sector + 15`]. Si alguno lo es: se comparan los dos extremos de la arista con el plano de cada sector, mismo rango.
+- **Agua** `FUN_00611410`: ambos sectores tipo 1 o 3 y vecino sin NTrans ni NCamin.
+- **Márgenes** (solo si la arista pasa): por cada extremo de la arista se busca (`FUN_00577770`, BFS por vecinos en radio **11.0** = `0x7A68CC`, radio del cuerpo + 1) si hay una arista **bloqueada** cerca; `w1` (extremo 0) y `w2` (extremo 1) valen **11.0** si la hay y **4.0** (`0x7941BC`) si no; `bits` = bit0/bit1 por extremo. Entonces el **ancho mínimo de un portal es 8 (libre), 15 (pared en un extremo) o 22 (en ambos)**.
+- Nota: el escalón de la ruta (+15/−20) es el mismo de `Unit` (`STEP_UP/STEP_DOWN` en `sectors.ts`).
+
+## Puntos de ruta y suavizado [hecho en diseño, detalle NO LEÍDO]
+- Cada paso aporta un **portal** (arista de salida) recortado: desde el extremo 0 se avanza `w1/largo` y desde el extremo 1 `w2/largo` (`FUN_00625750`; si el largo ≤ 1 se toma 0.49, `0x7A89C0`). Si el paso lleva el bit **4** (arista especial: escalera) el portal es un punto fijo guardado en la arista (`+0x1C..0x24`).
+- `FUN_00625AF0` es un **embudo (string-pulling)** sobre esos portales con intervalos angulares (`FUN_00674B40/674E60/674CA0`, `atan2`·constante); deja los puntos de giro necesarios entre inicio y destino. `FUN_00625900` calcula el punto de cruce del rayo con el portal y le resta un desplazamiento (`+8,+0xC` de la arista) por lado. **No leí** la lógica exacta de `FUN_00674B40/6749B0/674A10`; un embudo geométrico estándar con estos portales debería dar los mismos puntos de giro, pero no está comprobado.
+- Longitud total de la ruta = suma de tramos (`+0x14`).
+
+## Qué debe construir un port
+1. `findPath(start, startSector, goal, goalSector, mode)` = atajo de recta + A* como arriba, con el filtro a pie/agua y márgenes 11/4.
+2. Portales recortados + embudo → lista de puntos; el comando va punto a punto con `stepBody` (llegada con la tolerancia del motor, ya portada).
+3. Atasco: 9 ciclos sin avanzar → re-planificar.
+4. Escaleras (aristas con bit 4, `SETTREPAR`) y `GotoSector`: no portar hasta leerlas.
+
+## NO LEÍDO (R3)
+`FUN_00626470/6264A0` (cuándo se pasa al punto siguiente), `FUN_006281A0` (re-plan), `FUN_00627CD0/627990` (estados escalera), `FUN_00674B40/6749B0/674A10` (intervalos del embudo), `FUN_00610A10`, `FUN_00623E80/6242A0` (buffers), capacidad del pool de nodos, y cómo `BuscadorPuntoAPunto`/`GridSeek*` (otro buscador, usado por la IA enemiga) difiere de este.
