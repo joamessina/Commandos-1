@@ -38,12 +38,17 @@ export interface Wad {
   /** Cada paleta: 256 colores RGB565 little-endian (512 B). */
   readonly palettes: readonly Uint8Array[];
   readonly sprites: readonly Sprite[];
-  /** Sprites por nombre normalizado (sin `-` inicial, mayúsculas); el primero gana. */
+  /** Sprites por nombre de banco (ver `bankName`); el primero gana. */
   readonly byName: ReadonlyMap<string, Sprite>;
 }
 
-export function normalizeName(name: string): string {
-  return name.replace(/^-+/, '').toUpperCase();
+/**
+ * Nombre con el que el exe registra un sprite del WAD: quita UN guion inicial (FUN_005D02B0) y busca en mayúsculas
+ * (FUN_005CDE70). La búsqueda de un TILE del .VOL NO quita el guion: `-RUINA06.RLE` no coincide con nada y ese tile
+ * queda sin gráfico (invisible hasta que la explosión del edificio cambie los tiles).
+ */
+export function bankName(name: string): string {
+  return (name.startsWith('-') ? name.slice(1) : name).toUpperCase();
 }
 
 function cstr(b: Uint8Array, at: number, max: number): string {
@@ -146,7 +151,7 @@ export function parseWad(buf: Uint8Array): Wad {
     if (palette < 0 || palette >= palettes.length) throw new WadError(`${name}: paleta ${palette.toString()} inexistente`);
     const sprite = comp !== 0 ? decodeRle(name, b1, b2, palette) : decodeRaw(name, b1, h, w, palette);
     sprites.push(sprite);
-    const key = normalizeName(name);
+    const key = bankName(name);
     if (!byName.has(key)) byName.set(key, sprite);
   }
   if (p !== buf.length) throw new WadError(`${(buf.length - p).toString()} bytes sobrantes`);

@@ -2,9 +2,11 @@
  * Composición del mapa de una fase: pinta, EN EL ORDEN DEL ARCHIVO, cada TILE de cada POLY del .VOL
  * con el recorte (sx,sy,w,h) del sprite del Fase000N.WAD. Port 1:1 de tools/vol_render.py (verificado
  * visualmente con la fase 0; docs/engine/graficos-mapa.md §3.3).
- * Es una vista del mapa estático, NO el juego: sin estados de edificios destruidos, agua animada ni objetos.
+ * Estado inicial: edificios sanos. Los tiles de ruinas/explosión llevan un guion (`-RUINA06.RLE`, `-EXPLO00.RLE`) y el exe los
+ * busca sin quitarlo, así que no encuentran sprite y no se dibujan (FUN_00614040 → FUN_005CDE70).
+ * Es una vista del mapa estático, NO el juego: sin agua animada ni objetos.
  */
-import { BLEND, normalizeName, rgb565, TRANSPARENT, type Sprite, type Wad } from '../formats/wad.ts';
+import { BLEND, rgb565, TRANSPARENT, type Sprite, type Wad } from '../formats/wad.ts';
 import type { Tile, Vol } from '../formats/vol.ts';
 
 export interface MapOptions {
@@ -17,7 +19,7 @@ export interface MapImage {
   readonly height: number;
   /** RGBA, fila a fila. */
   readonly pixels: Uint8ClampedArray<ArrayBuffer>;
-  /** Tiles cuyo sprite no está en el WAD de la fase (p. ej. -EXPLO00.RLE en otro banco). */
+  /** Tiles sin gráfico: su nombre exacto no está en el banco (los `-…` ocultos hasta destruir el edificio, o sprites de otro banco). */
   readonly missing: number;
 }
 
@@ -66,7 +68,7 @@ export function composeMap(vol: Vol, wad: Wad, opts: MapOptions = {}): MapImage 
   for (const poly of vol.polys) {
     if (opts.skipWater === true && poly.name === 'AGUA') continue;
     for (const t of poly.tiles) {
-      const s = wad.byName.get(normalizeName(t.sprite));
+      const s = wad.byName.get(t.sprite.toUpperCase());
       const pal = s ? wad.palettes[s.palette] : undefined;
       if (!s || !pal) {
         missing++;

@@ -51,7 +51,8 @@ if __name__ == '__main__':
     dim, polys, extra = parse_vol(open(sys.argv[1], encoding='latin1').read())
     pals, sp, _ = W.parse(open(sys.argv[2], 'rb').read())
     by = {}
-    for s in sp: by.setdefault(s['name'].lstrip('-').upper(), s)
+    # regla del exe: el WAD registra el sprite sin UN guion inicial; el TILE se busca con su nombre exacto (FUN_005D02B0/FUN_005CDE70)
+    for s in sp: by.setdefault((s['name'][1:] if s['name'].startswith('-') else s['name']).upper(), s)
     cache, miss = {}, 0
     nt = sum(len(p['tiles']) for p in polys)
     assert all(len(p['tiles']) == p['num'][-1] for p in polys), 'ntiles de cabecera != TILE leidos'
@@ -63,7 +64,7 @@ if __name__ == '__main__':
     for p in polys:
         if p['name'] == 'AGUA' and '--skip-water' in sys.argv: continue
         for t in p['tiles']:
-            key = t['name'].lstrip('-').upper()
+            key = t['name'].upper()
             if key not in by: miss += 1; continue
             if key not in cache: cache[key] = sprite_rgba(by[key], pals)
             sw, sh, rows = cache[key]

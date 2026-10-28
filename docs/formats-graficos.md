@@ -6,6 +6,7 @@ Cada afirmación lleva **[exe]** (leída en el decompilado del exe de la raíz) 
 > - Tipo 7 **no** "activa anclajes": es `NHOTSPOTS`; tipo 8 es `HOTSPOT (x,y,k)` (máx. 5 por fotograma), no un anclaje. Los anclajes son los tipos 9/10/11 (`ANCLAJES/ANCLAJE/ANCLAJESEC`). Tipos: 0 NUM_SEQUENCES · 1 SEQUENCE (cíclica) · 2 NLSEQUENCE (no cíclica) · 3 CHAINSEQUENCE (2 enlaces) · 4 FRAME · 5 SPRITE · 6 SIZESPRITE.
 > - Ranuras de los tipos 1–3: `a` = período en **distancia** (unidades de mapa por ciclo, locomoción) y `b` = período en **ticks** de 1/20 s; paso = `(trunc(n·t/b) + trunc(n·d/a)) mod n`. Mi hipótesis de "velocidad" para ANDAR 33/CORRER 55 era incompleta: es distancia por ciclo de animación.
 > - Cabecera de 400 B del WAD = `int32[100]` (tabla de ranuras de paleta; en 168 de 245 archivos es basura de memoria que el cargador no usa). Campos del sprite: +0x48 alto, +0x4C ancho, +0x50 bits, +0x54 compresión (4 = RLE, 0 = crudo). Los 506 `.BMP` cumplen `len = h·(w+2)+1`.
+> - **Nombres de sprite:** el WAD registra cada sprite sin UN guion inicial, pero el `TILE` del `.VOL` se busca con el nombre exacto: `-RUINA06.RLE` no se encuentra y el tile no se dibuja (así el mapa arranca con edificios sanos). Ver `docs/engine/graficos-mapa.md` §7.
 > - El mapa gráfico lo dibuja el **`.VOL`** (polígonos con TILE `x,y,w,h,sx,sy,g,"sprite","flags"`); los `.TIL` **no los lee el juego** (`NTILE` no existe en el exe). `.SEC` (NIBS) cerrado al byte en los 11 archivos.
 
 

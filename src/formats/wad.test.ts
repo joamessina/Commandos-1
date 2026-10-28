@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { must, palette, rleParts, str, u32, wadBytes, type SpriteSpec } from '../testing/builders.ts';
-import { BLEND, normalizeName, OPAQUE, parseWad, rgb565, TRANSPARENT, WadError } from './wad.ts';
+import { BLEND, bankName, OPAQUE, parseWad, rgb565, TRANSPARENT, WadError } from './wad.ts';
 
 // 3x2: fila 0 = [transp, opaco 5, mezcla 7], fila 1 = 3 opacos (1,2,3)
 const ROWS = [[0xff, 1, 1, 5, 0xfe, 1, 7], [3, 1, 2, 3]];
@@ -21,10 +21,11 @@ describe('parseWad', () => {
   });
 
   it('indexa por nombre normalizado y el primero gana', () => {
-    const dup: SpriteSpec = { ...RLE, name: 'FOO.RLE' };
+    const dup: SpriteSpec = { ...RLE, name: 'FOO.RLE' }; // -Foo.rle se registra como FOO.RLE
     const w = parseWad(wadBytes([PAL], [RLE, dup]));
     expect(w.byName.get('FOO.RLE')).toBe(w.sprites[0]);
-    expect(normalizeName('--abc.rle')).toBe('ABC.RLE');
+    expect(bankName('-abc.rle')).toBe('ABC.RLE');
+    expect(bankName('--abc.rle')).toBe('-ABC.RLE'); // solo UN guion, como el cargador del exe
   });
 
   it('decodifica un sprite crudo (alto×(ancho+2)+1 bytes)', () => {

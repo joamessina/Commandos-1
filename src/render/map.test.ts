@@ -50,4 +50,14 @@ describe('composeMap', () => {
     expect(px(m.pixels, 4, 0, 0)).toEqual(RED);
     expect(px(m.pixels, 4, 1, 0)).toEqual(GREEN);
   });
+
+  it('un tile con guion no encuentra sprite y queda oculto, aunque el WAD tenga ese sprite (se registra sin guion)', () => {
+    const dashed = parseWad(wadBytes([palette([0, 0xf800, 0x07e0])], [{ name: '-RUINA.RLE', comp: 4, h: 2, w: 2, b1: r.b1, b2: r.b2, palette: 0 }]));
+    const oculto = composeMap(vol('0,0,2,2,0,0,0,"-RUINA.RLE","   "'), dashed);
+    expect(oculto.missing).toBe(1);
+    expect(px(oculto.pixels, 4, 0, 0)).toEqual([0, 0, 0, 255]);
+    const visible = composeMap(vol('0,0,2,2,0,0,0,"RUINA.RLE","   "'), dashed);
+    expect(visible.missing).toBe(0);
+    expect(px(visible.pixels, 4, 0, 0)).toEqual(RED);
+  });
 });
