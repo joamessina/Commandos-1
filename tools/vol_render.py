@@ -68,16 +68,19 @@ if __name__ == '__main__':
             if key not in by: miss += 1; continue
             if key not in cache: cache[key] = sprite_rgba(by[key], pals)
             sw, sh, rows = cache[key]
-            sx = t['sx'] % sw if by[key]['b2'] else t['sx']
-            w = min(t['w'], sw - sx) if by[key]['b2'] else t['w']
+            rle = bool(by[key]['b2'])
+            # RLE: sx % ancho y w recortado. BMP crudo: textura repetida, recorte modulo ancho y alto (FUN_0057F770, docs/research/q1-render.md)
+            sx = t['sx'] % sw
+            w = min(t['w'], sw - sx) if rle else t['w']
             for yy in range(t['h']):
                 sy = t['sy'] + yy
-                if not 0 <= sy < sh: continue
+                if not rle: sy %= sh
+                elif not 0 <= sy < sh: continue
                 dy = t['y'] + (t['h'] - 1 - yy if 'Y' in t['flags'] else yy)
                 if not 0 <= dy < Hd: continue
                 for xx in range(w):
-                    if not 0 <= sx + xx < len(rows[sy]): continue
-                    px = rows[sy][sx + xx]
+                    if rle and not 0 <= sx + xx < len(rows[sy]): continue
+                    px = rows[sy][(sx + xx) % sw]
                     if px[3] == 0: continue
                     dx = t['x'] + (w - 1 - xx if 'X' in t['flags'] else xx)
                     if 0 <= dx < Wd:

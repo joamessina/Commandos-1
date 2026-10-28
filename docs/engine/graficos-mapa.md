@@ -127,3 +127,9 @@ Los tiles de ruinas y explosión del `.VOL` llevan un **guion inicial** (`-RUINA
 - Esto corrige §3.3 (que atribuía los escombros a "estados alternativos" sin saber cuáles ocultar) y el render de referencia `tools/vol_render.py` (ahora aplica esta regla).
 - En el mapa 0: 319 de 821 tiles quedan sin gráfico (277 `-EXPLO` en los volúmenes `*EXP1` + 42 `-RUINA` en volúmenes sanos).
 - **Abierto:** en el patio de la izquierda del mapa 0 (x 560–1000, y 560–1000) el 12 % de los píxeles no lo pinta ningún tile visible. No se sabe qué lo cubre en el juego. El mar tampoco se ve: los tiles `AGUA` (`MAR0DST.BMP`) son la máscara del efecto `.WATER`, que no está implementado.
+
+## 8. Correcciones tras la investigación Q1 de render (2026-10-28; ver `docs/research/q1-render.md`)
+- **Proyección** [hecho, verificada con 19 edificios del mapa 0, mediana 0,3 px]: `px = x`, `py = 0,6428·y − 0,7660·z` (cos 50° y sin 50°); el `z` del MIS y el `cz` del VOL están en la misma escala; el `z` de un bicho sale del plano del sector (`z = A·x + B·y + C`).
+- **BMP crudo = textura repetida**: el recorte (`sx`,`sy`) se toma módulo ancho y alto (`FUN_0057F770`); `SUELO01.BMP` de la poly `BASE` trae `sx`,`sy` negativos. Esto explicaba el "patio negro" del mapa 0 (error de nuestro render, ya corregido en `src/render/map.ts` y `tools/vol_render.py`; el mapa 1 también cambió). Queda ~1,2 % de píxeles sin pintar junto a cajas, sin explicar.
+- `g` **sí** se guarda (`tile+0x38`) y se usa: el blitter recibe `d = g + cz_vol + zoff`; con flag `L` (0x08) recibe `d = g + 0x10`. `d` es un tope de nivel de luz por píxel, no una clave de orden. Los nombres que terminan en `EXP1` reciben `flags |= 1` (`FUN_00612820`). Esto corrige §3.2.
+- Sigue sin leerse: cómo se intercalan bichos, objetos y sombras con los volúmenes al dibujar; cámara (viewport, scroll, centrado); hotspot y sombra del bicho.

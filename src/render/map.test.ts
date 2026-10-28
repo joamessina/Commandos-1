@@ -60,4 +60,11 @@ describe('composeMap', () => {
     expect(visible.missing).toBe(0);
     expect(px(visible.pixels, 4, 0, 0)).toEqual(RED);
   });
+
+  it('repite la textura de los BMP crudos: sx y sy negativos o mayores al tamaño dan la vuelta (módulo ancho y alto)', () => {
+    const raw = parseWad(wadBytes([palette([0, 0xf800, 0x07e0])], [{ name: 'R.BMP', comp: 0, h: 1, w: 2, b1: [1, 2, 0, 0, 0], palette: 0 }]));
+    const m = composeMap(vol('0,0,4,2,-1,-1,0,"R.BMP","   "'), raw); // sx=-1 -> 1, sy=-1 -> 0 (alto 1)
+    expect([px(m.pixels, 4, 0, 0), px(m.pixels, 4, 1, 0), px(m.pixels, 4, 2, 0), px(m.pixels, 4, 3, 0)]).toEqual([GREEN, RED, GREEN, RED]);
+    expect([px(m.pixels, 4, 0, 1), px(m.pixels, 4, 3, 1)]).toEqual([GREEN, RED]); // la fila siguiente vuelve a la fila 0
+  });
 });

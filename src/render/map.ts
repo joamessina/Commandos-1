@@ -24,19 +24,21 @@ export interface MapImage {
 }
 
 function drawTile(img: Uint8ClampedArray, mw: number, mh: number, t: Tile, s: Sprite, pal: Uint8Array): void {
-  // RLE: sx módulo el ancho del sprite y w recortado; crudo: tal cual (vol_render.py).
-  const sx = s.rle ? t.sx % s.width : t.sx;
+  // RLE: sx módulo el ancho del sprite y w recortado. BMP crudo: textura repetida, recorte módulo ancho y alto
+  // (FUN_0057F770; el SUELO01.BMP de BASE trae sx,sy negativos). Evidencia: docs/research/q1-render.md.
+  const mod = (a: number, n: number): number => ((a % n) + n) % n;
+  const sx = mod(t.sx, s.width);
   const w = s.rle ? Math.min(t.w, s.width - sx) : t.w;
   const flipX = t.flags.includes('X');
   const flipY = t.flags.includes('Y');
   for (let yy = 0; yy < t.h; yy++) {
-    const sy = t.sy + yy;
+    const sy = s.rle ? t.sy + yy : mod(t.sy + yy, s.height);
     if (sy < 0 || sy >= s.height) continue;
     const dy = t.y + (flipY ? t.h - 1 - yy : yy);
     if (dy < 0 || dy >= mh) continue;
     for (let xx = 0; xx < w; xx++) {
-      const px = sx + xx;
-      if (px < 0 || px >= s.width) continue;
+      const px = s.rle ? sx + xx : (sx + xx) % s.width;
+      if (px >= s.width) continue;
       const k = sy * s.width + px;
       const mode = s.mode[k] ?? TRANSPARENT;
       if (mode === TRANSPARENT) continue;
