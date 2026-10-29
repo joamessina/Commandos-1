@@ -32,9 +32,35 @@ Parser de una entrada: **`FUN_00682A60`** (llamada desde el cargador de la inten
 3. Música: stream del WAV del `.MUSICA` en bucle a 0,75·VOLMÚSICA; `MUERTE.WAV`/`MCOMPLET.WAV` una vez al final.
 4. IA: usar los 48 radios de oído (`obj-explosivos.md`) con `FUN_00680D50(obj,1)` al emitir ruido de gameplay; independientes de 1.
 
-## Dudas abiertas
+## Dudas abiertas (1, 2 y 3 cerradas en el Cierre 2, al final)
 1. **Qué sonido suena para cada evento de gameplay con qué volumen**: la tabla de 152 tags y los 48 radios de oído están cerrados; el volumen por llamada (`0,75` casi siempre) está visto en cada acción (`ENTE`, `CACH`, `XPLO`, `TKTK`, `CEPO`, …) pero no se hizo el barrido sistemático de los ~124 llamadores de `FUN_0067F9C0`; es una tarea de lectura mecánica (un grep de `push`/`fld` antes de la llamada, `tools/callargs.py`), no una incógnita del formato.
 2. **Fades de música** y significado de `+0x49C`/`+0x46C` fuera de los estados 0/6..12: no se encontró lógica de fundido; la corte es inmediata (`FUN_0067E230` cierra el stream).
 3. **`FUN_0067F5A0` (sonido continuo)**: no se confirmó con el volumen de una entrada `BUCLADO` si aplica la atenuación posicional o el volumen fijo; `MAPA0009` es la única misión con `.BUCLADO` (`RIO1`, `VOLUMEN 0,05`, `POS [270 3484 0]`).
 4. **`.HANDLE`** del ambiente (tag opcional de 4 letras): se guarda en el registro pero no se vio consumidor distinto del propio `FUN_00682560`; ningún `.MIS` real lo usa (`grep` en los 11 `MAPA*.MIS`).
 5. **Sensores de zona** (`.SENSORES_SND_ZONA`, códigos `REAC`, `BLBL`, `INIC`, `NORT`): su mapeo a mensajes sigue en sonido-parsers §1.5 como no leído.
+
+## Cierre 2 (2026-10-29): volumen por llamada, sonido continuo, fades
+Cierra las dudas 1, 2 y 3 de arriba. Barrido hecho con desensamblado: se tomaron **todos** los `call` (E8, siguiendo los `jmp` de 5 B) a `FUN_0067F9C0` y a `FUN_00681B90` y se reconstruyeron los `push`/`fld` previos (volumen = último argumento empujado primero). **[hecho]** salvo lo marcado.
+
+### S2.1 Volumen de cada llamada [hecho]
+- **Todos los sonidos de gameplay se piden con volumen base `0,75`** (`fld [0x793240]`). Barrido:
+  - `FUN_0067F9C0(tag, pos, vol)`: **75 llamadas**. 70 cargan `0,75` (`0x793240`) justo antes; las 5 restantes están dentro de la propia biblioteca: `FUN_006817A0` y `FUN_006817F0` (envoltorios sin llamadores, el volumen es un parámetro), `FUN_00681B90` (envoltorio de gameplay, ver abajo), `FUN_00682360` (tick de ambiente: `vol` = `.VOLUMEN` del registro, `+0x24`) y `FUN_00683040` (actualiza un sonido de objeto: `vol` = `obj+0x14`).
+  - `FUN_00681B90(categoría_IA, tag, objeto, vol)` (= ruido para la IA `FUN_00681660` + `FUN_0067F9C0(tag, objeto+8, vol)`): **81 llamadas, las 81 con `vol = 0,75`** (77 literales + 4 que cargan `0x793240` antes de un `call` intercalado: `0x433B22`, `0x440E0D`, `0x47CF1C`, `0x492488`). El "132 llamadores" de `readbatch` cuenta también los `jmp` de relleno.
+  - Resultado: **no hay ningún sonido de gameplay con volumen distinto de 0,75**; lo que cambia lo que se oye es (a) la atenuación por distancia (`vol·(1 − d/800)`), (b) `VOLEFECTOS` (categoría 0 de `0x878580`) y (c) los `.VOLUMEN` de ambiente (0,05–0,6 por entrada de `.AMBIENTE`).
+- **Tabla fourcc → categoría de ruido IA** (primer argumento de `FUN_00681B90`; 2 = `SONIDO_ATENCION`, 3 = `SONIDO_PELIGRO`, ver `organos.md`/`obj-explosivos.md`), con número de sitios de llamada:
+  - **3 (peligro)**: `ALRM` ×14, `AL10`, `EBAR`, `GRAN`, `KI03` ×2, `MET0`, `XPLO` ×2, `ZO01`, `ZO02`.
+  - **2 (atención)**: `ALTO` ×6, `ATAK` ×13 (+2 con categoría variable), `VMUE` ×5, `VESP` ×3, `LADR` ×3, `AVVE` ×2, `DETE` ×2, `QIEN` ×2, `AL01`, `AL02`, `AL04`, `APOE`, `AVAT`, `ESPG`, `RUGA`, `RUGV`.
+  - **1**: `TELF` ×1. **Variable (registro)**: `ESPI` y 5 sitios donde el fourcc también viene en un registro (`0x443EE8`, `0x44B531`, `0x4927A1`, `0x4A26B4`, `0x6FE69E`: tag dependiente del bicho/objeto).
+- **Sonidos sin ruido para la IA** (llamada directa a `FUN_0067F9C0`, 0,75): `AL01 AL03 AL04 AL05 AL07 AL08 AL10 AL12 AL13 ASPA CACH CAFU CAJA CBAR CEPO CLTR CUCH ELSH EMPU ENTE ESCL ESPO FTRN FUSL GAL1 GAL2 HERI KI01 KI02 MAQP OLEA PUTA SBAR SCUE SOCU SOLD ZO03` y otros 22 sitios con el fourcc en un registro (tabla por tipo de objeto).
+- Para el port: `playPos(tag, posMundo, 0.75)`; la categoría (1/2/3) sólo sirve para el ruido de la IA (radios de `0x821DE0`).
+
+### S2.2 Sonido continuo `FUN_0067F5A0` (`BUCLADO`) [hecho]
+- Sí **atenúa por distancia**, pero sólo una vez. `FUN_0067F5A0(handle, s)` mira `s+4` (flag "posicional"): `≠ 0` → `vol = catVol · s.vol · (1 − d/800)` y pan `Δx/800` (`FUN_0067EFA0`, `R = 800,0` = double `0x7AEBA8`, `pos = s+8`); `= 0` → `vol = catVol[s+0x14] · s.vol`, sin atenuación. `FUN_0067E530(s, pos)` (llamado por el alta de la entrada, `FUN_00682700`) copia `POS` a `s+8..+0x10` y **pone `s+4 = 1`**; `FUN_0067E560` fija `s.vol` (= `.VOLUMEN`). Por lo tanto las entradas `.BUCLADO` del `.AMBIENTE` son **posicionales** (la de `MAPA0009`: `RIO1`, `VOLUMEN 0,05`, `POS [270 3484 0]`).
+- El tick de ambiente (`FUN_00682970`) llama `FUN_0067FA80(1)` **una sola vez** (marca `+0x2C = 1`) y `FUN_0067FA80` a su vez a `FUN_0067F5A0` una vez: **el volumen/pan se calculan en ese instante** con el oyente de entonces y no se vuelven a actualizar mientras suena el bucle **[hecho el código; no se encontró otro actualizador; hip: el original queda con el volumen del arranque]**. Con `R = 800` y la cámara del inicio de la misión 9 lejos de `(270, 3484)`, el río puede quedar mudo.
+
+### S2.3 Fades de música [hecho: no hay]
+- El handle de la música de misión (`+0x46C` del motor) sólo se lee/escribe en abrir (`FUN_005BCEF0`), cerrar (`FUN_005BB6B0/5BB6E0/5BB7D0/5C30A0/5C6640`, cada una `FUN_0067E230` + `+0x46C = 0`) y comprobar (`FUN_005BF6B0`). Ninguna ajusta el volumen en el tiempo: **no hay fundido en el motor**, el corte es inmediato; el volumen del stream es 0,75·`VOLMUSICA` fijo.
+- Los únicos "fades" son de **guion**: en los `BRIExxxx.SCR` (briefing) los pasos `10 STARTWAVELEVELM #.35 / #.25 / #.15 / #.05 / #.00` bajan el nivel del WAV del briefing en 5 escalones de 10 ticks; es decisión del script, no del motor.
+
+### Dudas abiertas tras el Cierre 2
+Quedan las 4 y 5 de arriba (`.HANDLE`, `.SENSORES_SND_ZONA`) sin tocar (fuera del encargo). El `Legacy\coman_mp.exe` es otro binario (3,5 MB): las direcciones de estas notas son de la raíz; no se recorrió el barrido de volúmenes en Legacy.
