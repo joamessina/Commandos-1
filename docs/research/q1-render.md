@@ -110,3 +110,15 @@ Constructor de la matriz de cámara; cámara/viewport/scroll; orden de dibujo bi
 
 
 > **Nota del coordinador (2026-10-28):** las direcciones `0x7A5B00` y `0x7A9350` que este informe da para cos50°/sin50° **no contienen esos floats** (se leyó basura); la proyección `py = 0,6428·y − 0,7660·z` sí está verificada empíricamente (19 edificios, mediana 0,3 px). Buscar las constantes reales si hace falta.
+
+## Cierre (2026-10-29) [hecho, detalle en `docs/lectura/render.md`]
+Lo que estaba NO LEÍDO y ya se leyó (cada punto con direcciones en `docs/lectura/render.md`):
+- **Constructor de la matriz** (§7 NO LEÍDO): `FUN_005B7EC0(50.0f)` (ángulo en grados, float `0x795C74`) arma una rotación en X, fila mayor `[1 0 0; 0 c −s; 0 s c]`; la llama `FUN_005C2790` sobre `*(DAT_0083FEA0+0x140)`. `sx = x`, `sy = 0,6428·y − 0,7660·z` (truncado, `vol+0x108/0x10C`). **Corrección a la nota del coordinador y al §0/§1.4**: `0x7A5B00` y `0x7A9350` son **doubles** = 0,6427876 y 0,7660444 (cos/sin 50°); los leyeron como float. En el picking el índice es fila mayor (`sx = m0x+m1y+m2z`, `sy = m3x+m4y+m5z`).
+- **Hotspot/posición del bicho** (R2.4): esquina sup. izq. del sprite = `(trunc(x), trunc(0,6428·y − 0,766·z)) + (hx,hy)` del fotograma (`FUN_00590F20` → `tile+0x18/0x1C`; `FUN_006BCED0` suma `vol+0x108/0x10C`). `COMA0000.RLE` 27×39 con `(−14,−35)`.
+- **Sombra**: no hay sombra genérica de personajes. Sombras de edificios/objetos = tiles horneados (`IDAVIO*SOMBRA*`, `.TILESBASEDESAPARECERAN`); voladores = secuencia `*SOMBRA` del ANM (`ClassAcPajaro`). `BRILLOS`/`CHIRIVITAS` = estrellitas del atontado.
+- **EXTRAINFO** (§4.3): hasta 8 **ids de material** (tabla de 35 en `0x824098`: `TEJAGRIS`, `CEMENTO`, `MADERA`, `CHAPA…`, `BISMROT1..6`) que consume la destrucción del edificio (`FUN_0045EC80`/`FUN_004603B0`): 8 trozos de ese material por byte.
+- **Bit 0x01 de flags de tile**: solo la rama de blit rotado del volumen dinámico (`FUN_006BCED0`); no se activa en el mapa estático.
+- **`d` y `L`** (§2.1/§4.2): **`vol+0xD4` no es `cz`**: vale 0 (o −16 con `.ILUMINADA 1`, solo `MAPA0009.MIS`); `disp[9]` = 0. Por eso `d = g` (0) y no hay `d` = 253..462 que explicar. Pesos de luz: `T[k] = FUN_006459C0(min(max(k,d), max(L,d)))`, byte de mapa de luz `k` (0..15), sin signo.
+- **Luz/filtro** (§4.4): filtro por defecto lineal `c·n/16`; filtro nocturno `ClassNightColorFilter` (global `0x81BF40`) solo en paletas del `.WADSPRITES` (`FASE0004/0005.WAD` de `BMPS\SPRITES`) de `MAPA0004/5/9`; luces puntuales = disco de nivel 15 (r ≤ 0,75) → 0 (r=1) en `FUN_00583FA0`. **Misión 0 (día): sin tablas, colores directos** (hip en la ruta del dispositivo). La noche completa queda con dudas concretas (ver `render.md`).
+- **1,2 % negro** (§4.1): 1 709 px sin tile; el único tile oculto que los cubre (`ANTI02EXP1 -EXPLO00.RLE`) no tiene sprite en ningún WAD; es negro también en el juego (hip fuerte). Detalle en `render.md` §9.
+- **Orden de dibujo**: verificado sin huecos; el bit 0 de `vol+4` (`*EXP1`) solo cambia el orden de inserción (lista diferida), no oculta.
