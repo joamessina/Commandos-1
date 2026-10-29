@@ -55,3 +55,29 @@ describe('Boat (SimBalsa)', () => {
     expect(b.dest).toBeNull();
   });
 });
+
+describe('Boat: límites del Sim', () => {
+  it('con VELMAX alto el desplazamiento se limita a 0,5·R por ciclo', () => {
+    const b = new Boat(0, 0, 0, 0, [], null, 30, 40);
+    b.goTo({ x: 1000, y: 0 });
+    for (let i = 0; i < 30; i++) {
+      const x0 = b.x;
+      b.tick();
+      expect(b.x - x0).toBeLessThanOrEqual(15 + 1e-9);
+    }
+  });
+
+  it('tocar tierra frena en seco y deja el giro al 75 % en el ciclo siguiente', () => {
+    const b = new Boat(495, 0, 0, 0, [], sea);
+    b.goTo({ x: 900, y: 300 });
+    for (let i = 0; i < 20; i++) b.tick();
+    expect(b.x).toBeLessThan(500);
+    expect(b.touchedLand).toBe(true);
+  });
+
+  it('sin motor ni destino se queda quieto', () => {
+    const b = new Boat(5, 5, 0, 10, [], null);
+    b.tick();
+    expect([b.x, b.y, b.ang]).toEqual([5, 5, 10]);
+  });
+});

@@ -125,3 +125,29 @@ describe('Unit en un bote', () => {
     expect(new Unit('Z', anm, 0, 0, 0, 0, sectors).disembark()).toBe(false); // no va en ningún bote
   });
 });
+
+describe('loadWorld: casos límite', () => {
+  const mac = (n: string): string | undefined =>
+    ({
+      RARA: '.VARIABLES [ X VN.7.5 Cnombre ] .ACCIONES [ solo [ [ ] .CARISMA 1 ] [ [ [ ] ] ] [ [ [ nombre ] [ .K 1 ] ] [ .Z 2 ] ] [ AcOk [ .A 1 ] ] ]',
+      CUERPO: '.CLASS BICHO .VOLCOLISION [ ] .ACCIONES [ [ AcX [ ] ] ]',
+    })[n];
+  const w = loadWorld('.MISSION [ .ELEMENTOS [ [ .CLASS MACRO .MACRO RARA ] [ .CLASS MACRO ] [ .CLASS MACRO .MACRO CUERPO .XYZ [ a b ] ] 7 ] ]', { difficulty: 'FACIL', macro: mac });
+  it('macro sin .CLASS = BICHO, sin .TOKEN toma el nombre de la macro, sin .XYZ el origen; entradas raras de .ACCIONES se ignoran', () => {
+    expect(w.map((e) => [e.token, e.cls, e.x, e.y, e.z, e.angle, e.anim, e.radius])).toEqual([
+      ['RARA', 'BICHO', 0, 0, 0, 0, null, 0],
+      ['CUERPO', 'BICHO', 0, 0, 0, 0, null, 0],
+    ]);
+    expect(w[0]?.actions.map((a) => a.name)).toEqual(['AcOk']);
+    expect(w[1]?.actions.map((a) => a.name)).toEqual(['AcX']);
+  });
+
+  it('un MACRO sin .MACRO no se crea', () => {
+    expect(loadWorld('.MISSION [ .ELEMENTOS [ [ .CLASS MACRO .TOKEN T ] ] ]', { difficulty: 'FACIL', macro: mac })).toEqual([]);
+  });
+
+  it('boatSlots ignora plazas incompletas', () => {
+    const e = loadWorld('.MISSION [ .ELEMENTOS [ [ .CLASS BICHO .ACCIONES [ [ acPilotaje [ .INFO [ [ .ENTRADA [ 1 2 ] ] 3 [ .ENTRADA [ 1 2 ] .SALIDA [ 3 4 ] ] ] ] ] ] ] ] ]', { difficulty: 'FACIL', macro: mac })[0];
+    expect(e && boatSlots(e)).toEqual([{ entry: [1, 2], exit: [3, 4], angle: 0 }]);
+  });
+});

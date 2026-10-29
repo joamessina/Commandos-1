@@ -100,6 +100,7 @@ function build(inst: readonly Node[], opts: WorldOpts, depth: number, parent: El
   const cls = asText(find(inst, '.CLASS'))?.toUpperCase() ?? '';
   let block: Node[] = [...inst];
   let macro: string | null = null;
+  let macroClass = cls;
   if (cls === 'MACRO') {
     macro = asText(find(inst, '.MACRO')) ?? null;
     const text = macro ? opts.macro(macro) : undefined;
@@ -107,13 +108,15 @@ function build(inst: readonly Node[], opts: WorldOpts, depth: number, parent: El
     const mac = parseClave(text);
     const vars = macroDefaults(mac);
     for (const [k, v] of instanceVars(inst)) vars.set(k, v);
-    block = [...(subst(mac, vars) as Node[]), ...inst];
+    const expanded = subst(mac, vars) as Node[];
+    macroClass = asText(find(expanded, '.CLASS'))?.toUpperCase() ?? 'BICHO';
+    block = [...expanded, ...inst];
   }
   const xyz = asNumbers(find(inst, '.XYZ')) ?? asNumbers(find(block, '.XYZ'));
   const cyl = asList(find(asList(find(block, '.VOLCOLISION')) ?? [], 'CILINDRO'));
   const el: Elem = {
     token: asText(find(inst, '.TOKEN')) ?? macro ?? '',
-    cls: cls === 'MACRO' ? (asText(find(block, '.CLASS')) ?? 'BICHO').toUpperCase() : cls,
+    cls: macroClass,
     macro,
     bando: (asText(find(block, '.BANDO')) ?? '').toUpperCase(),
     x: xyz?.[0] ?? 0,
@@ -129,14 +132,14 @@ function build(inst: readonly Node[], opts: WorldOpts, depth: number, parent: El
     parent,
   };
   (parent ? parent.children : out).push(el);
-  if (depth < MAX_DEPTH) for (const c of asList(find(inst, '.ELEMENTOS')) ?? []) build(asList(c) ?? [], opts, depth + 1, el, out);
+  if (depth < MAX_DEPTH) for (const c of asList(find(inst, '.ELEMENTOS')) ?? []) if (Array.isArray(c)) build(c, opts, depth + 1, el, out);
 }
 
 /** Elementos de nivel superior de `.MISSION .ELEMENTOS` (con sus hijos anidados). */
 export function loadWorld(misText: string, opts: WorldOpts): Elem[] {
   const mission = asList(find(parseClave(misText), '.MISSION'));
   const out: Elem[] = [];
-  for (const e of asList(find(mission ?? [], '.ELEMENTOS')) ?? []) build(asList(e) ?? [], opts, 0, null, out);
+  for (const e of asList(find(mission ?? [], '.ELEMENTOS')) ?? []) if (Array.isArray(e)) build(e, opts, 0, null, out);
   return out;
 }
 

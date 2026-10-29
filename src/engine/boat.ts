@@ -82,7 +82,8 @@ export class Boat {
       const dx = this.dest.x - this.x;
       const dy = this.dest.y - this.y;
       if (dx * dx + dy * dy >= this.vmax * this.vmax + ARRIVE_PREC) {
-        let delta = dx * dx + dy * dy > 4 ? norm180(Math.atan2(dy, dx) / DEG - this.ang) : 0;
+        // (el exe anula Δ si d² ≤ 4, pero aquí d² ≥ v² + 64 siempre)
+        let delta = norm180(Math.atan2(dy, dx) / DEG - this.ang);
         let v = this.vmax;
         if (this.reverse) {
           v = -v;
