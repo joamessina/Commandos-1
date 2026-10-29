@@ -19,6 +19,9 @@ import { newBody, runSpeed, stepBody, WALK_SPEED, type Body, type Vec } from './
 
 export { COS50, SIN50 };
 
+/** Energía inicial de los comandos (tabla `0x815198`). */
+export const COMMANDO_ENERGY: Readonly<Record<string, number>> = { COMANDO: 200, FRANCOT: 100, LANCHERO: 160, ARTIFIC: 130, CONDUC: 130, ESPIA: 160 };
+
 /** Mundo (x,y,z) -> píxel de mapa. Verificado con 19 edificios del mapa 0 (mediana 0,3 px): docs/research/q1-render.md. */
 export const project = (x: number, y: number, z: number): { px: number; py: number } => ({ px: x, py: COS50 * y - SIN50 * z });
 
@@ -45,6 +48,13 @@ export class Unit {
   running = false;
   /** Sector que pisa (null sin mapa de sectores o fuera de todos). */
   sector: Sector | null = null;
+  /** Energía (`bicho+0x208`): tabla 0x815198 para los comandos. */
+  energy = 100;
+  dead = false;
+  /** Agachado (0x23C & 0x40): lo ven a la mitad de alcance. */
+  crouched = false;
+  /** Velocidad al andar (VEL de la ruta del soldado); null = la del jugador, 2,5. */
+  speed: number | null = null;
   /** Vehículo en el que va (su plaza = `seat`): el cuerpo sigue a la plaza y no camina. */
   boat: Boat | null = null;
   private seat = 0;
@@ -111,6 +121,22 @@ export class Unit {
     return !s || simBlocked(s) || (s !== this.sector && !stepOk(groundZ(s, x, y) - this.z));
   };
 
+  /** Detiene la orden de caminar en curso. */
+  stop(): void {
+    this.path = [];
+    this.target = null;
+  }
+
+  /** Coloca al personaje (teletransporte de JUMP, al bajar de un vehículo): posición y rumbo, y vuelve a buscar el sector. */
+  place(x: number, y: number, ang: number): void {
+    this.body.x = x;
+    this.body.y = y;
+    this.body.ang = ang;
+    this.body.vx = this.body.vy = 0;
+    this.stop();
+    this.land();
+  }
+
   /** Sube a una plaza del bote (animación EMBARCADO). */
   board(boat: Boat, seat: number): void {
     this.boat = boat;
@@ -157,13 +183,37 @@ export class Unit {
     return false;
   }
 
+  /**
+   * `AcMuerte` (docs/lectura/muerte.md §3): si la energía ≤ daño muere (energía 0), si no se descuenta. Devuelve true si murió con este golpe.
+   * shortcut: sin animación de herido ni voces; la muerte anima MUERTE1 y deja el cuerpo.
+   */
+  hit(damage: number): boolean {
+    if (this.dead) return false;
+    if (this.energy > damage) {
+      this.energy -= damage;
+      return false;
+    }
+    this.energy = 0;
+    this.dead = true;
+    this.path = [];
+    this.target = null;
+    this.body.vx = this.body.vy = 0;
+    this.boat = null;
+    if (this.anim.has('MUERTE1')) this.anim.set('MUERTE1');
+    return true;
+  }
+
   /** Un ciclo de lógica (1/20 s). */
   tick(): void {
+    if (this.dead) {
+      this.anim.advance(0, 1);
+      return;
+    }
     if (this.boat) {
       this.ride();
       return;
     }
-    const v = this.running ? runSpeed(this.token) : WALK_SPEED;
+    const v = this.running ? runSpeed(this.token) : (this.speed ?? WALK_SPEED);
     const wp = this.path[0] ?? null;
     const r = stepBody(this.body, wp, v, isWater(this.sector) ? 0.5 : 1, this.blocked);
     this.land();

@@ -1,0 +1,162 @@
+import { describe, expect, it } from 'vitest';
+import { parseAnm } from '../formats/anm.ts';
+import { parseSec, SectorFlag } from '../formats/sec.ts';
+import { anmSeq, bnm, secBytes } from '../testing/builders.ts';
+import { RouteType, type Route } from './patrol.ts';
+import { SectorMap } from './sectors.ts';
+import { Order, Soldier, type Shot, type SoldierWorld } from './soldier.ts';
+import { COMMANDO_ENERGY, Unit } from './unit.ts';
+import { inCone, lineClear, sees } from './vision.ts';
+
+const anm = parseAnm(
+  bnm([{ type: 0, slots: [5] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8), ...anmSeq(1, 'APUNTAR', 1, 0, 0, 8), ...anmSeq(2, 'DISPARAR', 1, 0, 5, 8), ...anmSeq(2, 'MUERTE1', 2, 0, 20, 8)]),
+);
+const unit = (x: number, y: number, ang = 0, token = 'S'): Unit => new Unit(token, anm, x, y, 0, ang);
+
+describe('vision', () => {
+  const v = { x: 0, y: 0, heading: 0 };
+  it('cono de 70° y alcance 800; el radio del blanco da margen en el borde', () => {
+    expect(inCone(v, { x: 500, y: 0, radius: 10, low: false })).toBe(true);
+    expect(inCone(v, { x: 801, y: 0, radius: 10, low: false })).toBe(false);
+    expect(inCone(v, { x: 500, y: 300, radius: 10, low: false })).toBe(true); // 31°
+    expect(inCone(v, { x: 500, y: 400, radius: 10, low: false })).toBe(false); // 38,7°
+    expect(inCone(v, { x: -100, y: 0, radius: 10, low: false })).toBe(false); // a la espalda
+    expect(inCone(v, { x: 500, y: 350, radius: 100, low: false })).toBe(true); // 35°: el margen r lo deja entrar
+  });
+
+  it('agachado o buceando: la mitad del alcance; respeta .MOD y .ANG', () => {
+    expect(inCone(v, { x: 500, y: 0, radius: 10, low: true })).toBe(false);
+    expect(inCone(v, { x: 399, y: 0, radius: 10, low: true })).toBe(true);
+    expect(inCone({ ...v, range: 320, angle: 40 }, { x: 321, y: 0, radius: 10, low: false })).toBe(false);
+    expect(inCone({ ...v, heading: 90 }, { x: 0, y: 300, radius: 10, low: false })).toBe(true);
+  });
+
+  // x 0..100 llano, 100..200 Ocluso, 200..300 llano
+  const verts: [number, number][] = [];
+  for (let i = 0; i <= 3; i++) verts.push([i * 100, 0], [i * 100, 100]);
+  const quad = (i: number, extra: object = {}): { verts: number[] } => ({ verts: [i * 2, i * 2 + 2, i * 2 + 3, i * 2 + 1], ...extra });
+  const map = new SectorMap(parseSec(secBytes({ verts, a: [quad(0), quad(1, { flags: SectorFlag.Ocluso }), quad(2)], tw1: [[-1, 1, -1, -1], [-1, 2, -1, 0], [-1, -1, -1, 1]] })));
+  it('un sector Ocluso entre los dos corta el rayo; el del propio observador o blanco no; sin mapa no hay oclusión', () => {
+    expect(lineClear(map, 50, 50, 250, 50)).toBe(false);
+    expect(lineClear(map, 150, 50, 250, 50)).toBe(true); // el observador está dentro del Ocluso
+    expect(lineClear(map, 50, 50, 150, 50)).toBe(true); // el blanco está dentro
+    expect(lineClear(map, 10, 50, 90, 50)).toBe(true);
+    expect(lineClear(null, 50, 50, 250, 50)).toBe(true);
+    expect(sees({ x: 50, y: 50, heading: 0 }, { x: 250, y: 50, radius: 10, low: false }, map)).toBe(false);
+    expect(sees({ x: 50, y: 50, heading: 0 }, { x: 90, y: 50, radius: 10, low: false }, map)).toBe(true);
+  });
+});
+
+const route = (...xs: number[]): Route => ({ name: 'r', type: RouteType.PingPong, points: xs.map((x) => ({ x, y: 0, z: 0, wait: 0, angle: 0, vel: 2 })) });
+interface Fx {
+  world: SoldierWorld;
+  shots: Shot[];
+}
+const mkWorld = (commandos: Unit[], rng = (): number => 0): Fx => {
+  const shots: Shot[] = [];
+  return { shots, world: { commandos, sectors: null, rng, onShot: (_s, shot) => shots.push(shot) } };
+};
+const run = (s: Soldier, w: SoldierWorld, n: number): void => {
+  for (let i = 0; i < n; i++) s.tick(w);
+};
+
+describe('Soldier', () => {
+  it('patrulla su ruta a la VEL de la ruta y llega al segundo punto', () => {
+    const u = unit(0, 0);
+    const s = new Soldier('S', u, route(0, 100));
+    const { world } = mkWorld([]);
+    run(s, world, 20);
+    expect(u.body.x).toBeGreaterThan(20);
+    expect(u.speed).toBe(2);
+    let max = 0;
+    for (let i = 0; i < 80; i++) {
+      s.tick(world);
+      max = Math.max(max, u.body.x);
+    }
+    expect(max).toBeGreaterThan(95); // llegó al punto 100 y vuelve (ida y vuelta)
+    expect(u.body.x).toBeLessThan(max);
+    expect(s.order).toBe(Order.Patrol);
+  });
+
+  it('ve a un comando: apunta 40 ciclos y dispara con daño 30 y recarga 15; mata a FRANCOT a los 4 tiros', () => {
+    const c = unit(300, 0, 180, 'FRANCOT');
+    c.energy = COMMANDO_ENERGY['FRANCOT'] ?? 0;
+    const s = new Soldier('S', unit(0, 0), null);
+    const { world, shots } = mkWorld([c]);
+    run(s, world, 5);
+    expect(s.order).toBe(Order.Aim);
+    expect(shots).toHaveLength(0);
+    run(s, world, 40);
+    expect(s.order).toBe(Order.Shoot);
+    run(s, world, 5 + 15 * 4);
+    expect(shots.length).toBe(4);
+    expect(shots[0]).toMatchObject({ toX: 300, hit: true });
+    expect(c.dead).toBe(true);
+    expect(c.energy).toBe(0);
+    expect(s.order).toBe(Order.Patrol); // mató al blanco: vuelve a su puesto
+  });
+
+  it('si pierde de vista al blanco va a su última posición, espera y vuelve al puesto', () => {
+    const c = unit(300, 0, 180);
+    const u = unit(0, 0);
+    const s = new Soldier('S', u, null);
+    const { world } = mkWorld([c]);
+    run(s, world, 10);
+    expect(s.order).toBe(Order.Aim);
+    c.body.x = 300;
+    c.body.y = 2000; // se esconde
+    run(s, world, 25);
+    expect(s.order).toBe(Order.Investigate);
+    run(s, world, 400);
+    expect(s.order).toBe(Order.Patrol);
+    expect(Math.hypot(u.body.x, u.body.y)).toBeLessThan(5);
+  });
+
+  it('oye un disparo y va a investigar; muerto no reacciona; kill() deja el cuerpo', () => {
+    const u = unit(0, 0);
+    const s = new Soldier('S', u, null);
+    const { world } = mkWorld([]);
+    s.hear(100, 0);
+    expect(s.order).toBe(Order.Investigate);
+    run(s, world, 100);
+    expect(u.body.x).toBeGreaterThan(50);
+    s.kill();
+    expect(s.dead).toBe(true);
+    expect(s.order).toBe(Order.Dead);
+    s.hear(5, 5);
+    run(s, world, 5);
+    expect(s.order).toBe(Order.Dead);
+    s.kill();
+    expect(u.anim.name).toBe('MUERTE1');
+  });
+
+  it('un comando agachado se ve solo a la mitad del alcance; los muertos no se ven', () => {
+    const c = unit(600, 0, 180);
+    c.crouched = true;
+    const s = new Soldier('S', unit(0, 0), null);
+    const { world } = mkWorld([c]);
+    run(s, world, 10);
+    expect(s.order).toBe(Order.Patrol);
+    c.crouched = false;
+    run(s, world, 3);
+    expect(s.order).toBe(Order.Aim);
+    const d = unit(100, 0);
+    d.hit(1e9);
+    const t = new Soldier('T', unit(0, 0), null);
+    run(t, mkWorld([d]).world, 5);
+    expect(t.order).toBe(Order.Patrol);
+  });
+});
+
+describe('Unit.hit / place', () => {
+  it('muere cuando la energía ≤ daño (no cuando queda en 0): COMANDO 200 aguanta 6 tiros de 30 y cae en el 7.º', () => {
+    const c = unit(0, 0, 0, 'COMANDO');
+    c.energy = COMMANDO_ENERGY['COMANDO'] ?? 0;
+    const died = Array.from({ length: 7 }, () => c.hit(30));
+    expect(died).toEqual([false, false, false, false, false, false, true]);
+    expect(c.hit(30)).toBe(false);
+    c.tick();
+    c.place(5, 6, 90);
+    expect([c.body.x, c.body.y, c.body.ang]).toEqual([5, 6, 90]);
+  });
+});
