@@ -34,3 +34,6 @@ Estados `+0x188`: 2 camina al **punto de empuje** del objeto (`AcPuntoEmpuje`, t
 
 ## Cierre: `RETARDOPISTOLA` (2026-10-29)
 `FUN_004F07E0` pisa el enfriamiento de la pistola (`tabla+0x2C`) con `cfg+0x60` **solo si ≠ −1**. `cfg+0x60` lo escribe únicamente el lector de `COMANDO.CFG` (`FUN_0061EBC0`, clave `.RETARDOPISTOLA`) y el `Comando.cfg` real instalado (`OUTPUT\Comando.cfg`: `.SONIDO`, `.SIZE`, `.PROFILE`, `.DEVELOP`, …) **no la trae**; el test `!= -1` implica que el valor inicial del ctor de la configuración es −1 (el ctor no se localizó por desensamblado). Efecto: **la pistola usa el enfriamiento de la tabla (10 ciclos)**; solo un `Comando.cfg` editado a mano lo cambiaría.
+
+## Cierre: `FUN_00676F20 / 00676B20` (2026-10-29)
+No son la lógica de la ráfaga de la metralleta: son el **efecto visual del fogonazo** (objeto `ClassEfectoFogonazo`-like): colocan el efecto en la posición del bicho que dispara (`bicho+0x58` = altura del arma, offset del cuerpo `motor+0x1C..0x24`), le fijan el ángulo (`sin/cos` del rumbo) y lo encienden (`FUN_006819A0`, `FUN_00680D50(1)`). La cadencia y el consumo de la metralleta del jugador están en `AUDisparar` (tabla de armas: enfriamiento 1 ciclo, 5 de munición por disparo) y el daño en `impactos.md`.
