@@ -9,15 +9,17 @@
  * shortcut: orden de dibujo por y de los pies (R2 pendiente); sin buceo (los comandos que arrancan en el mar, p. ej. mapa 0000, no pueden moverse);
  *           los controles (derecho = mover) son los del original según el juego conocido, NO leídos del exe todavía.
  */
-import { parseAnm } from '../formats/anm.ts';
+import { parseAnm, type Anm } from '../formats/anm.ts';
 import { entryBytes, parseContainer, type DirEntry } from '../formats/container.ts';
 import { parseSec } from '../formats/sec.ts';
 import { parseVol, type Vol } from '../formats/vol.ts';
 import { parseWad, type Wad } from '../formats/wad.ts';
-import { loadAllies } from '../engine/mission.ts';
-import { SectorMap } from '../engine/sectors.ts';
+import { Animator } from '../engine/anim.ts';
+import { Boat, boatSlots } from '../engine/boat.ts';
+import { isWater, SectorMap } from '../engine/sectors.ts';
 import { project, unproject, Unit } from '../engine/unit.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
+import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
 import { composeMap, repaintWater, waterBounds, type MapImage, type Rect } from '../render/map.ts';
 import { SpriteCache } from '../render/sprites.ts';
 
@@ -30,6 +32,7 @@ const dirInput = byId('dir') as HTMLInputElement;
 const mapSel = byId('map') as HTMLSelectElement;
 const waterBox = byId('water') as HTMLInputElement;
 const zoomSel = byId('zoom') as HTMLSelectElement;
+const diffSel = byId('diff') as HTMLSelectElement;
 const status = byId('status');
 const view = byId('view');
 
@@ -55,7 +58,19 @@ interface WaterView {
   /** Equivale a DAT_00875DA8: el ciclo del agua solo corre si el mar se dibujó desde el anterior. */
   drawn: boolean;
 }
+/** Elemento del mundo con gráfico (soldado, objeto, el bote): se dibuja con su animador; por ahora sin lógica propia. */
+interface Prop {
+  readonly elem: Elem;
+  readonly anim: Animator;
+  readonly sprites: SpriteCache;
+  x: number;
+  y: number;
+  z: number;
+  ang: number;
+}
 interface Game {
+  readonly props: Prop[];
+  readonly boat: { readonly boat: Boat; readonly prop: Prop } | null;
   readonly water: WaterView | null;
   readonly map: HTMLCanvasElement;
   readonly units: UnitView[];
@@ -142,20 +157,57 @@ async function load(): Promise<void> {
   const units: UnitView[] = [];
   const secBytes = bytes(`DATOS/MISIONES/MAPA${n}.SEC`);
   const sectors = secBytes ? new SectorMap(parseSec(secBytes)) : null;
-  for (const a of misBytes ? loadAllies(misText) : []) {
-    const anm = bytes(`DATOS/RECURSOS/ELEM/${a.anim.toUpperCase()}.ANM`);
-    const w = bytes(`DATOS/RECURSOS/ELEM/${a.anim.toUpperCase()}.WAD`);
-    if (!anm || !w) continue;
-    const uWad: Wad = parseWad(w);
-    units.push({ unit: new Unit(a.token, parseAnm(anm), a.x, a.y, a.z, a.angle, sectors), sprites: new SpriteCache(uWad) });
+  const macro = (name: string): string | undefined => {
+    const b = bytes(`DATOS/MISIONES/${name.toUpperCase()}.MAC`);
+    return b ? new TextDecoder('latin1').decode(b) : undefined;
+  };
+  const elems = flatten(loadWorld(misText, { difficulty: diffSel.value as Difficulty, macro }));
+  const assets = new Map<string, { anm: Anm; sprites: SpriteCache } | null>();
+  const asset = (name: string): { anm: Anm; sprites: SpriteCache } | null => {
+    const key = name.toUpperCase();
+    if (!assets.has(key)) {
+      const a = bytes(`DATOS/RECURSOS/ELEM/${key}.ANM`);
+      const w = bytes(`DATOS/RECURSOS/ELEM/${key}.WAD`);
+      assets.set(key, a && w ? { anm: parseAnm(a), sprites: new SpriteCache(parseWad(w)) } : null);
+    }
+    return assets.get(key) ?? null;
+  };
+  const props: Prop[] = [];
+  const boats = new Map<Elem, { boat: Boat; prop: Prop }>();
+  for (const e of elems) {
+    const slots = boatSlots(e);
+    if (slots.length === 0 || !e.anim) continue;
+    const a = asset(e.anim);
+    if (!a) continue;
+    const boat = new Boat(e.x, e.y, e.z, e.angle, slots, sectors);
+    const prop = { elem: e, anim: new Animator(a.anm, a.anm.sequences.has('ANDAR') ? 'ANDAR' : defaultSeq(a.anm)), sprites: a.sprites, x: e.x, y: e.y, z: e.z, ang: e.angle };
+    boats.set(e, { boat, prop });
+    props.push(prop);
   }
+  for (const e of elems) {
+    if (e.cls === 'BICHOALIADO') {
+      const a = e.anim ? asset(e.anim) : null;
+      if (!a) continue;
+      const host = e.parent ? boats.get(e.parent) : undefined;
+      const unit = new Unit(e.token, a.anm, host ? host.boat.x : e.x, host ? host.boat.y : e.y, host ? host.boat.z : e.z, host ? host.boat.ang : e.angle, sectors);
+      if (host) unit.board(host.boat, units.filter((u) => u.unit.boat === host.boat).length);
+      units.push({ unit, sprites: a.sprites });
+    } else if (e.anim && !boats.has(e) && e.macro?.toUpperCase() !== 'MINASUB') {
+      const a = asset(e.anim);
+      if (a) props.push({ elem: e, anim: new Animator(a.anm, defaultSeq(a.anm)), sprites: a.sprites, x: e.x, y: e.y, z: e.z, ang: e.angle });
+    }
+  }
+  const mainBoat = [...boats.values()][0] ?? null;
   const first = units[0]?.unit;
   const p = first ? project(first.body.x, first.body.y, first.z) : { px: img.width / 2, py: img.height / 2 };
-  game = { water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic para elegir/caminar, Mayús+clic corre.`);
 }
+
+/** Secuencia en reposo de un gráfico: REPOSO si existe; si no, la primera (shortcut: la pose real la elige cada acción, no leída para objetos). */
+const defaultSeq = (anm: Anm): string => (anm.sequences.has('REPOSO') ? 'REPOSO' : (anm.sequences.keys().next().value as string));
 
 function makeWater(vol: Vol, wad: Wad, def: NonNullable<ReturnType<typeof parseWater>>, index: Uint8Array, bounds: Rect): WaterView {
   const img = composeMap(vol, wad, { layer: 'water' });
@@ -204,7 +256,13 @@ function setupStage(): void {
     acc = Math.min(acc + dt, 500);
     last = now;
     while (acc >= TICK) {
+      g.boat?.boat.tick();
       for (const u of g.units) u.unit.tick();
+      if (g.boat) {
+        g.boat.prop.x = g.boat.boat.x;
+        g.boat.prop.y = g.boat.boat.y;
+        g.boat.prop.ang = g.boat.boat.ang;
+      }
       if (g.water?.drawn) stepWater(g, g.water);
       g.ticks++;
       acc -= TICK;
@@ -248,21 +306,33 @@ function draw(g: Game): void {
     ctx.drawImage(g.water.canvas, 0, 0);
   }
   ctx.drawImage(g.map, 0, 0);
-  const order = g.units.map((u, i) => ({ u, i, py: project(u.unit.body.x, u.unit.body.y, u.unit.z).py })).sort((a, b) => a.py - b.py);
-  for (const { u, i } of order) {
-    const { px, py } = project(u.unit.body.x, u.unit.body.y, u.unit.z);
-    if (i === g.selected) {
-      ctx.strokeStyle = '#c9a24a';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.ellipse(px, py, 14, 7, 0, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    if (!u.sprites.draw(ctx, u.unit.anim.frame(u.unit.body.ang), px, py)) {
-      ctx.fillStyle = '#f0f';
-      ctx.fillRect(px - 4, py - 30, 8, 30);
-    }
+  const items: { py: number; paint: () => void }[] = [];
+  for (const pr of g.props) {
+    const { px, py } = project(pr.x, pr.y, pr.z);
+    if (px < ox - 150 || px > ox + vw + 150 || py < oy - 150 || py > oy + vh + 150) continue;
+    items.push({ py: py - (pr === g.boat?.prop ? 1000 : 0), paint: () => pr.sprites.draw(ctx, pr.anim.frame(pr.ang), px, py) });
   }
+  g.units.forEach((u, i) => {
+    const { px, py } = project(u.unit.body.x, u.unit.body.y, u.unit.z);
+    items.push({
+      py: py + (u.unit.boat ? 1 : 0),
+      paint: () => {
+        if (i === g.selected) {
+          ctx.strokeStyle = '#c9a24a';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.ellipse(px, py, 14, 7, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        if (!u.sprites.draw(ctx, u.unit.anim.frame(u.unit.body.ang), px, py)) {
+          ctx.fillStyle = '#f0f';
+          ctx.fillRect(px - 4, py - 30, 8, 30);
+        }
+      },
+    });
+  });
+  items.sort((a, b) => a.py - b.py);
+  for (const it of items) it.paint();
   const t = g.units[g.selected]?.unit;
   if (t?.target) {
     const q = project(t.target.x, t.target.y, t.target.z);
@@ -308,7 +378,12 @@ function onMouse(e: MouseEvent): void {
     // el cursor apunta al sector más alto que cruza el rayo del píxel (FUN_005F5590), no a un plano fijo
     const hit = g.sectors ? g.sectors.pick(mx, my) : { ...unproject(mx, my, sel.z), sector: null }; // sin .SEC: plano fijo del comando
     if (!hit) say('Ese punto está fuera de los sectores del mapa.');
-    else if (!sel.goTo(hit, run, hit.sector)) say(`${sel.token}: no hay camino a pie hasta ese punto.`);
+    else if (sel.boat) {
+      // En el bote: clic en agua = el bote va ahí; clic en tierra con el bote parado = el comando baja y camina.
+      if (isWater(hit.sector)) sel.boat.goTo(hit);
+      else if (!sel.disembark()) say(`${sel.token}: el bote debe estar parado y con una orilla a mano para bajar.`);
+      else if (!sel.goTo(hit, run, hit.sector)) say(`${sel.token}: bajó, pero no hay camino a pie hasta ese punto.`);
+    } else if (!sel.goTo(hit, run, hit.sector)) say(`${sel.token}: no hay camino a pie hasta ese punto.`);
   }
 }
 
@@ -337,6 +412,7 @@ if (import.meta.env.DEV) {
 dirInput.addEventListener('change', guarded(onFolder));
 mapSel.addEventListener('change', guarded(load));
 waterBox.addEventListener('change', guarded(load));
+diffSel.addEventListener('change', guarded(load));
 window.addEventListener('resize', resize);
 window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();

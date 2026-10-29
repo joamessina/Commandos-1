@@ -12,6 +12,7 @@
 import type { Anm } from '../formats/anm.ts';
 import type { Sector } from '../formats/sec.ts';
 import { Animator } from './anim.ts';
+import type { Boat } from './boat.ts';
 import { navFor, type Nav } from './path.ts';
 import { COS50, groundZ, isWater, SIN50, simBlocked, stepOk, validTarget, type SectorMap } from './sectors.ts';
 import { newBody, runSpeed, stepBody, WALK_SPEED, type Body, type Vec } from './walk.ts';
@@ -44,6 +45,9 @@ export class Unit {
   running = false;
   /** Sector que pisa (null sin mapa de sectores o fuera de todos). */
   sector: Sector | null = null;
+  /** Vehículo en el que va (su plaza = `seat`): el cuerpo sigue a la plaza y no camina. */
+  boat: Boat | null = null;
+  private seat = 0;
 
   constructor(
     readonly token: string,
@@ -107,8 +111,58 @@ export class Unit {
     return !s || simBlocked(s) || (s !== this.sector && !stepOk(groundZ(s, x, y) - this.z));
   };
 
+  /** Sube a una plaza del bote (animación EMBARCADO). */
+  board(boat: Boat, seat: number): void {
+    this.boat = boat;
+    this.seat = seat;
+    this.path = [];
+    this.target = null;
+    if (this.anim.has('EMBARCADO')) this.anim.set('EMBARCADO');
+    this.ride();
+  }
+
+  private ride(): void {
+    const boat = this.boat;
+    const slot = boat?.slots[this.seat];
+    if (!boat || !slot) return;
+    const p = boat.slotPoint(slot.entry);
+    this.body.x = p.x;
+    this.body.y = p.y;
+    this.body.ang = (((boat.ang + slot.angle) % 360) + 360) % 360;
+    this.body.vx = this.body.vy = 0;
+    this.z = boat.z;
+  }
+
+  /**
+   * Baja del bote (FUN_00503340: solo con el bote casi parado, velocidad < 0,01): prueba la SALIDA de la propia plaza y luego las demás;
+   * sirve el primer punto con sector a pie (DEEPWATER no). Devuelve false si no hay dónde bajar.
+   */
+  disembark(): boolean {
+    const boat = this.boat;
+    if (!boat || boat.speed >= 0.01 || !this.sectors) return false;
+    const order = boat.slots.map((_, i) => (i + this.seat) % boat.slots.length);
+    for (const i of order) {
+      const slot = boat.slots[i];
+      if (!slot) continue;
+      const p = boat.slotPoint(slot.exit);
+      const s = this.sectors.atZ(p.x, p.y, boat.z) ?? this.sectors.at(p.x, p.y);
+      if (!validTarget(s)) continue;
+      this.boat = null;
+      this.body.x = p.x;
+      this.body.y = p.y;
+      this.land();
+      this.anim.set('ANDAR');
+      return true;
+    }
+    return false;
+  }
+
   /** Un ciclo de lógica (1/20 s). */
   tick(): void {
+    if (this.boat) {
+      this.ride();
+      return;
+    }
     const v = this.running ? runSpeed(this.token) : WALK_SPEED;
     const wp = this.path[0] ?? null;
     const r = stepBody(this.body, wp, v, isWater(this.sector) ? 0.5 : 1, this.blocked);
