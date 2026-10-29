@@ -4,6 +4,8 @@ uso:
   py -I tools/readbatch.py resumen                       -> funciones / bytes leidos y pendientes por familia
   py -I tools/readbatch.py familias                      -> nombres exactos de familia
   py -I tools/readbatch.py tanda "<familia>" [KB=24]     -> imprime la proxima tanda (KB de codigo) y la marca como leida
+  py -I tools/readbatch.py rango <lo> <hi> [KB=24]       -> proxima tanda de funciones sin leer con lo <= direccion < hi (cualquier familia); las marca
+  py -I tools/readbatch.py faltan <lo> <hi>              -> cuantas funciones/KB sin leer quedan en el rango
   py -I tools/readbatch.py ver <hex> [<hex>...]          -> imprime funciones concretas (compactas) sin anotarlas
 Familias omitidas por no ser logica del juego: CRT / libreria, SEH (desenrollado de excepciones), std de C++.
 """
@@ -96,10 +98,20 @@ if __name__ == '__main__':
         for i, k in enumerate(sorted({fam(a) for a in IX})): print(f'#{i}', k)
     elif cmd == 'ver':
         for h in sys.argv[2:]: show(int(h, 16))
-    elif cmd == 'tanda':
-        familia, kb = sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else 24
-        if familia.startswith('#'): familia = sorted({fam(a) for a in IX})[int(familia[1:])]   # indice de `familias`
-        xs, budget, picked = todo(familia), kb * 1024, []
+    elif cmd in ('tanda', 'rango', 'faltan'):
+        if cmd == 'tanda':
+            familia, kb = sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else 24
+            if familia.startswith('#'): familia = sorted({fam(a) for a in IX})[int(familia[1:])]   # indice de `familias`
+            xs = todo(familia)
+        else:
+            lo, hi = int(sys.argv[2], 16), int(sys.argv[3], 16)
+            kb = int(sys.argv[4]) if len(sys.argv) > 4 else 24
+            familia = f'rango {lo:x}-{hi:x}'
+            done = ledger()
+            xs = sorted(a for a in IX if lo <= a < hi and a not in done and IX[a]['size'] > 5 and not IX[a]['failed'] and not fam(a).startswith(SKIP))
+            if cmd == 'faltan':
+                print(len(xs), 'funciones,', sum(IX[a]['size'] for a in xs) // 1024, 'KB sin leer'); sys.exit()
+        budget, picked = kb * 1024, []
         for a in xs:
             if picked and budget - IX[a]['size'] < 0: break
             picked.append(a); budget -= IX[a]['size']
