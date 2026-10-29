@@ -4,8 +4,8 @@
  * (2.5 al andar; correr según personaje), NO la animación. La animación avanza por distancia recorrida sobre el rumbo.
  * Con un SectorMap: suelo = plano del sector, destino y pasos validados (docs/research/q1-movimiento.md §R4); agua ×0.5.
  * Rutas (R3, docs/research/q1-rutas.md): `goTo` pide a `Nav` la cadena de sectores (atajo recto o A*) y camina por sus puntos de giro; sin camino la orden se rechaza.
- * shortcut: atasco = 9 ciclos sin avanzar (FUN_00629EF0) y se re-planifica desde donde está; lo que hace FUN_006281A0 NO se leyó, así que se
- *           reintenta hasta MAX_REPLANS veces y se abandona. Sin escaleras/PEscal (bit 4) ni agua/buceo en la ruta. Cuándo mejorar: al leer FUN_006281A0.
+ * Atasco: 9 ciclos sin avanzar (FUN_00629EF0) y la orden se abandona (TPathTool::abandona, FUN_006281A0: para el motor y, si faltan menos de 10 u al
+ * destino, la da por cumplida; si no, resetea. NO re-planifica). shortcut: sin escaleras/PEscal (bit 4) ni agua/buceo en la ruta.
  * shortcut: al detenerse la secuencia queda en el paso donde estaba (no se leyó cómo el original elige la pose de reposo),
  *           cuándo mejorar: al leer REPOSO/AGACHARSE y el estado de animación del bicho.
  */
@@ -26,7 +26,6 @@ export const unproject = (px: number, py: number, z: number): Vec => ({ x: px, y
 
 /** Ciclos seguidos sin avanzar que disparan un nuevo plan (FUN_00629EF0: `param_1[5] < 9`). */
 const STUCK_CYCLES = 9;
-const MAX_REPLANS = 3;
 
 /** Punto del mundo con la altura del suelo en él. */
 export interface Vec3 extends Vec {
@@ -41,8 +40,6 @@ export class Unit {
   /** Puntos que faltan hasta `target` (el primero es al que va el cuerpo). */
   private path: Vec3[] = [];
   private stuck = 0;
-  private replans = 0;
-  private goalSector: Sector | null = null;
   private readonly nav: Nav | null;
   running = false;
   /** Sector que pisa (null sin mapa de sectores o fuera de todos). */
@@ -80,8 +77,7 @@ export class Unit {
       path = route;
     }
     this.path = path;
-    this.goalSector = to;
-    this.stuck = this.replans = 0;
+    this.stuck = 0;
     this.target = { ...p, z: goalZ };
     this.running = run;
     const run1 = ['CORRE', 'CORRER'].find((n) => this.anim.has(n));
@@ -125,18 +121,13 @@ export class Unit {
     this.anim.advance(r.dx * Math.cos(rad) + r.dy * Math.sin(rad), 1); // distancia sobre el rumbo (FUN_00591DE0)
   }
 
-  /** Cuenta ciclos sin avanzar y, al llegar a 9, vuelve a planificar hasta el destino. */
+  /** Cuenta ciclos sin avanzar y, al llegar a 9, abandona la orden (cumplida si faltan < 10 u, reseteada si no: en ambos casos el comando se queda). */
   private watchStuck(dx: number, dy: number): void {
     this.stuck = dx * dx + dy * dy < 1e-4 ? this.stuck + 1 : 0;
     if (this.stuck < STUCK_CYCLES) return;
     this.stuck = 0;
-    const route = this.nav && this.sector && this.target && this.replans < MAX_REPLANS ? this.nav.route(this.body, this.sector, this.target, this.goalSector) : null;
-    this.replans++;
-    if (route && route.length > 0) this.path = route;
-    else {
-      this.path = [];
-      this.target = null;
-    }
+    this.path = [];
+    this.target = null;
   }
 
   /** Puntos que faltan hasta el destino (para dibujar la ruta). */

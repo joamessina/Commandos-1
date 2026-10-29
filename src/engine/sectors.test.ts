@@ -159,14 +159,14 @@ describe('Unit sobre sectores', () => {
     expect(u.target).toBeNull();
   });
 
-  it('si el camino se cierra mientras camina, re-planifica tras 9 ciclos sin avanzar y al tercer intento abandona', () => {
+  it('si el camino se cierra mientras camina, a los 9 ciclos sin avanzar abandona la orden (no re-planifica)', () => {
     const u = unit(10, 50);
     expect(u.goTo({ x: 90, y: 50 }, false)).toBe(true);
     const s0 = sector(0);
     s0.flags |= SectorFlag.NTrans; // el Sim anula cada paso
-    run(u, 30);
-    expect(u.target).not.toBeNull(); // sigue intentando
-    run(u, 30);
+    run(u, 8);
+    expect(u.target).not.toBeNull(); // todavía no cumplió 9 ciclos
+    run(u, 8);
     s0.flags &= ~SectorFlag.NTrans;
     expect(u.target).toBeNull();
     expect(u.body.x).toBeCloseTo(10, 0);
