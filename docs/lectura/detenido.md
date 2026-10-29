@@ -36,4 +36,4 @@ En cárcel (`FUN_00459800`): `MSGA_REPORT_PRESO` al guardia y `MSGA_AUTOREPORT_P
 **Custodia** (`FUN_00459310`): según `bicho+0x194`: `2` (detenido): cuenta `+0x2C` hasta 10 y luego `FUN_005086A0` (re-fija `bicho+0x194`: `= 2` si el bicho no es aliado; si es aliado `= (vtable+8 != 2)`) y reinicia; `1` y sin `bicho+0x23C & 0x800000`: `FUN_00508660` (misma lógica). `bicho+0x194`: 0 normal · 1 libre · 2 detenido; lo leen las puertas de casa/cárcel (`obj-contenedores.md`: un detenido no abre la puerta).
 
 ## Dudas abiertas
-- Ninguna sobre el receptor. El emisor de `MSGA_HAS_SIDO_DETENIDO` son las acciones de los policías/sargentos `AcpPatrullero` (`FUN_004CF6D0`) y `AcpSargento` (`FUN_004D9F20`), que **no se leyeron** en este informe (≈73 KB, rangos `0x4C3170–0x4DD700`); queda pendiente de una tanda aparte.
+- Ninguna sobre el receptor. El emisor es `AcpSargento` (`FUN_004D9F20`, y el reenvío `FUN_004CF6D0` tras `TRANSMIGRATE`); leído en `policia.md` §4.4: a < 30 u del enemigo, cada 10 ciclos, solo si hay cárcel y el enemigo no está bajo custodia.
