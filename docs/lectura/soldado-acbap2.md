@@ -1,0 +1,92 @@
+# Lectura del exe — `ClassAcBap2` / `ClassAcBanpe2` (soldado "con ruta") y `AcBap1`/`AcBanpe1`: `0x439FA0–0x43C7F0`
+
+Complemento de `soldado-acbap.md` (que describe la base `AcBap`, `0x42F4A0–0x438A40`). **[hecho]** = leído con dirección; **[hip]** = interpretación (marcada). Los argumentos de `FUN_00430670(orden, tiempo, datos)` que el descompilador pierde se sacaron del desensamblado (push previos al call).
+
+## 0. Qué son `AcBap1`, `AcBap2`, `AcBanpe1`, `AcBanpe2` [hecho]
+Tablas virtuales comparadas slot por slot (herramienta del trabajo, ver resultado):
+- **`AcBap1` y `AcBanpe1` = `AcBap` base.** Solo cambian el destructor (`FUN_00439FA0`, 30 B, llama al de la base) y el slot de serialización de partida (`+0x28`). **No hay lógica propia** que leer: se comportan como la base.
+- **`AcBap2` y `AcBanpe2` comparten exactamente los mismos overrides** (`AcBanpe2` solo difiere en el destructor y la serialización). Nombre de clase en el ctor (`FUN_0043B830`): cadena `"BAP2"` (`0x794500`, pasada a `FUN_004314D0`).
+- Overrides de `AcBap2` sobre la base (offset de vtable → función; base entre paréntesis): `+0x04` MAC `FUN_0043A590` (`431530`) · `+0x14` mensajes `FUN_0043AD60` (`4370D0`) · `+0x2C` reset `FUN_0043A1B0` (`4306F0`) · `+0x30` tick `FUN_0043BA50` (`435060`) · `+0x34` entrada de orden `FUN_0043C7F0` (`438A40`) · `+0x38` salida `FUN_0043C330` (`436770`) · `+0x3C` fin de enfoque `FUN_0043A0E0` (`432590`) · `+0x4C` `FUN_0043A200` (`433910`) · `+0x50` `FUN_0043A290` (`433A40`) · `+0x54` `FUN_0043B720` (`433B80`) · `+0x5C` `FUN_0043A1D0` (`433310`) · `+0x60` `FUN_0043B070` (`430F70`, nop en base) · `+0x64` `FUN_0043A300` (`431210`) · `+0x68` `FUN_0043B470` (`4337C0`) · `+0x70` `FUN_0043B1D0` (`433360`) · `+0x74` `FUN_0043B270` (nop en base) · `+0x78` `FUN_0043A380` (nop) · `+0x7C` `FUN_0043A450` (nop; "llegué") · `+0x84` `FUN_0043A3D0` (ir a un punto) · `+0x98` `FUN_0043B030` (zona permitida).
+
+En una frase: **la base `AcBap` ante cualquier estímulo se queda mirando (orden 9: mirar un punto, 100 ciclos); `AcBap2` ante los mismos estímulos va caminando al punto** (`BUSCADOR_IRA`) a la velocidad `VELDEJARPATRULLA`, y además atiende máquinas, cigarrillos tirados, casas y sigue una ruta.
+
+## 1. Parámetros del MAC (`FUN_0043A590`, antes de llamar al de la base) [hecho]
+| Clave | Campo acc | Valor | Efecto |
+|---|---|---|---|
+| `PERSIGUESONIDO` | `+0x660` | entero (`_ftol` del número); **por defecto 1** (ctor) | en `FUN_0043B470` decide si sigue el sonido (ver §4) |
+| `PERSIGUEPISADAS` | `+0x664` | entero; **por defecto 1** (ctor) | leído; **no hay otro consumidor en `AcBap2`** (solo el ctor lo guarda) |
+| `VELDEJARPATRULLA` | `+0x698` | float, **por defecto 3.0** (`0x793F74`, ctor `[0x1A6]`) | velocidad con la que sale a investigar. 3.0 es exactamente el umbral de `FUN_00436380`: `> 3.0` = correr, así que 3.0 es **andar** |
+| `RUTA` | `+0x6D4` (array), `+0x688` (cantidad) | lista de bloques `XYZ` + opcionales `ANGULO`, `ESPERA` | ruta del orden `0x1D`. Cada elemento mide **0x14 B**: `x,y,z` (floats), `+0xC` ángulo (float), `+0x10` espera (int, ciclos; `_ftol`) |
+Después llama al MAC de la base (§ Parámetros del MAC de `soldado-acbap.md`).
+
+## 2. Campos del acc (de la base) que usa `AcBap2` [hecho: dónde se escriben/leen]
+Banderas de evento que pone el manejador de mensajes de la base (`FUN_004370D0`) y limpia `FUN_004306F0` (reset): `+0xE4` vio un cuerpo/objeto a investigar (pos en `+0x26C`, id de sector/elemento en `+0x408`; `FUN_004326B0`) · `+0xEC` el cuerpo visto no está muerto ni atontado · `+0xF0` vio un cuerpo (`FUN_004370D0` caso 2 la pone en 1) · `+0xE8` objeto tipo `0xC` (pos `+0x278`, id `+0x40C`; `FUN_00432830`) · `+0xFC` objeto tipo 9 (pos `+0x29C`, id `+0x3F0`, ángulo del objeto `+0x23C`; `FUN_004308C0`) · `+0x128` compañero inmovilizado (pos `+0x2D8`, `FUN_004329C0`) · `+0xBC` hay objetivo (comando) visto (`FUN_00432C20`) · `+0xC0` recibió un impacto (`MSGA_IMPACTO`) · `+0xF4` oyó sonido de peligro/pánico (pos `+0x284`) · `+0xF8` oyó sonido de atención (pos `+0x290`) · `+0x108` le charlan · `+0x110` vio una casa/habitáculo con aliado dentro (`+0x344` = la casa) · `+0x114` "salida de habitáculo" · `+0x12C` hay un objeto "recogible" tipo `0xB` visto (`FUN_00434460`, ver §5) · `+0x130` chocó con un objeto con bit `0x800` · `+0x138` BUSCADOR_LLEGADA (llegó) · `+0x13C` no pudo llegar (`DESTINOINALCANZABLE`/crisis) · `+0x140` crisis del motor · `+0x144` salió de la patrulla (lo pone la entrada del orden 0xB y 0xF; lo limpia la entrada del 4) · `+0x154` "la orden cambió en este ciclo" (lo pone `FUN_00430670`) · `+0x68` contador de pedradas/clase del sonido de atención · `+0x54` nivel de alerta.
+
+Campos propios de `AcBap2` (ctor `FUN_0043B830`): `+0x660/+0x664` (PERSIGUE…), `+0x668` ya miró hacia el sentido del objeto (`FUN_0043AC60`), `+0x66C` bandera `NO_VENGAS`, `+0x670` chocó con `+0x344` mientras iba a la casa, `+0x674` máquina pide atención, `+0x678` yendo a coger, `+0x67C` viene de un sonido ("volver a mirar" guardado), `+0x680` `ME_ESTAS_IMPACTANDO`, `+0x684` veces atendida la máquina, `+0x688` cantidad de puntos de ruta, `+0x68C` estado de ruta (ctor: **2**), `+0x690` índice de ruta, `+0x698` velocidad, `+0x6C0..0x6C8` posición de la máquina, `+0x6CC` la máquina, `+0x6D4` ruta, `+0x6D8` ctor `[0x1B4]` = objeto de 0xD8 B (`FUN_006285E0`).
+
+## 3. Mensajes (`FUN_0043AD60`) [hecho]
+Si la orden es `0x15` (muerto) o `0x19` (inactivo): **ignora todo** (devuelve 0).
+| Mensaje | Efecto en `AcBap2` | ¿pasa a la base? |
+|---|---|---|
+| `MSGA_NO_VENGAS` | `+0x66C = 1` (alguien más ya agarró lo que iba a coger; ver orden 0xB) | no |
+| `MSGA_COLISION_DINAMICA` | con alerta `6` o `0xC`, `+0x340 == quien choca`, `+0x16C == 0` y orden `0xB`: `+0x138=1`, `+0x13C=0` (se da por llegado); con orden `0xF` y `+0x344 == quien choca`: `+0x670 = 1` | **sí** (la base procesa la colisión) |
+| `MSGA_MAQUINA_NECESITA_SER_ATENDIDA` | `+0x674 = 1`, `+0x6CC = emisor`; si el emisor es de tipo `9` (`emisor+400 == 9`) copia su posición (3 floats del bloque `+0x198`) a `+0x6C0..` | no |
+| `MSGA_ME_ESTAS_IMPACTANDO` | `+0x680 = 1` | no |
+| el resto | `FUN_004370D0` de la base | — |
+Quien manda `MAQUINA_NECESITA_SER_ATENDIDA` es otro objeto (código `0x479700` aprox., fuera del alcance de esta nota); le llega al operador que tiene asignado.
+
+## 4. Reacciones propias (cadena `FUN_004345F0`; mayor alerta = más prioridad) [hecho]
+Todas devuelven 1 si disparan. Las "ir a punto" usan `+0x84` (§6).
+| Slot | Función | Condición | Efecto (alerta → orden) |
+|---|---|---|---|
+| `+0x4C` | `43A200` | `+0xE4` y alerta < 10 | alerta **10**; va al punto `+0x26C` (id `+0x408`) a velocidad `VELDEJARPATRULLA`; `MI_VISTA_ES_INTERESANTE(1)`; voz `VMUE` si `+0xF0` (vio un cuerpo) si no `AL02`; `+0xCC = 1` |
+| `+0x50` | `43A290` | `+0xE8` y alerta < 8 | alerta **8**; va a `+0x278` (id `+0x40C`); `MI_VISTA_ES_INTERESANTE(1)`; voz `AL04` |
+| `+0x54` | `43B720` | `+0x128` (compañero caído) y alerta < `0xB` | `+0x568`←0 (limpia `+0x15E`); `FUN_006283D0(+0x2D8…, +0x400, +0x550, 1)` (¿hay camino? ver §7): si sí → alerta **0xB**, va a `+0x2D8`, voz `VESP`, `MI_VISTA_ES_INTERESANTE(1)`; si no y `+0x14C == 0` → voz `ALRM`, interesante(1), orden **0xE** |
+| `+0x60` | `43B070` | `+0x110` (casa vista) y (alerta `0xF` y `+0xBC==0`, o alerta < `0xE`) | pregunta a la casa `MSGA_POS_SUBIDA(+0x344)` → punto de entrada; si lo hay: orden **0xF**, `BUSCADOR_IRA` a ese punto; si arranca → alerta **0xE**; si no → orden 0xE |
+| `+0x64` | `43A300` | `+0xFC` y (alerta < 6, o alerta `0xF` con `+0xC0`) | alerta **5**; va a `+0x29C` (id `+0x3F0`); limpia `+0x564` y `+0x668` |
+| `+0x68` | `43B470` | (sonido, alerta `6` ó `0xC`; lo llama la base con el argumento = alerta) | ver §4b |
+| `+0x70` | `43B1D0` | sonido de atención (clase `+0x68`) | `+0x68==1` → orden **0xE**; `+0x68==2` → orden **0xC** mirando al emisor (`+0x354`), 200 ciclos, voz `AL01`; otro → va al punto del emisor |
+| `+0x74` | `43B270` | `+0x12C` y `+0x70==0` y alerta < 1 | **ir a coger** (§5) |
+| `+0x78` | `43A380` | `+0x674` y alerta < 8 | alerta **7**; va a `+0x6C0` (la máquina) |
+
+### 4b. `FUN_0043B470` — sigue el sonido de peligro/pánico [hecho]
+Entra con el argumento = alerta (6 ó 0xC). Si `PERSIGUESONIDO (+0x660) != 0`: (si tiene sector `+0x134` y no está en orden 4: si está a más de `sqrt(0x7944FC = 160000)` = **400** unidades de su puesto `+0x2B4/+0x2B8` abandona; si no, traza línea de vista `FUN_005F9820` desde su altura de ojo hasta el punto del sonido (`+0x2C0`) y, si lo **ve**, no hace caso (sigue como `iVar5=0`)); si decide ir: orden `0xB`, `BUSCADOR_IRA` al punto `+0x2C0` (id `+0x414`), y si la alerta es 6 con un emisor `+0x374` guarda su posición en `+0x69C` (`+0x67C = 1`). Si no logra arrancar el camino: si el destino ya estaba alcanzado (`FUN_00426EA0`), orden **4** (vuelve al puesto) y alerta 0; si no, guarda el punto en `+0x6B4` y mira (orden 9, 100 ciclos). **Si `PERSIGUESONIDO == 0`** (hay que ponerlo a 0 en el script, el defecto es 1): solo se queda mirando el punto (orden 9, 100 ciclos). [hecho; el sentido de "ve el sonido = ignora" es lectura del código, no se contrastó en juego]
+
+## 5. Ir a coger un objeto recogible (`FUN_0043B270`, mensajes `ESTOY_YENDO_A_COGERTE`/`YA_NO_VOY_A_COGERTE`) [hecho]
+`+0x12C` lo pone la base al clasificar un objeto como código `0xB` (`FUN_00434460` manda `MSGA_PUEDO_IR_A_COGERTE`; es el objeto con bit `0x800`, la cajetilla de **tabaco** que lanza el comando —`AUTabaco` en `au-jugador.md`—). Con `+0x70==0` y alerta < 1:
+1. Si hay un segundo candidato `+0x15C`: va un momento (orden 9, 30 ciclos) a la posición `+0x2F0` (o `+0x32C` si `+0x160==0`) y alerta 2 y voz `AL01`; si aún queda candidato, no sigue.
+2. `BUSCADOR_IRA(+0x32C, velocidad +0x698, id +0x3FC)`; si arranca: alerta **1**, `+0x84` a esa posición con velocidad `0x793E4C = 1.5`, **envía `MSGA_ESTOY_YENDO_A_COGERTE` al objeto** (id `+0x6C`) y emite voz (`FUN_00430DC0`).
+Mientras va (orden `0xB`, alerta 1 ó 2): `+0x678 = 1`; si choca con el objeto (`+0x130`) → orden `0x18`; si recibió `NO_VENGAS` (`+0x66C`) → orden `0x14` (vuelve al puesto) y alerta 1. Al salir de la orden 0xB sin haber llegado a `0x18` manda `MSGA_YA_NO_VOY_A_COGERTE` al objeto (`+0x3E4`).
+**Orden 0x18 (recoger):** entrada: `+0x90 = FUN_00436140(4)` = duración de la animación `RECOGER`, `FUN_00508410(1)`; tick: cuenta `+0x90`; al llegar a 0 llama `FUN_0069ECD0(+0x3D8)` y vuelve a orden `0x14`; si el resultado ≠ 0 (el soldado recibe el tabaco): **`bicho+0x23C |= 0x10000`** (se hace fumador), `acc+0x70=3`, `acc+0x78 = 0x3C` (60 ciclos hasta el primer cigarro), `acc+0x150 = 1`. Salida: animación 0 (`ANDAR`), `FUN_00508410(0)` y `YA_NO_VOY_A_COGERTE`. (Consumidor de `0x10000`: `FUN_00434410`, ver `soldado-acbap.md`, orden 4/5 fumar.)
+
+## 6. Órdenes propias (tick `FUN_0043BA50`, entrada `FUN_0043C7F0`, salida `FUN_0043C330`) [hecho]
+Las órdenes no listadas usan el tick/entrada/salida de la base.
+| Orden | Significado | Entrada | Tick | Salida |
+|---|---|---|---|---|
+| **4** (patrulla) | igual que la base | | si `+0x144` (salió de la patrulla) → orden **0x14** (vuelve al puesto); si no, tick base | (base) |
+| **0xB** | **ir caminando a un punto** (investigar), desde `+0x84` | `+0x144=1`, `VIGILAR_ON`, `SET_ANGULO_BARRIDO(0x1E=30)`, `+0x680=0` | ejecuta reacciones (`+0x48`); alerta 6 con `+0x10C` (llegó a un objeto tipo 0xA): orden 9 por **400** ciclos y `SET_ANGULO_BARRIDO(1)`; alerta 1/2: ver §5; si `+0x138` (llegó) y nada reaccionó: alerta 5 → si `+0x668` ya mirado, orden **0xE**, si no `FUN_0043AC60` (ver abajo); alerta 6 → copia `+0x69C` a `+0x2A8` si `+0x67C`, orden 0xE; alerta 7 (máquina) → manda `MSGA_ERES_ATENDIDA` a la máquina `+0x6CC`, `+0x684++`, voz `AL01`, y si `+0x684 < 3`: orden 0xE y `SETANG` hacia la máquina; si ≥ 3: orden **0x1D** (ruta); otras alertas → orden 0xE. Si no hubo cambio de orden, no está en escalera y `+0x680` (le pegaron): voz `ALRM` y orden 0xE | si venía yendo a coger: `YA_NO_VOY_A_COGERTE`; para; `RESTAURAR_ANGULO_BARRIDO` |
+| **0xE** | **mirar alrededor** (3 giros) | contador de giros `+0x64`=0, `+0x90 = 0x1E`, `parar`, `VIGILAR_ON`, `+0xC0=1`; si alerta `0xF`: `SETANG` al ángulo `+0x234` | reacciones; `+0x90--`; si sin reacción: (si el bicho `*(+0xE4)&2` y `+0x564` y `+0x594==+0x33C`: `FUN_00439FE0`, reacción diferida de aviso); al `+0x90<1`: si contador < 3: `SETANG` a (`FUN_004DFCE0()` + tabla `0x81132C[contador]` = **0°, 180°, 90°**), `+0x90 = 0x1E` (30 ciclos por giro); si ≥ 3: alerta 0 y busca reacciones diferidas (`43ABC0`, `439FE0`, `43A070`), si no hay → orden **0x14** | si `+0xCC` (dijo una voz): voz `ALRM` |
+| **0xF** | **ir a la entrada (POS_SUBIDA) de una casa con aliados dentro** | `+0x144=1`, `VIGILAR_ON`, `SET_ANGULO_BARRIDO(30)`, `MI_VISTA_ES_INTERESANTE(1)` | si `+0x670==0`: reacciones; al llegar (`+0x138`) y nada reaccionó → orden **0xE**; si `+0x670` (chocó con la casa) → orden **0x10** | para, `RESTAURAR_ANGULO_BARRIDO`, `MI_VISTA…(0)` |
+| **0x10** | **entrar en la casa y esperar a que no haya aliados** | `+0x114=0`; manda `MSGA_ENTRAR_HABITACULO(+0x344)` al propio bicho; si el resultado es 0: `+0x114 = 1` | mira la lista de ocupantes de la casa (`casa+0x198`: `+8` cantidad, `+0x20` array de 0x50 B, ocupante en `+0x4C`); mientras haya uno con `+0x108==2` (**aliado**) no hace nada; cuando no hay: manda `MSGA_SALIR_HABITACULO` y vuelve al orden **0xE** (también si `+0x114` o `+0x45`) | (base) |
+| **0x14** | volver al puesto | | sale a `+0x14` de la base (ver `soldado-acbap.md`) pero **la salida de 0x14 no hace nada** | no ejecuta la salida de la base |
+| **0x18** | recoger objeto | §5 | §5 | §5 |
+| **0x1D** | **seguir la ruta `RUTA`** | `+0x68C=0`, `+0x690=0`, `BUSCADOR_IRA` al punto 0 | si no cambió la orden y `+0x68C==1` (espera en el punto): cuando `+0x90 == espera` (primer ciclo) hace `SETANG` al ángulo del punto; `+0x90--`; al `<1`: índice++; si queda punto: `+0x68C=0` y va al siguiente; si no: alerta 0, orden **0xE** | `+0x68C = 2` |
+Llegada (`+0x7C` = `FUN_0043A450`, llamado desde `BUSCADOR_LLEGADA`): si la orden es 0x1D: `+0x90 = ruta[i].espera`; si espera = 0 y no es el último punto, pasa al siguiente sin esperar; si no `+0x68C = 1`.
+**`FUN_0043AC60`** (mirar hacia el sentido del objeto): `+0x668=1`; punto destino = posición del bicho + (cos, sen) del ángulo `+0x23C` × **50** (`0x793EB0`, double; `cos`/`sen` se deducen de los 2 call a la CRT `70B650/70B780` multiplicados por el ángulo×`0x793910`); `+0x84` a ese punto; si no arranca → orden 0xE. El `+0x23C` del acc lo escribe `FUN_004308C0` desde la ficha del objeto (`+0xC`).
+
+## 7. Otras piezas de `AcBap2` [hecho]
+- **`FUN_0043A0E0` (`+0x3C`, fin de enfoque; la base va a orden 9/0x12):** manda `MSGA_APUNTAR_OFF` al bicho, va a la última posición del objetivo `+0x260` (`+0x84`, id `+0x410`) y reproduce `QIEN` (`FUN_00430CA0`, vol 0.75): "¿quién va?".
+- **`FUN_0043A3D0` (`+0x84`, `ir a punto(pos, id, vel)`)**: si `vel == 0` usa `+0x698`; orden **0xB**; `BUSCADOR_IRA(pos, vel, id, 0)`; si no arranca, orden 9 (100 ciclos, mira el punto). Devuelve si arrancó. (En la base `+0x84` siempre hace orden 9 / 100 ciclos y devuelve 0.)
+- **`FUN_0043B030` (`+0x98`, zona permitida)**: devuelve 0 solo si `ZONAPERMITIDA` está activa (`+0xA8`) y el elemento destino no está en ninguno de los sectores de la máscara `+0x550` (`elem+0x2C+índice*4 & máscara`). `FUN_004364A0` (BUSCADOR_IRA) lo consulta antes de aceptar un destino.
+- **`FUN_00439FE0`** (reacción diferida): si `+0x564` (evento guardado mientras estaba ocupado en alerta alta): vuelca la copia guardada (`+0x568.. → +0x23C`, pos `+0x29C..`, id `+0x3F0`) y llama a `+0x64`. **`FUN_0043A070`**: ídem para el sonido guardado en `+0x554` (`+0x558..→+0x2C0`) y llama a la reacción de sonido (`FUN_00433430`). **`FUN_0043ABC0`**: si `+0x568` (compañero caído guardado), vuelve a consultar `FUN_006283D0` y, si hay camino, va a `+0x2D8`.
+- **`FUN_006283D0(x,y,z,sector,máscara,1)`**: pregunta de alcanzabilidad/camino; no se leyó (fuera de rango); en `AcBap2` solo se usa su resultado ≠ 0 = "puedo llegar".
+
+## 8. Qué cambia para el juego [resumen]
+1. Un soldado `BAP2` **sale de su puesto** a investigar cuerpo (alerta 10), objeto (8/5), compañero caído (`0xB`), sonido (alerta 6/0xC, solo si `PERSIGUESONIDO`), cajetilla (1), casa con aliado (`0xE/0xF`), máquina (7). Al llegar **mira alrededor 3 veces** (0°, 180°, 90°, 30 ciclos cada una) y **vuelve al puesto** (orden `0x14`).
+2. Si el estímulo es un sonido y tiene `PERSIGUESONIDO=0`, solo se queda mirando el punto 100 ciclos.
+3. Con ruta `RUTA` y tras 3 atenciones de máquina recorre sus puntos (`x,y,z`, `ANGULO`, `ESPERA`).
+
+## Dudas abiertas
+- Quién emite `MSGA_NO_VENGAS` y `MSGA_MAQUINA_NECESITA_SER_ATENDIDA` es otro objeto (cuartel/máquina, `0x479700`...): se detalla en la nota de objetos; aquí solo el receptor.
+- `PERSIGUEPISADAS` (`+0x664`): solo se lee y se guarda; no hay consumidor en `AcBap2` ni en la base (comprobado: en las 30 funciones de `0x439FA0–0x43C7F0` solo aparece en el MAC y el ctor). Motivo: el sistema de huellas es otro módulo (`FUN_005F9820` y sectores) fuera del alcance; el flag queda sin efecto en estas clases.
+- Semántica exacta de `FUN_006283D0` y de `FUN_0069ECD0` (resultado de "recibir el tabaco"): fuera del rango asignado.
