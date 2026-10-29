@@ -31,7 +31,7 @@
 | 0x16 | impacto salvaje (reinicia la animación) | | |
 | 0x17 | **esposado/detenido** | `0x240\|=0x1000`, `0x23C\|=0x4000`, anim `ESPOSAS1-3` (o `_DESNUDO`), avisa `ME_HAS_ESPOSADO` | espera `FIN_ARRESTO` |
 | 0x19 | inactivo | | no se actualiza |
-| 0x1A | desnudo/atontado esperando | | cuenta 200 y recompone |
+| **0x1A** | **huir corriendo al punto de alarma** (corrección 2026-10-29: antes figuraba como "desnudo esperando") | alerta=0; limpia `bicho+0x24C` bits `0x100` y `0x20000`; si está desnudo (`23C&0x400000`) quita selección y `+0x90=200`; `FUN_004389E0`: si hay punto de alarma (`vtable+0xA8` = `FUN_00431340` → `FUN_0059D8B0`, ver `guarda.md` §3) `BUSCADOR_IRA` a esa posición (`+0x2E4`) a velocidad **4.0** (corre); si no hay, `+0x138=+0x13C=1` | si está desnudo cada 200 ciclos grita `ALRM` (`FUN_00430C40`); si el punto de alarma se desactivó (`vtable+0xAC` = `FUN_00431370`: `mundo[+0xBE0+idx·0x18]`) o llegó → orden 0xE (mirar alrededor). `FUN_00431390` dispara el evento de misión `EV_EXITPOINT` (`acc+0x30`, parámetro del MAC) |
 | **0x1B** | **atontado** (cachiporra / `CACHIPORRAZO`) | `0x23C\|=0x200000`, anim `ATONTADO(_DESNUDO)`, **`+0x90 = 600` ciclos (30 s)** | se levanta al terminar (o antes si recibe otro estímulo pasados 15 ciclos) |
 | 0x1C | fin: limpia órganos | | |
 

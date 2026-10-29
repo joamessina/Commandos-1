@@ -24,7 +24,7 @@ Fuera de alcance (no leído): serialización, destructores y getters (el lector 
 
 ## 2. Botiquín / Jeringuilla (`ClassAUBotiquin`)
 - Parámetros de misión (`FUN_004E8B50`): lee un bloque de script y fija `acc+0x1A0 = entero·2` (por defecto `6` usos en el ctor, `acc+0x1A0`=`[0x68]`).
-- Objetivo válido (`FUN_004E8A50`): es una persona (`vtable+8 == 2`) con `vida(+0x208) < vidaMáx(+0x20C)`; si no, `acc+0x194 = 1` (rechazado).
+- Objetivo válido (`FUN_004E8A50`): es un comando (clase 2) con `vida(+0x208) < vidaMáx(+0x20C)`; si no, `acc+0x194 = 1` (rechazado).
 - Estado 3: camina hasta llegar (`FUN_0050A380`), anima **`JERINGA`** (vel 1.0, prio 6) → estado 4. Estado 4: cuenta cuadros desde 0; **al cuadro 10** aplica la cura; si pasa de `ficha+0x8CC` sin haberla aplicado la aplica igualmente y termina.
 - **Cura** (`FUN_004E8C30`): `blanco.vida += 0x22` (**34**), recortada a `vidaMáx`; `usos -= 1`; al llegar a 0 quita el ítem `0x52`.
 - Mensajes: clic sobre elemento ⇒ si es persona herida va al estado 3 (cura), si no estado 2 (camina hasta allí). Clic sobre punto ⇒ ir ahí.
@@ -37,7 +37,7 @@ Fuera de alcance (no leído): serialización, destructores y getters (el lector 
 - Clic derecho (`MSG_BOTON2VIRTUAL`) marca bit 2 de `acc+0x198`: salir.
 
 ## 4. Cachiporra (`ClassAUCachiporra`)
-- Blanco = persona (`vtable+8==2`) y `acc+0x19C` marca si es válido. Estados: 2 anda al blanco, 3 llegó ⇒ gira hacia él (`FUN_004DFCF0`, ángulo por atan2) y elige animación según arma equipada `ficha+0x7A8`: `0` `LANZARPIEDRA` · `4` `SACACACHIPORRA` · `5` `JERINGA` (vel 2.0) · otro `ANDAR`.
+- Blanco: enemigo (clase `≠ 2`); `acc+0x19C` es el flag de validez. Estados: 2 anda al blanco, 3 llegó ⇒ gira hacia él (`FUN_004DFCF0`, ángulo por atan2) y elige animación según arma equipada `ficha+0x7A8`: `0` `LANZARPIEDRA` · `4` `SACACACHIPORRA` · `5` `JERINGA` (vel 2.0) · otro `ANDAR`.
 - Estado 5: cuenta cuadros; **al cuadro 6** (si el blanco existe) lanza `MSGA_CACHIPORRAZO` al blanco y, si `acc+0x198` (**bit "ESPIA"**: solo cuando el bicho no es `ESPIA`), emite el sonido `'CACH'` (`0x43414348`, vol 0,75).
 - `FUN_004EA590`: la cachiporra "silenciosa" depende de que el bicho **no** sea el `ESPIA` (para éste el golpe no hace ruido).
 - Enfundado/desenfundado: `MSGA_ARMA_DESENFUNDADA/ENFUNDADA` + `ficha+0x824 |= 0x8000` (arma en mano). Un golpe previo y la víctima ya cayó (`+0x23C & 4`): cancela.
@@ -59,7 +59,7 @@ Fuera de alcance (no leído): serialización, destructores y getters (el lector 
 ## 7. ArrestadoUsar (`0x4E6F00`)
 - Un bicho **arrestado** puede usar granadas/metralleta/balas del francotirador (`FL_GRANADAS` 0x100, `FL_METRALLETA` 0x200, `FL_BALASFRANCOT` 0x400 — mismos flags que `FLAGSRECOGER` desplazados ×32). Estados 2..5 dependen de `contenedor+0x198 → +0x10`. Pendiente: no se leyó el cuerpo completo.
 
-## 8. Acciones sobre enemigos (el blanco debe ser un soldado: `vtable+8 == 2`)
+## 8. Acciones sobre enemigos (clase del bicho = `vtable+8`: 1 enemigo/animal · 2 comando del jugador · 3 arrestado; el blanco válido es `≠ 2`)
 Todas caminan hasta "llegué" (`FUN_0050A380`: distancia ≤ `bicho+0x180` y |diferencia de ángulo| < **15°**, const `0x795658`), giran hacia el blanco (`MSGO_MOTOR_SETANG`, tolerancia **5°** o **4 ciclos** de espera) y recién entonces animan. Si el blanco ya está muerto (`+0x23C & 4`) cancelan.
 - **Esposas** (`0x4F4470`): estado 3 camina → 2 gira → 4 envía **`MSGA_HAS_SIDO_ESPOSADO`** al blanco y termina. El blanco atontado (`+0x23C & 0x8000000`) no exige "llegué" si la acción lo traía marcado.
 - **Cachiporra**: §4. **Jeringuilla** (`0x4F8480`, mata): `JERINGA`; inicia con duración forzada de **12 cuadros**; al cuadro **10** aplica `FUN_005986A0(bicho, blanco, tipo 9, 0)` (impacto tipo 9; ver `impactos.md`) y vuelve a la pose. Blanco válido: soldado.
