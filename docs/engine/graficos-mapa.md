@@ -1,5 +1,8 @@
 # Gráficos, mapa y animación (informe parcial, se actualiza por punto cerrado)
 
+> **Aviso (2026-10-29):** este informe es de la primera tanda de investigación; muchos de sus «NO LEÍDO» se cerraron después. Ver `docs/lectura/*.md` (lectura sistemática del exe: AU*, enemigos, objetos, misión, render, sonido, flags, vehículos) y `docs/research/q1-*.md` (movimiento, colisión, rutas, escaleras, cámara, orden de dibujo). Ante discrepancia, mandan esos.
+
+
 Marcas: **[hecho]** = leído en el exe (dirección) y/o verificado en los archivos reales; **[hip]** = hipótesis; **NO LEÍDO** = sin evidencia.
 Exe = `coman_mp.exe` de la raíz. Herramientas nuevas en `tools/`: `exedis.py` (desensambla una VA y sigue stubs `jmp`), `jmpchase.py` (resuelve stubs), `callers.py` (quién llama, incluso vía stubs), `bmp_sprite_check.py`.
 

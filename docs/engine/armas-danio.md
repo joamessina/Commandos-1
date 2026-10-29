@@ -1,5 +1,8 @@
 # Armas, daño, impactos, muerte y energía (Commandos 1, coman_mp.exe)
 
+> **Aviso (2026-10-29):** este informe es de la primera tanda de investigación; muchos de sus «NO LEÍDO» se cerraron después. Ver `docs/lectura/*.md` (lectura sistemática del exe: AU*, enemigos, objetos, misión, render, sonido, flags, vehículos) y `docs/research/q1-*.md` (movimiento, colisión, rutas, escaleras, cámara, orden de dibujo). Ante discrepancia, mandan esos.
+
+
 Estado: **PARCIAL, escrito temprano** (se actualiza al cerrar cada punto). Marcas: [hecho] = leído en el decompilado/exe con dirección; [hip] = hipótesis; NO LEÍDO = no se miró.
 Convenciones: `this+0x1c` en una acción = el bicho dueño; en el bicho `+0x208` = ENERGÍA (int). `DAT_0083d658+0x468` = contador de ciclos (20/s). Slots de vtable de acción (ClassAcXxx): 0 dtor, 1 init/parse de `.CLAVES`, 4 update por ciclo, 5 manejador de mensajes, 10 guardado. Los thunks `jmp` hay que seguirlos (script propio: nombre `thunk_FUN_xxxx` = destino).
 

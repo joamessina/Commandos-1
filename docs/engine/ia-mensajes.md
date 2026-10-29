@@ -1,5 +1,8 @@
 # IA de enemigos, sistema de mensajes y toma de decisiones (Commandos 1, `coman_mp.exe`)
 
+> **Aviso (2026-10-29):** este informe es de la primera tanda de investigación; muchos de sus «NO LEÍDO» se cerraron después. Ver `docs/lectura/*.md` (lectura sistemática del exe: AU*, enemigos, objetos, misión, render, sonido, flags, vehículos) y `docs/research/q1-*.md` (movimiento, colisión, rutas, escaleras, cámara, orden de dibujo). Ante discrepancia, mandan esos.
+
+
 Estado: **PARCIAL** (informe escrito temprano y ampliado). Marcas: **[hecho]** = leído en el decompilado con dirección; **[hip]** = hipótesis; **NO LEÍDO** = no se leyó.
 Herramientas del análisis (fuera del repo): `scratchpad\ia\*.py`. Tabla completa de mensajes: `docs/engine/ia-mensajes-tabla.tsv` (671 filas: id, nombre, clases que lo comparan, clases que lo usan; la columna de clases es por vecindad de dirección = aproximada).
 

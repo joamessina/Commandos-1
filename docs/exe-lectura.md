@@ -1,5 +1,8 @@
 # Lectura del exe: qué se cubrió, qué se leyó y qué no
 
+> **Aviso (2026-10-29):** este informe es de la primera tanda de investigación; muchos de sus «NO LEÍDO» se cerraron después. Ver `docs/lectura/*.md` (lectura sistemática del exe: AU*, enemigos, objetos, misión, render, sonido, flags, vehículos) y `docs/research/q1-*.md` (movimiento, colisión, rutas, escaleras, cámara, orden de dibujo). Ante discrepancia, mandan esos.
+
+
 Exe analizado: `coman_mp.exe` de la **raíz** (PE normal; el de `Legacy\` está cifrado, ver `formats-texto-y-modelo.md` §0). 5 secciones: `.text` 3 737 088 B · `.rdata` · `.data` · `.idata` · `.rsrc`.
 Tres niveles, para no confundirse: **Cubierto** = existe en el índice y tiene dueño; **Atribuido** = un script lo asignó a un subsistema; **Leído** = lo leí y lo entendí (con dirección). **Cubrir y atribuir no es leer.**
 

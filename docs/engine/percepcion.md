@@ -1,5 +1,8 @@
 # Percepción: vista, oído, memoria, ruido, luz (Commandos 1, `coman_mp.exe`)
 
+> **Aviso (2026-10-29):** este informe es de la primera tanda de investigación; muchos de sus «NO LEÍDO» se cerraron después. Ver `docs/lectura/*.md` (lectura sistemática del exe: AU*, enemigos, objetos, misión, render, sonido, flags, vehículos) y `docs/research/q1-*.md` (movimiento, colisión, rutas, escaleras, cámara, orden de dibujo). Ante discrepancia, mandan esos.
+
+
 Estado: **informe parcial pero con lo central cerrado**. Marcas: **[hecho]** = leído en el decompilado/exe con dirección; **[hip]** = hipótesis; **NO LEÍDO** = no se pudo leer. Direcciones = VA del exe (base 0x400000). Muchas entradas de vtable son thunks `jmp`; acá van las direcciones de la función REAL. Ticks: el juego corre a 20 ciclos/s por defecto (`exe-lectura.md`).
 
 ## 1. Resumen ejecutivo

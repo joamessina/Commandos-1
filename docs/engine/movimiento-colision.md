@@ -1,5 +1,8 @@
 # Movimiento, motores, colisión y búsqueda de ruta (Commandos 1, `coman_mp.exe`)
 
+> **Aviso (2026-10-29):** este informe es de la primera tanda de investigación; muchos de sus «NO LEÍDO» se cerraron después. Ver `docs/lectura/*.md` (lectura sistemática del exe: AU*, enemigos, objetos, misión, render, sonido, flags, vehículos) y `docs/research/q1-*.md` (movimiento, colisión, rutas, escaleras, cámara, orden de dibujo). Ante discrepancia, mandan esos.
+
+
 Estado: **PARCIAL (v2)**. [hecho] = leído en el decompilado con dirección; [hip] = hipótesis; NO LEÍDO = no se leyó.
 Convención: `FUN_xxxxxxxx` = dirección VA. Los métodos virtuales de las vtables son thunks `jmp`; las direcciones de abajo ya son las **reales**.
 Ritmo del juego: 20 ciclos/s por defecto (`MAXFPS=0x14`, ver `docs/exe-lectura.md` §2.1). Toda velocidad de abajo está en **unidades de mundo por ciclo**.

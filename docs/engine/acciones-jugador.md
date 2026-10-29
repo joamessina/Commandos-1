@@ -1,5 +1,8 @@
 # Acciones del jugador, habilidades, objetos y vehículos (ClassAU*, mochila)
 
+> **Aviso (2026-10-29):** este informe es de la primera tanda de investigación; muchos de sus «NO LEÍDO» se cerraron después. Ver `docs/lectura/*.md` (lectura sistemática del exe: AU*, enemigos, objetos, misión, render, sonido, flags, vehículos) y `docs/research/q1-*.md` (movimiento, colisión, rutas, escaleras, cámara, orden de dibujo). Ante discrepancia, mandan esos.
+
+
 Estado: **PARCIAL, en ampliación**. Marcas: **[hecho]** = leído en el exe/datos con dirección; **[hip]** = hipótesis; **NO LEÍDO**.
 Método: `RTTI -> vtable -> función` (las entradas de vtable son stubs `jmp`; el decompilado del stub muestra el cuerpo real). Direcciones = stub (vtable) y entre paréntesis la función real. Constantes `_DAT_` = double, `DAT_` en argumento float = float (leído del PE).
 

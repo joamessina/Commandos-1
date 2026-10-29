@@ -1,5 +1,8 @@
 # Interfaz, menús, misiones, puntuación y guardado (exe `coman_mp.exe` de la raíz)
 
+> **Aviso (2026-10-29):** este informe es de la primera tanda de investigación; muchos de sus «NO LEÍDO» se cerraron después. Ver `docs/lectura/*.md` (lectura sistemática del exe: AU*, enemigos, objetos, misión, render, sonido, flags, vehículos) y `docs/research/q1-*.md` (movimiento, colisión, rutas, escaleras, cámara, orden de dibujo). Ante discrepancia, mandan esos.
+
+
 Estado: **informe parcial pero verificado** (primera entrega; se amplía abajo). Cada dato: **[hecho]** = leído en el decompilado (con dirección), **[hip]** = deducido, **NO LEÍDO** = no se tocó.
 Objeto principal del juego = `ClassEngineJuego` (global `DAT_0083d658`, 0x1448 B; vtable: ctor/init `0x5bd030`, `0x5c2790` = init de recursos y arranque, `0x5c7160` = dispatcher por estado). Abreviatura: `G+off` = campo de ese objeto.
 

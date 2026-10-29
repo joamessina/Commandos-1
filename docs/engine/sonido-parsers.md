@@ -1,5 +1,8 @@
 # Sonido y parsers/vocabulario de datos (versión parcial 1, 2026-10-27)
 
+> **Aviso (2026-10-29):** este informe es de la primera tanda de investigación; muchos de sus «NO LEÍDO» se cerraron después. Ver `docs/lectura/*.md` (lectura sistemática del exe: AU*, enemigos, objetos, misión, render, sonido, flags, vehículos) y `docs/research/q1-*.md` (movimiento, colisión, rutas, escaleras, cámara, orden de dibujo). Ante discrepancia, mandan esos.
+
+
 Convención: **[hecho]** = leído en el exe/archivos con dirección · **[hip]** = hipótesis · **NO LEÍDO** = no se pudo leer, no se supone.
 Exe: `coman_mp.exe` de la raíz. Direcciones VA (base 0x400000). Herramientas nuevas (todas en `tools\`): `vtres.py` (vtable con stubs resueltos), `exedis.py` (desensamblado capstone; se llamaba `dis.py` y chocaba con la stdlib), `xs.py` (funciones por cadena), `flist.py`, `callargs.py` (argumentos `push imm` de cada llamada), `dumpdata.py`, `soundtab.py`, `wavscan.py`, `verify_sound.py`, `verify_mis.py`, `keyscan.py`, `vocab.py`.
 Salidas en `research-c1\`: `sound_table.tsv`, `exe_keys_getblock.tsv`, `vocab_c1.tsv`.
