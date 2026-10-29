@@ -109,5 +109,14 @@ if __name__ == '__main__':
         with open(LEDGER, 'a', encoding='utf8') as fh:
             if new: fh.write('addr\tfamilia\ttanda\n')
             for a in picked: fh.write(f'{a:08x}\t{familia}\t{tanda}\n')
-        print(f'# tanda {tanda}: {len(picked)} funciones, {sum(IX[a]["size"] for a in picked)} B; pendientes tras esta: {len(xs) - len(picked)}')
-        for a in picked: show(a)
+        import contextlib, io
+        out = os.environ.get('TANDA_OUT')
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            print(f'# tanda {tanda}: {len(picked)} funciones, {sum(IX[a]["size"] for a in picked)} B; pendientes tras esta: {len(xs) - len(picked)}')
+            for a in picked: show(a)
+        if out:
+            open(out, 'w', encoding='utf8').write(buf.getvalue())
+            txt = buf.getvalue()
+            print(txt.splitlines()[0], '->', out, len(txt.splitlines()), 'lineas')
+        else: print(buf.getvalue())
