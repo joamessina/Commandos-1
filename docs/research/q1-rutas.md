@@ -1,7 +1,7 @@
 # Q1 — R3: pathfinding (`TPathTool`)
 
 Fuente: exe de la raíz, decompilado en `D:\Joaquin\research-c1\ghidra\all2` (`py -I tools/showfn.py D:/Joaquin/research-c1/ghidra/all2 <hex>`). **[hecho]** = leído con dirección; **[hip]** = hipótesis; **NO LEÍDO**.
-Estado: **estructura completa del buscador (A* sobre sectores) y de sus reglas de paso; suavizado y seguimiento leídos a nivel de diseño, no byte a byte.** No se probó contra el original en vivo (R6), así que ninguna ruta está comparada con la real.
+Estado: **estructura completa del buscador (A* sobre sectores) y de sus reglas de paso; PORTADO a `src/engine/path.ts` (2026-10-28).** El suavizado se portó con un embudo estándar (el exacto no se leyó). No se probó contra el original en vivo (R6, salteada por decisión del usuario), así que ninguna ruta está comparada con la real; sí contra los 11 `.SEC` (`npm run verify:real`).
 
 ## Flujo [hecho]
 `ClassAcUsuarioGoto` → `FUN_00628470(x,y,z,sector, agua, agachado)` → `TPathTool::buscaCamino` `FUN_00627490`:
@@ -41,6 +41,15 @@ Dos variantes, elegidas por `FUN_00628470`: a pie (`FUN_006112B0`, contexto `{0x
 2. Portales recortados + embudo → lista de puntos; el comando va punto a punto con `stepBody` (llegada con la tolerancia del motor, ya portada).
 3. Atasco: 9 ciclos sin avanzar → re-planificar.
 4. Escaleras (aristas con bit 4, `SETTREPAR`) y `GotoSector`: no portar hasta leerlas.
+
+## Lo leído al portar (2026-10-28) [hecho]
+- **Normales de arista** `FUN_005F3D00`: `a=-(y1-y0)/L`, `b=(x1-x0)/L`, `c=-(a·x0+b·y0)`; en los 11 `.SEC` todos los polígonos son antihorarios (área > 0), así que la distancia es **positiva hacia el interior**. Los vecinos son simétricos por índice de vértice.
+- **Margen de pared** `FUN_00577770`: BFS por vecinos desde el sector que se deja; en cada arista con distancia `d ∈ [-0.01, 11)` al extremo y proyección dentro del segmento (o a < 11 de un extremo) llama al filtro `FUN_00610710`: **hay pared si la arista no tiene vecino o el filtro a pie la bloquea**. Corta en la primera; no reexpande por aristas bloqueadas. Cola de 1023.
+- **Costo** `FUN_00624370`: `dist(punto medio de la arista de entrada o el inicio, punto medio de la arista de salida) × sector+0x1C`; ese costo vale 1.0 para todos (lo fija el cargador `FUN_005F9EC0`). Lista abierta `FUN_00623FF0`: inserción ordenada por `f=g+h` fijada al insertar (empate: el nuevo va después).
+- **Atajo de recta** `FUN_00624530`: arista de salida = primera arista con `cruz(v_i−p, d) ≥ 0` y `cruz(v_{i+1}−p, d) < 0`; `t` del cruce (0.1 si el rayo es casi paralelo). Éxito si `t > 1`.
+- **Avance de punto**: no hay lógica propia de distancia; el motor avisa `msgPuntoAlcanzado` (`FUN_00628C40`) al llegar (d² < 1) y entonces `FUN_00626810` pasa al punto siguiente (`FUN_00626710(i+1)`); si el punto alcanzado es el destino final la ruta termina. **Contador de atasco** (`FUN_00629EF0`): suma 1 cada ciclo en que la posición cambió menos que `1e-4` (d²), **sin reiniciarse mientras se mueve**; a los 9, `FUN_006281A0` (no leída).
+- **Sector por vecinos** `FUN_005F9E60`→`FUN_005F6F70`: si el punto queda del lado interior de todas las aristas es ese sector; si no, recursión por los vecinos (primero por las aristas que lo dejan afuera, luego las otras) con sello contra bucles; si falla, búsqueda global. Es lo que permite subir a un puente/piso B enlazado desde un A (22 aristas A→B).
+- Puntos de ruta del original: uno por **cada portal** (cruce del rayo con el portal, desplazado 1 u por la normal, `FUN_00625900`), más los puntos de giro; el port emite solo giros y destino (los intermedios son colineales).
 
 ## NO LEÍDO (R3)
 `FUN_00626470/6264A0` (cuándo se pasa al punto siguiente), `FUN_006281A0` (re-plan), `FUN_00627CD0/627990` (estados escalera), `FUN_00674B40/6749B0/674A10` (intervalos del embudo), `FUN_00610A10`, `FUN_00623E80/6242A0` (buffers), capacidad del pool de nodos, y cómo `BuscadorPuntoAPunto`/`GridSeek*` (otro buscador, usado por la IA enemiga) difiere de este.

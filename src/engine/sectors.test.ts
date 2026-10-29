@@ -9,7 +9,8 @@ import { Unit } from './unit.ts';
 // A4 (400..500) llano; A5 (500..600) 30 más alto; A6 (600..700) solo agachado
 const verts: [number, number][] = [];
 for (let i = 0; i <= 7; i++) verts.push([i * 100, 0], [i * 100, 100]);
-const quad = (i: number, extra: object = {}): { verts: number[] } => ({ verts: [i * 2, i * 2 + 1, i * 2 + 3, i * 2 + 2], ...extra });
+// antihorario: aristas 0 abajo, 1 derecha (vecino i+1), 2 arriba, 3 izquierda (vecino i-1)
+const quad = (i: number, extra: object = {}): { verts: number[] } => ({ verts: [i * 2, i * 2 + 2, i * 2 + 3, i * 2 + 1], ...extra });
 const map = new SectorMap(
   parseSec(
     secBytes({
@@ -24,6 +25,7 @@ const map = new SectorMap(
         quad(6, { flags: SectorFlag.SoloAg }),
       ],
       b: [quad(0, { plane: [0, 0, 50] })],
+      tw1: Array.from({ length: 7 }, (_, i) => [-1, i < 6 ? i + 1 : -1, -1, i > 0 ? i - 1 : -1]),
     }),
   ),
 );
@@ -113,21 +115,32 @@ describe('Unit sobre sectores', () => {
     expect(u.goTo({ x: 90, y: 50 }, false)).toBe(true);
   });
 
-  it('un muro entre medio lo frena en el borde del sector', () => {
+  it('sin camino por sectores (NTrans, escalón de +30) la orden se rechaza y no se mueve', () => {
     const u = unit(50, 50);
-    // destino válido (agua) detrás del muro: 100..200 es NTrans
-    expect(u.goTo({ x: 250, y: 50 }, false)).toBe(true);
-    run(u, 120);
-    expect(u.body.x).toBeLessThanOrEqual(100);
-    expect(u.body.x).toBeGreaterThan(90);
-    expect(u.sector).toBe(sector(0));
+    expect(u.goTo({ x: 250, y: 50 }, false)).toBe(false); // 100..200 es NTrans
+    const v = unit(450, 50);
+    expect(v.goTo({ x: 590, y: 50 }, false)).toBe(false); // 500..600 está 30 más alto
+    expect(v.goTo({ x: 490, y: 50 }, false)).toBe(true);
+    expect(u.target).toBeNull();
   });
 
-  it('un escalón de +30 al cambiar de sector lo frena en el borde', () => {
-    const u = unit(450, 50);
-    u.goTo({ x: 590, y: 50 }, false);
-    run(u, 60);
-    expect(u.body.x).toBeLessThanOrEqual(500);
+  it('una orden a menos de 2 u del destino se ignora', () => {
+    const u = unit(50, 50);
+    expect(u.goTo({ x: 51, y: 50 }, false)).toBe(true);
+    expect(u.target).toBeNull();
+  });
+
+  it('si el camino se cierra mientras camina, re-planifica tras 9 ciclos sin avanzar y al tercer intento abandona', () => {
+    const u = unit(10, 50);
+    expect(u.goTo({ x: 90, y: 50 }, false)).toBe(true);
+    const s0 = sector(0);
+    s0.flags |= SectorFlag.NTrans; // el Sim anula cada paso
+    run(u, 30);
+    expect(u.target).not.toBeNull(); // sigue intentando
+    run(u, 30);
+    s0.flags &= ~SectorFlag.NTrans;
+    expect(u.target).toBeNull();
+    expect(u.body.x).toBeCloseTo(10, 0);
   });
 
   it('en agua camina a la mitad de la velocidad', () => {

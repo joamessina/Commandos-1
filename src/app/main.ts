@@ -3,7 +3,8 @@
  * DATOS/recursos/bmps/map_mp/Fase000N.wad. Nada se sube ni se hace fetch: todo se lee con la File API.
  * Controles: clic izquierdo = elegir comando / caminar; clic derecho = caminar; Mayús+clic o doble clic derecho = correr;
  * flechas o WASD = mover la cámara; 1-4 = elegir comando; Inicio = centrar en el elegido.
- * shortcut: el suelo y el paso salen de los sectores (.SEC), pero sin rutas (R3: el comando empuja contra las paredes), orden de dibujo por y de los pies (R2 pendiente);
+ * Rutas: el comando sigue el camino por sectores (A* + embudo, R3); si no hay camino a pie la orden se rechaza y se avisa en la barra de estado.
+ * shortcut: orden de dibujo por y de los pies (R2 pendiente); sin agua/buceo (los comandos que arrancan en el mar, p. ej. mapa 0000, no pueden moverse);
  *           los controles (derecho = mover) son los del original según el juego conocido, NO leídos del exe todavía.
  */
 import { parseAnm } from '../formats/anm.ts';
@@ -213,6 +214,14 @@ function draw(g: Game): void {
     const q = project(t.target.x, t.target.y, t.z);
     ctx.strokeStyle = '#c9a24a';
     ctx.beginPath();
+    const here = project(t.body.x, t.body.y, t.z);
+    ctx.moveTo(here.px, here.py);
+    for (const w of t.waypoints) {
+      const p = project(w.x, w.y, t.z);
+      ctx.lineTo(p.px, p.py);
+    }
+    ctx.stroke();
+    ctx.beginPath();
     ctx.arc(q.px, q.py, 5, 0, Math.PI * 2);
     ctx.stroke();
   }
@@ -242,7 +251,7 @@ function onMouse(e: MouseEvent): void {
     const now = performance.now();
     const run = e.shiftKey || (e.button === 2 && now - lastRight < 350);
     if (e.button === 2) lastRight = now;
-    sel.goTo(unproject(mx, my, sel.z), run);
+    if (!sel.goTo(unproject(mx, my, sel.z), run)) say(`${sel.token}: no hay camino a pie hasta ese punto.`);
   }
 }
 

@@ -3,14 +3,16 @@
  * el clic fija un destino y la animación (ANDAR/CORRE) se elige por nombre; la velocidad la decide el motor
  * (2.5 al andar; correr según personaje), NO la animación. La animación avanza por distancia recorrida sobre el rumbo.
  * Con un SectorMap: suelo = plano del sector, destino y pasos validados (docs/research/q1-movimiento.md §R4); agua ×0.5.
- * shortcut: sin rutas (R3): una pared entre el comando y el destino lo deja empujando contra ella;
- *           sin escaleras/PEscal ni comprobación de arista a arista (FUN_005F62F0), solo del punto de llegada.
+ * Rutas (R3, docs/research/q1-rutas.md): `goTo` pide a `Nav` la cadena de sectores (atajo recto o A*) y camina por sus puntos de giro; sin camino la orden se rechaza.
+ * shortcut: atasco = 9 ciclos sin avanzar (FUN_00629EF0) y se re-planifica desde donde está; lo que hace FUN_006281A0 NO se leyó, así que se
+ *           reintenta hasta MAX_REPLANS veces y se abandona. Sin escaleras/PEscal (bit 4) ni agua/buceo en la ruta. Cuándo mejorar: al leer FUN_006281A0.
  * shortcut: al detenerse la secuencia queda en el paso donde estaba (no se leyó cómo el original elige la pose de reposo),
  *           cuándo mejorar: al leer REPOSO/AGACHARSE y el estado de animación del bicho.
  */
 import type { Anm } from '../formats/anm.ts';
 import type { Sector } from '../formats/sec.ts';
 import { Animator } from './anim.ts';
+import { navFor, type Nav } from './path.ts';
 import { groundZ, isWater, simBlocked, stepOk, validTarget, type SectorMap } from './sectors.ts';
 import { newBody, runSpeed, stepBody, WALK_SPEED, type Body, type Vec } from './walk.ts';
 
@@ -23,10 +25,21 @@ export const project = (x: number, y: number, z: number): { px: number; py: numb
 /** Inversa de `project` para un plano z conocido. */
 export const unproject = (px: number, py: number, z: number): Vec => ({ x: px, y: (py + SIN50 * z) / COS50 });
 
+/** Ciclos seguidos sin avanzar que disparan un nuevo plan (FUN_00629EF0: `param_1[5] < 9`). */
+const STUCK_CYCLES = 9;
+const MAX_REPLANS = 3;
+
 export class Unit {
   readonly body: Body;
   readonly anim: Animator;
+  /** Destino final de la orden vigente. */
   target: Vec | null = null;
+  /** Puntos que faltan hasta `target` (el primero es al que va el cuerpo). */
+  private path: Vec[] = [];
+  private stuck = 0;
+  private replans = 0;
+  private goalSector: Sector | null = null;
+  private readonly nav: Nav | null;
   running = false;
   /** Sector que pisa (null sin mapa de sectores o fuera de todos). */
   sector: Sector | null = null;
@@ -43,12 +56,26 @@ export class Unit {
   ) {
     this.body = newBody(x, y, angle);
     this.anim = new Animator(anm, 'ANDAR');
+    this.nav = sectors ? navFor(sectors) : null;
     this.land();
   }
 
   /** Ordena caminar (o correr) hasta un punto del mundo. Devuelve false si el destino no es transitable (FUN_0053A250). */
   goTo(p: Vec, run: boolean): boolean {
-    if (this.sectors && !validTarget(this.sectors.at(p.x, p.y))) return false;
+    // shortcut: el sector destino sale de atZ con la z del comando (el clic se proyectó sobre su plano); el original usa FUN_005F6C60 por (x,y)
+    //           o lo recibe de quien da la orden (FUN_00628470), no leído. Cuándo mejorar: al leer ClassAcUsuarioGoto.
+    const to = this.sectors?.atZ(p.x, p.y, this.z) ?? null;
+    if (this.sectors && !validTarget(to)) return false;
+    let path = [p];
+    if (this.nav) {
+      const route = this.sector ? this.nav.route(this.body, this.sector, p, to) : null;
+      if (!route) return false;
+      if (route.length === 0) return true; // ya está a menos de 2 u: la orden se ignora
+      path = route;
+    }
+    this.path = path;
+    this.goalSector = to;
+    this.stuck = this.replans = 0;
     this.target = p;
     this.running = run;
     const run1 = ['CORRE', 'CORRER'].find((n) => this.anim.has(n));
@@ -56,9 +83,17 @@ export class Unit {
     return true;
   }
 
+  /**
+   * Sector en (x,y): siguiendo los vecinos del actual (FUN_005F9E60, así se sube a un puente o piso B que la vecindad enlaza);
+   * si no, búsqueda global con z. shortcut: el original cae a FUN_005F6C60 (sin z); atZ evita elegir un B que está por encima.
+   */
+  private sectorAt(x: number, y: number): Sector | null {
+    return (this.sector && this.nav?.follow(this.sector, x, y)) || (this.sectors?.atZ(x, y, this.z) ?? null);
+  }
+
   /** Sector y altura del suelo bajo el cuerpo. */
   private land(): void {
-    const s = this.sectors?.atZ(this.body.x, this.body.y, this.z) ?? null;
+    const s = this.sectorAt(this.body.x, this.body.y);
     this.sector = s;
     if (s) this.z = groundZ(s, this.body.x, this.body.y);
   }
@@ -66,18 +101,41 @@ export class Unit {
   /** ¿Puede pisar (x,y)? Sector transitable y escalón dentro de [-20,+15] respecto del suelo actual. */
   private blocked = (x: number, y: number): boolean => {
     if (!this.sectors) return false;
-    const s = this.sectors.atZ(x, y, this.z);
+    const s = this.sectorAt(x, y);
     return !s || simBlocked(s) || (s !== this.sector && !stepOk(groundZ(s, x, y) - this.z));
   };
 
   /** Un ciclo de lógica (1/20 s). */
   tick(): void {
     const v = this.running ? runSpeed(this.token) : WALK_SPEED;
-    const r = stepBody(this.body, this.target, v, isWater(this.sector) ? 0.5 : 1, this.blocked);
+    const wp = this.path[0] ?? null;
+    const r = stepBody(this.body, wp, v, isWater(this.sector) ? 0.5 : 1, this.blocked);
     this.land();
-    if (r.arrived) this.target = null;
+    if (wp && r.arrived) {
+      this.path.shift();
+      if (this.path.length === 0) this.target = null;
+    } else if (wp) this.watchStuck(r.dx, r.dy);
     const rad = (this.body.ang * Math.PI) / 180;
     this.anim.advance(r.dx * Math.cos(rad) + r.dy * Math.sin(rad), 1); // distancia sobre el rumbo (FUN_00591DE0)
+  }
+
+  /** Cuenta ciclos sin avanzar y, al llegar a 9, vuelve a planificar hasta el destino. */
+  private watchStuck(dx: number, dy: number): void {
+    this.stuck = dx * dx + dy * dy < 1e-4 ? this.stuck + 1 : 0;
+    if (this.stuck < STUCK_CYCLES) return;
+    this.stuck = 0;
+    const route = this.nav && this.sector && this.target && this.replans < MAX_REPLANS ? this.nav.route(this.body, this.sector, this.target, this.goalSector) : null;
+    this.replans++;
+    if (route && route.length > 0) this.path = route;
+    else {
+      this.path = [];
+      this.target = null;
+    }
+  }
+
+  /** Puntos que faltan hasta el destino (para dibujar la ruta). */
+  get waypoints(): readonly Vec[] {
+    return this.path;
   }
 
   get moving(): boolean {

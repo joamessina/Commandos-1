@@ -7,7 +7,7 @@ Lo que pide la misión 0 (medido en `MAPA0000.MIS`): 82 macros de 18 tipos (todo
 ## A. IMPLEMENTACIÓN
 
 ### Q1 — Ya: es la ruta crítica para ver y mover un comando
-**Estado (2026-10-28):** I1 ✅ (`src/formats/clave.ts`) · I2 ✅ (`anm.ts` 166/166 + `anim.ts`) · I3 🔶 (bucle a 20 Hz y cámara por teclado hechos; falta límites/scroll del original) · I4 🔶 (se cargan los aliados, incl. anidados; faltan los otros 78 elementos) · I5 ✅ (`src/formats/sec.ts` + `src/engine/sectors.ts`: suelo, sector por punto, destino válido, paso y escalón; falta `CHOQ*.VOL`, rutas y escaleras) · I6 🔶 (caminar/correr con la velocidad real, agua ×0,5, suelo y bloqueo por sectores; **sin** rutas (R3), deslizamiento (`FUN_0057E520`) ni escaleras) · I7 ⬜.
+**Estado (2026-10-28):** I1 ✅ (`src/formats/clave.ts`) · I2 ✅ (`anm.ts` 166/166 + `anim.ts`) · I3 🔶 (bucle a 20 Hz y cámara por teclado hechos; falta límites/scroll del original) · I4 🔶 (se cargan los aliados, incl. anidados; faltan los otros 78 elementos) · I5 ✅ (`src/formats/sec.ts` + `src/engine/sectors.ts`: suelo, sector por punto, destino válido, paso y escalón; falta `CHOQ*.VOL`, rutas y escaleras) · I6 🔶 (caminar/correr con la velocidad real, agua ×0,5, suelo y bloqueo por sectores, **rutas** con `src/engine/path.ts` (A* + embudo); **sin** deslizamiento (`FUN_0057E520`), escaleras ni agua/buceo) · I7 ⬜.
 | # | Qué | Por qué es urgente | Listo cuando | Depende de |
 |---|---|---|---|---|
 | I1 | **Parser `.CLAVE [ ]` en TS** (`MIS`, `MAC`, `DAT`, `cfg`) con tests | Sin él no se instancia nada: ni comandos, ni enemigos, ni objetos. Gramática ya cerrada (`sonido-parsers.md`, verificada en 117/117) | Árbol de las 19 `MIS` y 96 `MAC`; `$Variable` resuelta contra la instancia | — |
@@ -40,7 +40,7 @@ Menús, briefing y créditos · tutorial `.ROL` · partidas guardadas (`.SAV` es
 ## B. INVESTIGACIÓN
 
 ### Q1 — Lo que traba la ruta crítica (cada una destraba un ítem de arriba)
-**Estado (2026-10-28):** R1 ✅ cerrada por código · R4 ✅ estructura y consultas · R5 ✅ (patio = error nuestro, corregido) · R2 🔶 proyección cerrada y mecanismo de orden hallado (pintor por pares entre volúmenes, regla cilindro↔cilindro leída; falta el polígono de edificios y la cámara) · R3 ✅ estructura (A* sobre sectores, filtros, márgenes 11/4; falta detalle del embudo y del avance de puntos) · R6 ⬜ (requiere abrir el juego). Informes: `docs/research/q1-movimiento.md`, `q1-render.md`, `q1-rutas.md`, `q1-orden-dibujo.md`.
+**Estado (2026-10-28):** R1 ✅ cerrada por código · R4 ✅ estructura y consultas · R5 ✅ (patio = error nuestro, corregido) · R2 🔶 proyección cerrada y mecanismo de orden hallado (pintor por pares entre volúmenes, regla cilindro↔cilindro leída; falta el polígono de edificios y la cámara) · R3 ✅ portado a `src/engine/path.ts` (A* sobre sectores, filtros, márgenes 11/4, seguimiento por vecinos FUN_005F9E60; embudo estándar en lugar de los intervalos angulares FUN_00674B40…, no leídos) · R6 ⬜ (requiere abrir el juego; el usuario decidió saltearla: el parpadeo de resolución molesta — se vuelve a medir solo si algo se ve raro). Informes: `docs/research/q1-movimiento.md`, `q1-render.md`, `q1-rutas.md`, `q1-orden-dibujo.md`.
 
 | # | Pregunta | Destraba | Dónde mirar | Cómo se sabe que está resuelta |
 |---|---|---|---|---|

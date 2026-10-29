@@ -10,7 +10,8 @@ import { join } from 'node:path';
 import { entryBytes, parseContainer } from '../src/formats/container.ts';
 import { parseAnm } from '../src/formats/anm.ts';
 import { loadAllies } from '../src/engine/mission.ts';
-import { groundZ, SectorMap, validTarget } from '../src/engine/sectors.ts';
+import { navFor } from '../src/engine/path.ts';
+import { groundZ, SectorMap, simBlocked, validTarget } from '../src/engine/sectors.ts';
 import { parseSec } from '../src/formats/sec.ts';
 import { parseVol } from '../src/formats/vol.ts';
 import { parseWad } from '../src/formats/wad.ts';
@@ -79,6 +80,32 @@ for (const e of entries.filter((x) => /MAPA\d{4}\.MIS$/i.test(x.path)).sort((a, 
       return sec ? { ok: validTarget(sec), dz: groundZ(sec, a.x, a.y) - a.z } : { ok: false, dz: NaN };
     });
     console.log(`  sectores: ${res.filter((r) => r.ok).length.toString()}/${al.length.toString()} en sector transitable; dz(plano - .MIS) = ${res.map((r) => r.dz.toFixed(1)).join(', ')}`);
+    // rutas (R3): desde cada aliado a 40 sectores transitables; toda ruta hallada debe ir por sectores que el Sim deja pisar
+    const nav = navFor(map);
+    const goals = map.sec.sectors.filter((s) => !s.overlay && validTarget(s)).filter((_, i, l) => i % Math.max(1, Math.floor(l.length / 40)) === 0);
+    let found = 0;
+    let tried = 0;
+    let bad = 0;
+    for (const a of al) {
+      const from = map.atZ(a.x, a.y, a.z);
+      if (!from) continue;
+      for (const g of goals) {
+        const gi = g.verts.map((v) => map.sec.verts[v]);
+        const goal = { x: gi.reduce((t, v) => t + (v?.x ?? 0), 0) / gi.length, y: gi.reduce((t, v) => t + (v?.y ?? 0), 0) / gi.length };
+        const to = map.atZ(goal.x, goal.y, groundZ(g, goal.x, goal.y));
+        if (!to || !validTarget(to)) continue;
+        tried++;
+        const route = nav.route(a, from, goal, to);
+        if (!route) continue;
+        found++;
+        let prev: { x: number; y: number } = a;
+        for (const p of route) {
+          for (let t = 0.05; t < 1; t += 0.05) if (simBlocked(map.at(prev.x + (p.x - prev.x) * t, prev.y + (p.y - prev.y) * t))) bad++;
+          prev = p;
+        }
+      }
+    }
+    console.log(`  rutas: ${found.toString()}/${tried.toString()} con camino a pie; ${bad.toString()} muestras de ruta sobre sectores bloqueados`);
   }
 }
 
