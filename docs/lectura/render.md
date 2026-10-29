@@ -151,3 +151,7 @@ Otras subclases de `ClassPSystem` que no cuelgan de un hotspot: `ClassCascada` (
 2. Solape de dos discos de luz (esquinas k=0 sobrescriben) y ANM de bancos 0/1 con filtro lineal (¿negros de noche?): hip, ver C2.2.
 3. Comportamiento fino de las partículas (velocidad/vida/color por clase).
 4. `FUN_00644830` (blit con zoom) sin clamp visto; irrelevante mientras ninguna misión use zoom.
+
+## Cierre 5
+- Tiles `-RUINA` de MAPA0003 (`g = −1`, nivel 15): los nombres que empiezan por `-` **no se dibujan** hasta que el edificio se destruye (`graficos-mapa` §7), así que el posible «negro» solo afectaría a las ruinas ya destruidas; sin efecto en el estado inicial del mapa.
+- `Legacy\coman_mp.exe` (3,5 MB) contiene 0 de las 662 cadenas `MSG*` del exe de la raíz: está **cifrado/empaquetado** (el DRM ya anotado en `CLAUDE.md`), por lo que no se puede analizar estáticamente; todo el análisis es del exe de la raíz.

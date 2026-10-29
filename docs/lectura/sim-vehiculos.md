@@ -112,3 +112,6 @@ Mismo esquema que la Lancha. `+0xC8 = R/4`, `+0xB4 = R/8` (tope de empuje), `+0x
 - Rama de corriente de la balsa (`0x1F`, aguas profundas, `bicho+0x13C+4..0xC += corriente·5/masa`): leída pero sin contrastar con los `.SEC` reales (¿hay sectores con flag `Corrie` en agua?); quien consume `bicho+0x13C` no se siguió.
 - Tipos de objeto del `bicho+0x190 == 5` con conductor `vt+8 == 3/2`: no se identificaron las clases por RTTI.
 - No se midió el original en vivo; los números salen del código (reproducibles con `agenteF\simcar.py`).
+
+## Cierre 5
+La rama de corriente de la balsa (`0x1F`, aguas profundas) depende del flag de sector **Corriente (0x20)**, que **no aparece en ninguno de los 11 `.SEC`** (`q1-movimiento.md`): nunca se ejecuta con los datos instalados.

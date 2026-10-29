@@ -64,3 +64,6 @@ Cierra las dudas 1, 2 y 3 de arriba. Barrido hecho con desensamblado: se tomaron
 
 ### Dudas abiertas tras el Cierre 2
 Quedan las 4 y 5 de arriba (`.HANDLE`, `.SENSORES_SND_ZONA`) sin tocar (fuera del encargo). El `Legacy\coman_mp.exe` es otro binario (3,5 MB): las direcciones de estas notas son de la raíz; no se recorrió el barrido de volúmenes en Legacy.
+
+## Cierre 5
+Los sitios de `FUN_00681B90` «con el fourcc en un registro» (`FUN_00443E80`, `FUN_0044B4D0`, `FUN_0047CE90`) reciben el fourcc **como parámetro del llamador**: los 9–10 llamadores (`FUN_004444C0`, `FUN_00444820`, `FUN_004449C0`, `FUN_00444CE0`…) pasan **`'VMUE'`** (ve un muerto) o **`'VESP'`** (ve a un espía) como grito de categoría 2 (atención); 20 ciclos después la misma rutina emite **`'ALRM'`** (categoría 3, peligro) y marca el bit `0x8/0x10/0x20` de `+0x88` según el motivo (2/3/5).
