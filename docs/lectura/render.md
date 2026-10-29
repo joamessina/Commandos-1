@@ -155,3 +155,6 @@ Otras subclases de `ClassPSystem` que no cuelgan de un hotspot: `ClassCascada` (
 ## Cierre 5
 - Tiles `-RUINA` de MAPA0003 (`g = −1`, nivel 15): los nombres que empiezan por `-` **no se dibujan** hasta que el edificio se destruye (`graficos-mapa` §7), así que el posible «negro» solo afectaría a las ruinas ya destruidas; sin efecto en el estado inicial del mapa.
 - `Legacy\coman_mp.exe` (3,5 MB) contiene 0 de las 662 cadenas `MSG*` del exe de la raíz: está **cifrado/empaquetado** (el DRM ya anotado en `CLAUDE.md`), por lo que no se puede analizar estáticamente; todo el análisis es del exe de la raíz.
+
+## Cierre 6 (2026-10-29): agua animada
+Ver **`docs/lectura/agua.md`**: el mar es el bitmap `MAR0DST` (256×256) que `FUN_006BED80` reescribe cada ciclo desde un clon intacto; el exe solo lee `BMPDST` (`.BMP`/`.BMPSRC` se ignoran). Generador tipo 1 y 2 verificados píxel a píxel contra el exe emulado. Portado en `src/engine/water.ts` + capas en `src/render/map.ts`.

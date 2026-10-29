@@ -5,18 +5,20 @@
  * flechas o WASD = mover la cámara; 1-4 = elegir comando; Inicio = centrar en el elegido.
  * El clic se traduce al mundo con el picking del original (sector más alto bajo el píxel), así que se puede ordenar ir a cualquier altura.
  * Rutas: el comando sigue el camino por sectores (A* + embudo, R3); si no hay camino a pie la orden se rechaza y se avisa en la barra de estado.
- * shortcut: orden de dibujo por y de los pies (R2 pendiente); sin agua/buceo (los comandos que arrancan en el mar, p. ej. mapa 0000, no pueden moverse);
+ * Agua: el mar es un bitmap que el exe reescribe cada ciclo (docs/lectura/agua.md); se anima en una capa propia debajo del resto.
+ * shortcut: orden de dibujo por y de los pies (R2 pendiente); sin buceo (los comandos que arrancan en el mar, p. ej. mapa 0000, no pueden moverse);
  *           los controles (derecho = mover) son los del original según el juego conocido, NO leídos del exe todavía.
  */
 import { parseAnm } from '../formats/anm.ts';
 import { entryBytes, parseContainer, type DirEntry } from '../formats/container.ts';
 import { parseSec } from '../formats/sec.ts';
-import { parseVol } from '../formats/vol.ts';
+import { parseVol, type Vol } from '../formats/vol.ts';
 import { parseWad, type Wad } from '../formats/wad.ts';
 import { loadAllies } from '../engine/mission.ts';
 import { SectorMap } from '../engine/sectors.ts';
 import { project, unproject, Unit } from '../engine/unit.ts';
-import { composeMap } from '../render/map.ts';
+import { parseWater, WaterFx } from '../engine/water.ts';
+import { composeMap, repaintWater, waterBounds, type MapImage, type Rect } from '../render/map.ts';
 import { SpriteCache } from '../render/sprites.ts';
 
 const byId = (id: string): HTMLElement => {
@@ -41,7 +43,20 @@ interface UnitView {
   readonly unit: Unit;
   readonly sprites: SpriteCache;
 }
+/** Mar animado: capa debajo del mapa y el efecto que reescribe el bitmap de los tiles AGUA. */
+interface WaterView {
+  readonly canvas: HTMLCanvasElement;
+  readonly img: MapImage;
+  readonly bounds: Rect;
+  readonly fx: WaterFx;
+  readonly index: Uint8Array;
+  readonly vol: Vol;
+  readonly wad: Wad;
+  /** Equivale a DAT_00875DA8: el ciclo del agua solo corre si el mar se dibujó desde el anterior. */
+  drawn: boolean;
+}
 interface Game {
+  readonly water: WaterView | null;
   readonly map: HTMLCanvasElement;
   readonly units: UnitView[];
   /** Sectores del mapa (picking del cursor); null si el mapa no trae .SEC. */
@@ -112,7 +127,13 @@ async function load(): Promise<void> {
   const t0 = performance.now();
   const vol = parseVol(new TextDecoder('latin1').decode(volBytes));
   const wad = parseWad(new Uint8Array(await readWad()));
-  const img = composeMap(vol, wad, { skipWater: waterBox.checked });
+  const misBytes = bytes(`DATOS/MISIONES/MAPA${n}.MIS`);
+  const misText = misBytes ? new TextDecoder('latin1').decode(misBytes) : '';
+  const wdef = waterBox.checked ? null : parseWater(misText);
+  const wsprite = wdef ? wad.byName.get(wdef.dst.toUpperCase()) : undefined;
+  const bounds = wsprite?.width === 256 && wsprite.height === 256 ? waterBounds(vol) : null; // el generador del exe asume 256×256
+  const water = wdef && wsprite && bounds ? makeWater(vol, wad, wdef, wsprite.index, bounds) : null;
+  const img = composeMap(vol, wad, water ? { layer: 'land' } : { skipWater: waterBox.checked });
   const map = document.createElement('canvas');
   map.width = img.width;
   map.height = img.height;
@@ -121,8 +142,7 @@ async function load(): Promise<void> {
   const units: UnitView[] = [];
   const secBytes = bytes(`DATOS/MISIONES/MAPA${n}.SEC`);
   const sectors = secBytes ? new SectorMap(parseSec(secBytes)) : null;
-  const mis = bytes(`DATOS/MISIONES/MAPA${n}.MIS`);
-  for (const a of mis ? loadAllies(new TextDecoder('latin1').decode(mis)) : []) {
+  for (const a of misBytes ? loadAllies(misText) : []) {
     const anm = bytes(`DATOS/RECURSOS/ELEM/${a.anim.toUpperCase()}.ANM`);
     const w = bytes(`DATOS/RECURSOS/ELEM/${a.anim.toUpperCase()}.WAD`);
     if (!anm || !w) continue;
@@ -131,10 +151,35 @@ async function load(): Promise<void> {
   }
   const first = units[0]?.unit;
   const p = first ? project(first.body.x, first.body.y, first.z) : { px: img.width / 2, py: img.height / 2 };
-  game = { map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic para elegir/caminar, Mayús+clic corre.`);
+}
+
+function makeWater(vol: Vol, wad: Wad, def: NonNullable<ReturnType<typeof parseWater>>, index: Uint8Array, bounds: Rect): WaterView {
+  const img = composeMap(vol, wad, { layer: 'water' });
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  canvas.getContext('2d')?.putImageData(new ImageData(img.pixels, img.width, img.height), 0, 0);
+  return { canvas, img, bounds, fx: new WaterFx(def, index), index, vol, wad, drawn: true };
+}
+
+/** Un ciclo del agua (FUN_006BED80): cámara = centro de la ventana en píxeles de mapa. */
+function stepWater(g: Game, w: WaterView): void {
+  w.drawn = false;
+  w.fx.step({ x: g.camX, y: g.camY });
+  w.fx.copyTo(w.index);
+  const z = zoom();
+  const vw = (stage?.width ?? 0) / z;
+  const vh = (stage?.height ?? 0) / z;
+  const clip = { x: Math.max(0, Math.floor(g.camX - vw / 2)), y: Math.max(0, Math.floor(g.camY - vh / 2)), w: Math.ceil(vw) + 1, h: Math.ceil(vh) + 1 };
+  repaintWater(w.img, w.vol, w.wad, clip);
+  const x = Math.min(clip.x, w.img.width - 1);
+  const y = Math.min(clip.y, w.img.height - 1);
+  // shortcut: solo se sube a la capa lo que está en pantalla; lo demás se pone al día al entrar en vista (mismo criterio que el flag del exe)
+  w.canvas.getContext('2d')?.putImageData(new ImageData(w.img.pixels, w.img.width, w.img.height), 0, 0, x, y, Math.min(clip.w, w.img.width - x), Math.min(clip.h, w.img.height - y));
 }
 
 function setupStage(): void {
@@ -160,6 +205,7 @@ function setupStage(): void {
     last = now;
     while (acc >= TICK) {
       for (const u of g.units) u.unit.tick();
+      if (g.water?.drawn) stepWater(g, g.water);
       g.ticks++;
       acc -= TICK;
     }
@@ -196,6 +242,11 @@ function draw(g: Game): void {
   ctx.save();
   ctx.scale(z, z);
   ctx.translate(-ox, -oy);
+  if (g.water) {
+    const b = g.water.bounds;
+    if (b.x < ox + vw && b.x + b.w > ox && b.y < oy + vh && b.y + b.h > oy) g.water.drawn = true;
+    ctx.drawImage(g.water.canvas, 0, 0);
+  }
   ctx.drawImage(g.map, 0, 0);
   const order = g.units.map((u, i) => ({ u, i, py: project(u.unit.body.x, u.unit.body.y, u.unit.z).py })).sort((a, b) => a.py - b.py);
   for (const { u, i } of order) {

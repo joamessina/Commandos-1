@@ -4,7 +4,7 @@
  * visualmente con la fase 0; docs/engine/graficos-mapa.md §3.3).
  * Estado inicial: edificios sanos. Los tiles de ruinas/explosión llevan un guion (`-RUINA06.RLE`, `-EXPLO00.RLE`) y el exe los
  * busca sin quitarlo, así que no encuentran sprite y no se dibujan (FUN_00614040 → FUN_005CDE70).
- * Es una vista del mapa estático, NO el juego: sin agua animada ni objetos.
+ * Es una vista del mapa estático, NO el juego: sin objetos. El mar se anima aparte (capas `water`/`land`, src/engine/water.ts).
  */
 import { BLEND, rgb565, TRANSPARENT, type Sprite, type Wad } from '../formats/wad.ts';
 import type { Tile, Vol } from '../formats/vol.ts';
@@ -12,6 +12,8 @@ import type { Tile, Vol } from '../formats/vol.ts';
 export interface MapOptions {
   /** Omite el polígono AGUA (tiras de mar; sin su animación se ve negro/recortado). */
   readonly skipWater?: boolean;
+  /** Capas para animar el mar: 'water' = solo el polígono AGUA sobre negro; 'land' = todo lo demás sobre transparente. */
+  readonly layer?: 'water' | 'land';
 }
 
 export interface MapImage {
@@ -65,10 +67,11 @@ function drawTile(img: Uint8ClampedArray, mw: number, mh: number, t: Tile, s: Sp
 export function composeMap(vol: Vol, wad: Wad, opts: MapOptions = {}): MapImage {
   const { width, height } = vol;
   const pixels = new Uint8ClampedArray(width * height * 4);
-  for (let i = 3; i < pixels.length; i += 4) pixels[i] = 255;
+  if (opts.layer !== 'land') for (let i = 3; i < pixels.length; i += 4) pixels[i] = 255;
   let missing = 0;
   for (const poly of vol.polys) {
     if (opts.skipWater === true && poly.name === 'AGUA') continue;
+    if (opts.layer !== undefined && (poly.name === 'AGUA') !== (opts.layer === 'water')) continue;
     for (const t of poly.tiles) {
       const s = wad.byName.get(t.sprite.toUpperCase());
       const pal = s ? wad.palettes[s.palette] : undefined;
@@ -80,4 +83,42 @@ export function composeMap(vol: Vol, wad: Wad, opts: MapOptions = {}): MapImage 
     }
   }
   return { width, height, pixels, missing };
+}
+
+export interface Rect {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
+/** Caja que cubren los tiles del polígono AGUA, o null si no hay. */
+export function waterBounds(vol: Vol): Rect | null {
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const poly of vol.polys) {
+    if (poly.name !== 'AGUA') continue;
+    for (const t of poly.tiles) {
+      x0 = Math.min(x0, t.x);
+      y0 = Math.min(y0, t.y);
+      x1 = Math.max(x1, t.x + t.w);
+      y1 = Math.max(y1, t.y + t.h);
+    }
+  }
+  return x0 > x1 ? null : { x: Math.max(0, x0), y: Math.max(0, y0), w: x1 - Math.max(0, x0), h: y1 - Math.max(0, y0) };
+}
+
+/** Vuelve a pintar los tiles del polígono AGUA que tocan `clip` en una capa 'water' ya compuesta (el bitmap del mar cambió). */
+export function repaintWater(img: MapImage, vol: Vol, wad: Wad, clip: Rect): void {
+  for (const poly of vol.polys) {
+    if (poly.name !== 'AGUA') continue;
+    for (const t of poly.tiles) {
+      if (t.x >= clip.x + clip.w || t.x + t.w <= clip.x || t.y >= clip.y + clip.h || t.y + t.h <= clip.y) continue;
+      const s = wad.byName.get(t.sprite.toUpperCase());
+      const pal = s ? wad.palettes[s.palette] : undefined;
+      if (s && pal) drawTile(img.pixels, img.width, img.height, t, s, pal);
+    }
+  }
 }
