@@ -1,0 +1,92 @@
+# Acciones del jugador `ClassAU*` (exe, `0x4E5000–0x505000`)
+
+Lectura del exe para el port. Ya cubiertos en otros informes: `AUEscalar`/`AuGoTo` (`docs/research/q1-escaleras.md`, `q1-rutas.md`), `AUDisparar`/`AUEmpujar` (`au-disparar.md`). Aquí: el resto.
+Fuera de alcance (no leído): serialización, destructores y getters (el lector los omite).
+
+## 0. Marco común
+- Toda acción `ClassAU*` hereda de `ClassAcUsuarioGoto` (ctor base `FUN_004BB590`; las que no caminan —`Camuflarse`, `Disfraz`, `Disparar`— heredan de `FUN_004BAE60`). Una acción = una máquina de estados **por personaje**; el estado vive en `acc+0x188` (índice `[0x62]`; en las "sin caminar" `acc+0x28`, índice `[10]`).
+- Campos fijos: `acc+0x1C` = el bicho (personaje), `acc+0x20` = su id. Métodos de la vtable: `+0x38` terminar acción · `+0x44` ficha del jugador (la del personaje: `+0x7AC` máscara de armas/ítems, `+0x7B0` máscara de lo "recogible", `+0x824` flags de estado, `+0x8A8` nombre de animación, `+0x8CC` **duración en cuadros de la animación actual** —la fija `FUN_00515400` vía `FUN_00509B60`; las acciones cuentan cuadros propios y la comparan contra este valor—, `+0x8D8` prioridad) · `+0x60` ir a un **elemento** (`blanco, correr, …`) · `+0x64` ir a un **punto** (`pos, z, correr, …`) · `+0x68` ir a un elemento con arrastre · `+0x6C` parar (`stop`).
+- `FUN_00515400(nombre, velocidad, prioridad, bucle)` = poner animación por nombre (copia el nombre a `ficha+0x8A8`, reinicia `+0x8CC=0`). Velocidad `1.0`=normal, `-1.0`=hacia atrás, `0`=congelada.
+- `FUN_0050A380(blanco)` = "ya llegué": distancia del bicho a un punto de contacto del blanco ≤ `bicho+0x180` y |diferencia de ángulo| < 2,5… (const `0x795658`). Todas las acciones de contacto caminan hasta que esto da 1 y recién ahí empiezan la animación de uso.
+- Mensajes de orden (todas los manejan igual): `MSGA_ACTUASOBREELEMENTO`/`…DBLCLK` (clic izquierdo sobre un objeto; `DBLCLK` ⇒ ir corriendo), `MSGA_ACTUASOBREPUNTO`/`…DBLCLK` (clic sobre el suelo), `MSG_BOTON2VIRTUAL` (clic derecho: cancelar/parar; en muchas acciones solo pone un bit en `acc+0x198` y la acción cierra al ciclo siguiente), `MSGA_ARGG` (me han golpeado ⇒ cancelar), `MSGA_COLISION_DINAMICA` (choque con otro móvil).
+- Ítems: `ficha+0x7AC` es la máscara de lo que el personaje **sabe usar** (`& 0xFFFFE7F1` al coger misil ⇒ se anulan los usos de dos bits mientras carga). `ficha+0x7B0 & obj+0x250` decide si el objeto es recogible y cuál mensaje enviarle (`FUN_004EDC30`, ver §Coger).
+
+## 0b. Acuchillar / Agacharse / Alicate / Escalar (extras)
+- **Acuchillar** (`0x4E5250–0x4E5C50`): estados en `acc+0x188`; `ACTUASOBREELEMENTO/PUNTO` ⇒ estado 2/3 camina al blanco (`vtable+0x68/0x60`); 3→5 anima `SACACUCHILLO` y **al cuadro 6** del retardo `ficha+0x8CC` aplica `FUN_004E5B00` = `FUN_005986A0(bicho, blanco, tipo 7 CUCHILLADA, 0x78 = 120 de daño)`, sólo si el blanco no está muerto (`+0x23C & 4`). `MSGA_ARMA_ENFUNDADA/DESENFUNDADA`.
+- **Agacharse** (`0x4E5E00`): `AGAC` pone `bicho+0x23C |= 0x80`, anim `AGACHARSE` velocidad ±1; `+0x23C & 0x40` = agachado.
+- **Alicate** (`0x4E6330–0x4E6730`): camina a un objeto con `obj+0x230 == 0x1000` (alambrada) y usa `ANDAR`.
+- **Escalar** (resto; cuerpo en `docs/research/q1-escaleras.md`): script `ESCALAMUROS = SI` ⇒ `ficha+0x7B4 |= 1` (sabe trepar muros); animaciones `ESCALAR_EMPIEZA` y `ESCALAR_FIN` (esta última a velocidad −1 al bajar, prio 10); órdenes `MSGO_MOTOR_SETTREPAR/GETTREPAR`; mensajes `MSGA_ESCALAMURO`, `MSG_SOY_UNA_ESCALA`, `MSGA_ESCALA_GETINFO`; clic derecho en la escalera pausa (`SETTREPAR 2, vel 0`); chocar con un enemigo en la escalera le aplica un impacto y `MSGA_ME_ESTAS_IMPACTANDO` (detalle sin cerrar).
+
+## 1. Camuflarse / Disfraz (acciones sin caminar, base `FUN_004BAE60`)
+- **Camuflarse** (`0x4EB610`, estados `acc+0x28`): 0 inactivo · 1 anima `CAMUFLARSE` (vel 1, prio 6) y pasa a 7 con destino 4 · 7 anima y cuenta cuadros; en el 2.º ciclo emite sonido `'ENTE'` (`0x454E5445`, vol. 0.75) y al agotar `ficha+0x8CC` salta al estado de destino · **4** (camuflado): `ficha+0x8D8=0`; llama `FUN_006157B0`, `FUN_00615750`, `FUN_00616080` (apagan bits de visibilidad del bicho) y escribe **`bicho+0x230 = 1`** (`=` "camuflado"; las enemigas lo leen para no ver) → estado 5 · 5 espera `acc+0x2C & 1` y vuelve · 6 salida: restaura con `FUN_00616140/616020/615780`. Si en 1/4/7 el bicho recibe el bit `0x800000` de `+0x23C` (alguien lo mató/atrapó) vuelve a 3 y limpia `+0x230=0`.
+- **Disfraz** (`0x4EF5F0`, ponerse un uniforme): exige `ficha+0x824 & 0x800` (ya llevo un disfraz) y consulta cuántas piezas hay (`FUN_005100F0`; ≥2 ⇒ ok; =1 ⇒ ok solo con bit 2). Si el bicho está agachado (`+0x23C & 0x40`) se levanta. Envía `MSGA_PONTE_EL_DISFRAZ` al propio id, deja la animación en `REPOSO` y fija `bicho+0x1BC=6`, `+0x1F0=1.0`. `MSGA_DISFRAZ_VISIBLE` guarda `acc+0x2C=param` (el disfraz se ve/no se ve).
+  - Bloqueada si el bicho tiene `+0x23C & 0x800000`.
+
+## 2. Botiquín / Jeringuilla (`ClassAUBotiquin`)
+- Parámetros de misión (`FUN_004E8B50`): lee un bloque de script y fija `acc+0x1A0 = entero·2` (por defecto `6` usos en el ctor, `acc+0x1A0`=`[0x68]`).
+- Objetivo válido (`FUN_004E8A50`): es una persona (`vtable+8 == 2`) con `vida(+0x208) < vidaMáx(+0x20C)`; si no, `acc+0x194 = 1` (rechazado).
+- Estado 3: camina hasta llegar (`FUN_0050A380`), anima **`JERINGA`** (vel 1.0, prio 6) → estado 4. Estado 4: cuenta cuadros desde 0; **al cuadro 10** aplica la cura; si pasa de `ficha+0x8CC` sin haberla aplicado la aplica igualmente y termina.
+- **Cura** (`FUN_004E8C30`): `blanco.vida += 0x22` (**34**), recortada a `vidaMáx`; `usos -= 1`; al llegar a 0 quita el ítem `0x52`.
+- Mensajes: clic sobre elemento ⇒ si es persona herida va al estado 3 (cura), si no estado 2 (camina hasta allí). Clic sobre punto ⇒ ir ahí.
+
+## 3. Bucear (`ClassAuBucear`, buzo; `0x4E9C10`)
+- Solo se puede **empezar** si el parámetro es `"URGENTE"` o **todos** los sectores pisados son de agua (`MSGO_MOTOR_GETSECTORESPISADOS`, `FUN_004E95A0`: cada sector `[0] == 1`, tipo agua).
+- Entrar: anima `BUCEAR` (vel 1, prio 2); `bicho+0x23C |= 0x80 | 0x1000 | 0x80000` (agachado + buceando + oculto); `MSGO_MOTOR_SETBUCEAR`; velocidades del mover (`bicho+0x13C → +0x50`): **`+8` ×2**, **`+0xC` ×0,125** (el original guarda los valores previos en `acc+0x19C/0x1A4…` y los restaura al salir); **altura de ojo `bicho+0x58` ×0,125** (el buzo casi no se ve). Detalles: `+8`/`+0xC` del mover no están rotulados (¿andar/correr?), pendiente.
+- Salir (`FUN_004E97B0`): quita `0x80`,`0x1000`,`0x80000`; restaura `+8`, `+0xC`, `+0x58`; anima pose 2.
+- Mientras bucea, si aparece un sector no-agua (`FUN_004E9730`) o `ficha+0x824 & 0x4000` se corta (devuelve 0).
+- Clic derecho (`MSG_BOTON2VIRTUAL`) marca bit 2 de `acc+0x198`: salir.
+
+## 4. Cachiporra (`ClassAUCachiporra`)
+- Blanco = persona (`vtable+8==2`) y `acc+0x19C` marca si es válido. Estados: 2 anda al blanco, 3 llegó ⇒ gira hacia él (`FUN_004DFCF0`, ángulo por atan2) y elige animación según arma equipada `ficha+0x7A8`: `0` `LANZARPIEDRA` · `4` `SACACACHIPORRA` · `5` `JERINGA` (vel 2.0) · otro `ANDAR`.
+- Estado 5: cuenta cuadros; **al cuadro 6** (si el blanco existe) lanza `MSGA_CACHIPORRAZO` al blanco y, si `acc+0x198` (**bit "ESPIA"**: solo cuando el bicho no es `ESPIA`), emite el sonido `'CACH'` (`0x43414348`, vol 0,75).
+- `FUN_004EA590`: la cachiporra "silenciosa" depende de que el bicho **no** sea el `ESPIA` (para éste el golpe no hace ruido).
+- Enfundado/desenfundado: `MSGA_ARMA_DESENFUNDADA/ENFUNDADA` + `ficha+0x824 |= 0x8000` (arma en mano). Un golpe previo y la víctima ya cayó (`+0x23C & 4`): cancela.
+
+## 5. Recoger cosas
+- `ClassAUCoger` (`FUN_004EDC30`): decide qué hacer con el objeto según `obj+0x250 & ficha+0x7B0`: bit `1` bomba (`MSG_SOY_UNA_BOMBA`), `2` lancha (`MSG_SOY_LA_ZODIAK`), `4` señuelo (`MSG_SOY_UN_SEGNUELO`), `8..0x80,0x6000` objeto genérico (`MSG_ACTUASOBRE`, se lo "recoge"), `0x200` equipo (`FUN_005132C0`), `0x1C00` cuerpo (`MSG_SOY_UN_CUERPO_RECOGIBLE`), `0x10000` misil (`MSG_SOY_UN_MISIL_RECOGIBLE`).
+- Camina hasta llegar; si el objeto tiene `obj+0x254 != 0x1000` y no hay contenedor, anima `ANDAR` y al cuadro de contacto (`FUN_004ED8B0`) aplica el efecto (gira con tolerancia **5°**, `0x795F50`, hasta 4 ciclos de espera para alinearse; luego estado 7 de 4 ciclos). Si el objeto es muy cercano (`+0x250 & 0x204` ≠ 0) no anima.
+- `FLAGSRECOGER` (script): `FL_GRANADAS`→8, `FL_METRALLETA`→0x10, `FL_BALASFRANCOT`→0x20 (qué ítems recoge este bicho; en `AUArrestadoUsar` el mismo mapa con 0x100/0x200/0x400 para "usar").
+- **CogeTabacoDeMuerto**: cierra al llegar si `acc+0x18C & 7`; coge el tabaco (`FUN_00513CE0`) sólo si el bicho muerto sigue allí. (Sin animación propia.)
+- **CogeBarril** (`0x4EBC60`): anima `COGEBARRIL` (vel 1, prio 2), espera `ficha+0x8CC` cuadros y pasa a `LLEVABARRIL`; sonido `'CBAR'` (`0x43424152`). Soltar (`FUN_004EBE20`): prueba hasta **32 ángulos** de **11,25°** (`0x79AA10`, ± alternando) para hallar sitio libre (`FUN_005094D0`), gira el bicho, `MSGO_MOTOR_BORRAFISICA` y emite `'SBAR'` (`0x53424152`). Si no hay sitio libre ⇒ no suelta (vuelve a estado 3).
+  - `MSGA_IMPACTO` mientras lleva barril ⇒ suelta el barril y avisa al barril (`vtable+0x50`).
+- **CogeBomba** (`0x4ECF30`): `COGEBOMBA` → `LLEVABOMBA` (`ficha+0x824 |= 0x400`); al llegar a un habitáculo envía `MSGA_ENTRAR_HABITACULO`.
+- **CogeMisil** (`0x4EC770`): **clic derecho suelta**; `MSG_ITEM_ACTIVADO`/`MSGA_ACTIVA_ASCENSOR` para el ascensor de misil. Estados: 1 libre · 2 va al misil · 3 coge · 4 lo lleva · 5 en habitáculo (`MSGA_SALIR_HABITACULO`, ahí `ficha+0x824 &= ~0x10`). Al soltar (`FUN_004ED2F0`) coloca el misil donde está el bicho (`obj+8/0xC/0x10 = pos`), `MSGO_MOTOR_BORRAFISICA` y `MSGA_SALIDADECONTENEDOR`.
+
+## 6. BeAtHome (entrar a una casa/habitáculo)
+- Estado 2: el contenedor `bicho+0x134` y su plantilla `+0x198` con `+0x10`: `0x80` ⇒ estado 4 (casa de usar), `0x100` o `0x400` ⇒ estado 3. `MSGA_SALIR_HABITACULO` sale. `FUN_004E8410`: consultas `0xF` (la casa tiene bit 4) y `0x61` (`ficha+0x824 & 0x2000`).
+- Clic izquierdo sobre elemento/punto sólo sirve en estado 4 (dentro). `MSGA_ARGG` fuera de estado 0/4 ⇒ salir si se puede.
+
+## 7. ArrestadoUsar (`0x4E6F00`)
+- Un bicho **arrestado** puede usar granadas/metralleta/balas del francotirador (`FL_GRANADAS` 0x100, `FL_METRALLETA` 0x200, `FL_BALASFRANCOT` 0x400 — mismos flags que `FLAGSRECOGER` desplazados ×32). Estados 2..5 dependen de `contenedor+0x198 → +0x10`. Pendiente: no se leyó el cuerpo completo.
+
+## 8. Acciones sobre enemigos (el blanco debe ser un soldado: `vtable+8 == 2`)
+Todas caminan hasta "llegué" (`FUN_0050A380`: distancia ≤ `bicho+0x180` y |diferencia de ángulo| < **15°**, const `0x795658`), giran hacia el blanco (`MSGO_MOTOR_SETANG`, tolerancia **5°** o **4 ciclos** de espera) y recién entonces animan. Si el blanco ya está muerto (`+0x23C & 4`) cancelan.
+- **Esposas** (`0x4F4470`): estado 3 camina → 2 gira → 4 envía **`MSGA_HAS_SIDO_ESPOSADO`** al blanco y termina. El blanco atontado (`+0x23C & 0x8000000`) no exige "llegué" si la acción lo traía marcado.
+- **Cachiporra**: §4. **Jeringuilla** (`0x4F8480`, mata): `JERINGA`; inicia con duración forzada de **12 cuadros**; al cuadro **10** aplica `FUN_005986A0(bicho, blanco, tipo 9, 0)` (impacto tipo 9; ver `impactos.md`) y vuelve a la pose. Blanco válido: soldado.
+- **Acuchillar**: ver notas de `AUAcuchillar` (tipo 7, 120 de daño).
+- **QuitaUniforme** (`0x4FF4A0`): sólo sobre un soldado caído/inmovilizado; anima `QUITA_UNIFORME` y **al cuadro 6** (o al final si no se aplicó) ejecuta `FUN_004FF180`: busca el uniforme del blanco en la tabla `0x815060` (stride 24 B: nombre, …, id, rango): `OFICIAL` rango 5 · `CABO` 4 · `GUARDA` 3 · `ALEGABAR` 2 · `GRANADER` 2 · `ALEMAN2` 1 · `SOLDADO` 1 (ids 99..105). Envía `MSGA_ESTAS_DESNUDO` al blanco (queda en `*_DESNUDO`). Si el jugador ya tiene un disfraz de rango ≥ el nuevo, sólo lo "guarda" (`FUN_005104A0`); si no, `MSGA_DISFRAZATE_DE_BICHO`.
+- **Robar** (`0x4FF7B0`, ladrón): gira, sonido `'PUTA'` (`0x50555441`), cuenta **10 ciclos** enviando `MSGA_PUTA_ECHAR_CHARLA` al blanco y al final `MSGA_TE_ROBO`.
+- **PutaDistrae** (`0x4FE0A0`): se acerca hasta ≤ **40**, gira (|Δ| < 0,01), y mientras el blanco esté a ≤ **200** (`0x794D30`) y con **línea de vista** (`FUN_005F9820`, por sectores) le envía `MSGA_PUTA_ECHAR_CHARLA` cada ciclo; si no, termina. Respuestas: `MSGA_NO_AGUANTO_CHARLA` (el soldado se cansó ⇒ vuelve al estado 1).
+- **Insignia** (`0x4F78A0`, espía): ídem pero con `MSGA_ECHAR_CHARLA`; radio de charla **40** (**120** si la ficha del bicho es de tipo 3, `FUN_004F6E50`); sólo vale si `FUN_0062CA40(blanco.+0x1F8, bicho.+0x1F8)` (bandos opuestos). Sonido `'SOLD'` (`0x534F4C44`) una vez al empezar.
+- **TomarControlAleman** (`0x500DA0`): camina a un bicho de tipo 0/1 y, al llegar, si no está muerto ni en contenedor y `bicho.+0x24C & 0x4000`, llama `FUN_00510B10` (toma control). *Interpretación*: pasar al control del alemán disfrazado/convertido; sin confirmar.
+
+## 9. Colocar / manejar objetos
+- **ManejaBomba** (`0x4FA800…`): lista de hasta N bombas (registro de 0x40 B: ptr, `+0x2C` colocada, `+0x30` id, `+0x3C` orden); estados 2 camina → 3/4 gira (5°) → anima **`PONEBOMBA`** (vel 1, prio 6) → 5 al terminar duración: `FUN_005086E0(1)` y envía `MSG_MANIPULA_BOMBA`. **Recoger** = misma animación **hacia atrás** (vel −1, prio 10). El sitio libre se busca con 16 ángulos de **22,5°** (`0x797918`).
+- **ManejaCepo** (trampas; `MSG_SOY_UN_CEPO`) y **ManejaSegnuelo** (señuelo; `MSG_SOY_UN_SEGNUELO`, `MSG_SEGNUELO_ONOFF`, órdenes `DESACTIVA`/`SUELTA`): misma estructura (`PONEBOMBA` de ida y de vuelta, 22,5°). Ítems vistos: `0x2C/0x2D/0x2E` (señuelo en mano/activo/desactivado).
+- **ManejaItem** (`0x4F9EB0`): órdenes `COGE` / `SUELTA` sobre un objeto por nombre (tokens de misión `ITTOK`, `BICHOSOLTAR`). Coge: `MSGA_OBJETO_RECOGER`; suelta: 16 ángulos de 11,25°; gira hacia el ángulo con tope ±45° por ciclo (`0x79747C/0x79B444`).
+- **Tabaco** (`0x500A60`): lanza una cajetilla (`CAJETILL`, anim `LANZARPIEDRA`): gira (5°), anima, y a lo sumo a los **15 cuadros** (o fin de animación) ejecuta `FUN_005133B0(punto, tipo)`; sirve de **distracción por sonido**.
+- **Lanzallamas** (`0x4F9090`): script `LANZALLA` fija las cargas (por defecto **5**); `SACA_LANZALLAMAS` al empezar; gira (5°) y crea el objeto **`LLAMARADA`** (`.EXPLOTA 1 .FIJO 1 .NOCAE 1`) delante del bicho a media altura (`+0x58·0,5`); envía `MSGA_LANZALLAMAS_ON`; cada llamarada gasta 1 carga; con 0 cargas retira el ítem `0x15`. Termina con `MSGA_LANZALLAMAS_FIN` o clic derecho (`MSGA_LANZALLAMAS_OFF`).
+- **Garfio** (en realidad *arrastrar cadáver*, `0x4F5430`): `MSG_SOY_UN_CUERPO_RECOGIBLE`; anima `LLEVARMUERTO`; elige la secuencia del cuerpo en `MUERTOS.ANM` (`AuGarfio::MiraQueSecuenciaPoner`); `ficha+0x824 |= 0x400` y `bicho+0x23C |= 0x8000`. Suelta (`FUN_004F6030`): prueba **8 ángulos de 45°** y emite `'SCUE'` (`0x53435545`); si lo golpean con el cuerpo encima, envía `MSGA_IMPACTO_SALVAJE` al cuerpo. Parámetro `ESPIADES`.
+
+## 10. Vehículos (`ClassAUUsarVehiculo`, `0x503160`; **leído en superficie**)
+- Script `VEHICULOS` ⇒ qué tipos conduce: `TIERRA` (bit 1, estado 0x29, ítem 2) · `AGUA` (bit 2, 0x2A, ítem 4) · `AIRE` (bit 4, 0x2B) · `BALSA` (bit 8, ítem 4) · `ARMA_ESTATICA` (bit 0x40, ítem 0x10). `ficha+0x248 & 3` = tipo del vehículo (tierra/agua).
+- Mensajes de piloto al vehículo: `MSGA_PILOTO_GOTOVEL` (velocidad objetivo, se reenvía cada ciclo mientras haya orden), `MSGA_PILOTO_PARAR`, `MSGA_PILOTO_DISPARAPUNTO` (disparar a un punto; `acc+0x1DC` = vehículo), `MSGA_ENTRADA_HABITACULO`/`SALIDA_HABITACULO`. Clic derecho: parar.
+- Bajarse (`FUN_00503340`): sólo con velocidad < 0,01 (`MSGO_MOTOR_GETVEL`) y sin sector de agua bajo el vehículo (`FUN_00503030`: sectores de tipo 1 o 3). El artillero (`CANONERO`) usa la animación cuando `plantilla+0x14 & 2`.
+- Pendiente: lectura completa junto con la familia de vehículos (`docs/lectura/parachoques.md` cubre sus choques).
+
+## 11. Usar objetos (`ClassAUUsar`, `0x501A00/0x501EF0`)
+Patrón de todas las acciones de contacto: clic ⇒ elige la **posición de uso** del objeto (`MSGA_POS_SUBIDA` ⇒ punto de entrada; en escaleras `MSGA_ESCALA_GET_PUNTOS` y se elige el extremo más cercano en z respecto de la mitad), camina; al llegar gira (5°/4 ciclos), envía **`MSG_ACTUASOBRE`** al objeto y espera **4 ciclos** (estado 7) antes de terminar. El bit `obj+0x254 & ficha+0x7AC & 0xE` decide si el bicho sabe usar ese objeto. Misma estructura en `ArrestadoUsar` (flags `FLAGSUSAR`).
+
+## 12. Usos de memoria compartida entre acciones (para el port)
+- `DAT_0083cd..0083cf` = "caché" de ids de mensajes registrados (`FUN_006119B0(nombre)` devuelve el id; se calcula una vez). Nada que portar.
+- Constantes (todas `double` salvo indicación): `0x794660 = 0,5` · `0x79A3E0 = 0,125` · `0x795F50 = 5` (grados) · `0x79AA10 = 11,25` · `0x796160 = 45` · `0x795740 = 2,0f` · `0x794688 = -1,0f` · `0x793240 = 0,75f` (volumen de los sonidos de golpe).

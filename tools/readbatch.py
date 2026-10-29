@@ -68,9 +68,22 @@ def compact(a):
     return '\n'.join(out)
 
 
+def boilerplate(txt):
+    """Serializacion de partidas (guardar/cargar), destructores y getters triviales: sin logica de juego."""
+    n = len(txt.splitlines())
+    if re.search(r'\(\*param_3 \+ [48]\)', txt) and ('0066f0f0' in txt or '0066ef20' in txt or 'param_2 == 0' in txt) and n < 60: return 'serializacion'
+    if n <= 14 and re.search(r'vftable;', txt) and 'FUN_0070b0f3' in txt: return 'destructor'
+    if n <= 9 and re.search(r'return \*\(.*\)\(param_1 \+ 0x[0-9a-f]+\);|return \(\*\(', txt): return 'getter'
+    return None
+
+
 def show(a, mark=None):
     f = IX[a]
     k = klass(a)
+    b = boilerplate(compact(a))
+    if b:
+        print(f"## {a:08x} {f['size']}B [{b}, omitida]")
+        return
     strs = [s[:50] for s in f['strs']][:6]
     print(f"\n## {a:08x} {f['size']}B callers={len(f['callers'])}{' ' + k if k else ''} [{fam(a)}]" + (f'  strs={strs}' if strs else ''))
     print(compact(a))
