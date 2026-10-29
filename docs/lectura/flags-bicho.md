@@ -92,3 +92,11 @@ Durante un arresto (`INICIO_ARRESTO`) `AcBap` guarda `+0x24C` y lo pone a 0; `FI
 ## Dudas abiertas
 - Bits `23C` `0x10`, `0x1000000`, `0x10000000` y `240` `0x10000/0x20000`: el código que los pone vive en `FUN_004655B0`, `FUN_00429380`, `FUN_004A23E0`, `FUN_007010B0`, `FUN_004946C0` (clases de objetos de misión y de animales fuera del encargo del enemigo humano); no se pudo nombrarlos sin leer esas clases.
 - Los bits de `+0x24C` no tienen lectores directos salvo `0x2000` y `0x4000`; los demás se interpretaron por quién los pone y cuándo los quita.
+
+## Cierre 4 (2026-10-29): bits que faltaban [hecho por escaneo del .text]
+- `+0x23C & 0x10000000` = **cuerpo no sólido para el movimiento** (mancha de sangre/decal): lo pone `FUN_004A23E0` (`SANGRE`) y lo leen los filtros de choque `FUN_00574860`, `FUN_0057E2A0` y `FUN_0057E950`, que lo saltan.
+- `+0x23C & 0x1000000`: lo pone `FUN_00429380` y `FUN_004655B0`; **ningún lector en todo el binario** (sin efecto).
+- `+0x23C & 0x10`: lo enciende el cargador del bicho (`FUN_0050C490`) y lo leen `FUN_0057E950` (colisión) y `FUN_006BB570` (zonas); marca de bicho «de colisión especial» [hip del nombre].
+- `+0x240 & 0x10000` (y `0x20000`): solo hay una escritura (`FUN_007010B0`, zona de librería) y ningún lector: sin efecto.
+- `bicho+0x190 == 5` (con `bicho+0x198 ≠ 0`): **entidad con registro de habitáculo** (casa o vehículo): es lo que comprueban `AUUsar/AUCoger/AUGarfio` antes de leer `registro+0x10` (máscara de tipo).
+- **Energía de los comandos**: ninguno de los 15 `.ENEGIA` de los 10 `.MIS` pertenece a un bloque de comando (están en soldados/objetos), así que manda la tabla `0x815198` (aplicada por `FUN_00513D60` después del cargador común): 7 tiros enemigos matan a un COMANDO, etc. (`disparo-enemigo.md` §5).
