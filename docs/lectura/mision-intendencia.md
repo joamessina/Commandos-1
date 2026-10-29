@@ -94,3 +94,9 @@ Ejemplos de lo que cada MIS carga en `OBJETIVOS`/`VEHICULOHUIDA`: M0 `ZODIAC5`, 
 - Cuerpos de `FUN_005A96F0/97A0` (M4: cuándo un guardia "alarma" cuenta para `CHHU`/`CHES`), de `FUN_006AC350` (máquina de la huida del tren de M2) y de `FUN_005A7F10/8020/5ED0` (autoexplosiones de M3): se anotó su función por contexto y entradas, no sus umbrales. Motivo: son sub-rutinas de una sola misión que dependen de datos del `.MIS` (`MAPA0003`/`MAPA0004`); conviene validarlas al portar esas misiones comparando con el mapa real.
 - Qué hace cada patrulla al recibir `MSGA_TRIGGER_REACT` (lo decide `AcGuarda`/`AcPatrulla`, dominio del agente de enemigos).
 - Contenido de las pantallas de resultados (qué sprite/fila): UI, fuera de estos temas.
+
+
+## Cierre 2 (2026-10-29)
+- **`FUN_005A3500(sargento, n)` = regenerar soldados** [hecho]: `n` veces `FUN_005A2AD0` (crea un soldado en la entrada de la casa y resta 1 a `NUMREGENSOLDIERS` mientras quede reserva). Detalle y cálculo de `n` en `policia.md` (Cierre 2). El parser de la definición de patrulla es `FUN_0062B6C0` (mapa clave-campo completo en el mismo cierre).
+- **Eventos `CHxx`**: `Intendencia::vt+0x3C` (slot 15; la base devuelve 0) es una **consulta** `(bicho, clave)`; `'CHDH'` y `'CHDB'` no son eventos sino consultas (punto fijo de huida y casa refugio más cercana). `Intend04`: (2733, −241, 0); `Intend09`: (965, −90, 0). Los eventos reales son `CHSE`, `CHSH`, `CHSC`, `CHNH` y `CHHI`; su consumo está en `presos-testigos.md` (Cierre 2). Completa la fila M4 de §8: `CHSH/CHSE` además de las voces son las señales de "el preso huye/escapa".
+- Sin cerrar: `FUN_005A96F0/97A0` (alarma de guardias de M4), `FUN_006AC350` (tren de M2) y las autoexplosiones de M3 (`FUN_005A7F10/8020/5ED0`): rutinas de una sola misión, no se tocaron.

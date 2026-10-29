@@ -65,3 +65,7 @@ Todo lo demás pasa a `FUN_004C2A60` (`TRANSMIGRAR`).
 ## Dudas abiertas
 - Cuándo se escribe `acc+0x58` ("va dentro de contenedor") distinto de en `FUN_0048B440`: solo ahí (copia `contenedor+0x198→+0`); sin más lectores. No hay duda de comportamiento.
 - Orden 1 (`EXIT`): ningún lector dentro de la clase; el efecto (el bicho sale del mapa / queda detenido) lo decide quien consulte la acción (misión). No se puede cerrar con este rango.
+
+
+## Cierre 2 (2026-10-29)
+Sin cambios en `AcPatrulla`. Dos precisiones para quien la use con patrullas de soldados: (1) la **definición de grupo** (`NSOLDIERS`, `NCOLUMNS`, `FORMX/FORMY`, `TOLERANCIA`, `DISTANCIA`, `HOME/JAIL`, flags `REGENERATE`…) la lee `FUN_0062B6C0`; el mapeo completo está en `policia.md` (Cierre 2) y `RUTADEF` es la lista de rutas que consume esta clase (§1). (2) `ORDEN_PATROL_EXIT` y `TRIGGER_REACT` llegan por los eventos `EXITHOME_EVENTS`/`REACT_EVENTS` de la definición, que `FUN_0059A060` reparte (`mision-intendencia.md` §5). Las dudas sobre `acc+0x58` y la orden 1 (`EXIT`) siguen igual: sin lector dentro de la clase, lo consulta la misión.

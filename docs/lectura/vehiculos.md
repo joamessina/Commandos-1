@@ -32,3 +32,11 @@ Maniobras: **Auto/Ciclo**: pasa el giro `φ` (con marcha atrás: `φ+180°`) y v
 
 ## 3. Sin leer (con motivo)
 La dinámica de los `Sim*` de vehículo (`SimAuto`, `SimTanque`, `SimLancha`, `SimBalsa`, `SimSub`, `SimAve`, `SimMisil`), en `0x660000–0x66C000` (35 KB; volcado a mano en la sesión pero no analizado). **Ningún vehículo es jugable en el port todavía**; se leerá cuando se porte el primero (la maniobra de cada motor de §2 ya dice qué datos le entrega a su Sim: velocidad firmada, giro y, en el tanque, orugas diferenciales).
+
+
+## Cierre 2 (2026-10-29): la dinámica de los `Sim*` ya está leída
+Ver **`docs/lectura/sim-vehiculos.md`** (integrador, `SimAutoOrg`, `SimTanque`, `SimLancha`, `SimBalsa`, `SimSub`, `SimRail`, `SimAve`, `SimMisil`, constantes y datos reales). Lo que se cerró:
+- El motor pide cada ciclo un impulso `n` (velocidad constante `VELMAX` hacia el destino en mundo + ángulo de error `Δ`); el Sim lo filtra. Auto: `v = 0,3·n + 0,7·vprev`, giro `min(c=10, a=1,0·|v|)` °/ciclo y deslizamiento lateral ≤ 1 (radio de giro 57,3 u). Tanque/Balsa: `avanzar(v−R·Δ, v+R·Δ)` con `ω = (b−a)/(2R)` y fricción 0,5/0,8. Lancha: timón (±50°, 22,5°/ciclo) y filtro 0,1. Rail: proyección sobre el segmento con `INERCIAS`.
+- **Corrección a §2**: la marcha atrás se decide **una sola vez** en `GoTo` (`vt+0x7C`), no cada ciclo, y `ANGREV` vale siempre **150°** (ninguna instancia define `$AngMarchaAtras`). `CAPGIRO [a b c]`: `a` = factor giro/velocidad (def. 1,0), `b` = velocidad mínima para girar (def. 0), `c` = giro máximo °/ciclo (def. 10); ningún dato lo trae. `GIROMAX`, `ACBASE` y `SOBREAGUA` de los `.MAC` **no existen en el exe**.
+- **Corrección a §2 (Sim por motor)**: `SimAuto` (`FUN_00665A70`) es código muerto; Auto/Ciclo usan **`SimAutoOrg`** (`FUN_00665ED0`). `SimSeguidor` también está muerto. La Balsa lleva un `SimObjeto` terrestre para cuando varó. `MotorSub` y `MotorCiclo` no aparecen en ningún dato.
+- §3 ("Sin leer") queda reemplazado por `sim-vehiculos.md`. Solo queda pendiente `FUN_006BB320` (zona permitida del vehículo del jugador).
