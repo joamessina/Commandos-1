@@ -31,3 +31,6 @@ Claves del MAC de la acción: `ARMAS [ … ]` (qué armas lleva, marca `+0x98 + 
 
 ## AUEmpujar (`FUN_004F2480`) [hecho]
 Estados `+0x188`: 2 camina al **punto de empuje** del objeto (`AcPuntoEmpuje`, tipo 8: `blanco+0x190 == 8`) con tolerancia `DAT_00795658 (15)`; 3 gira (`MSGO_MOTOR_SETANG`) hasta quedar a < `DAT_0079AE98` del ángulo; 4 camina el último tramo; 5 anima `EMPUJAR` y cada ciclo manda `MSGA_ERES_EMPUJADO` al objeto mientras el objeto no esté muerto y se haya desplazado ≤ `radio² + DAT_00796388`; máximo **26 reintentos** (`+0x1A8`). Marca `bicho+0x24C |= 0x2000` al crearse.
+
+## Cierre: `RETARDOPISTOLA` (2026-10-29)
+`FUN_004F07E0` pisa el enfriamiento de la pistola (`tabla+0x2C`) con `cfg+0x60` **solo si ≠ −1**. `cfg+0x60` lo escribe únicamente el lector de `COMANDO.CFG` (`FUN_0061EBC0`, clave `.RETARDOPISTOLA`) y el `Comando.cfg` real instalado (`OUTPUT\Comando.cfg`: `.SONIDO`, `.SIZE`, `.PROFILE`, `.DEVELOP`, …) **no la trae**; el test `!= -1` implica que el valor inicial del ctor de la configuración es −1 (el ctor no se localizó por desensamblado). Efecto: **la pistola usa el enfriamiento de la tabla (10 ciclos)**; solo un `Comando.cfg` editado a mano lo cambiaría.
