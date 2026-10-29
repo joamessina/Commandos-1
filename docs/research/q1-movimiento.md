@@ -123,13 +123,13 @@ La "corriente" no es un tipo: es el flag Corriente (0x20) con el vector `+0x40/+
 | 0x8 | NCamin | 1 | bloquea buscador y `FUN_0053A250`, **no** al Sim; se conmuta con `FUN_0043D6F0` |
 | 0x10 | **Ocluso** | 1019 | corta la línea de vista (`FUN_005F9820`) y excluye destinos de lanzamiento |
 | 0x20 | Corriente | nunca | corriente del agua (arriba) |
-| 0x40 | PEscal | 60 | consumidor NO LEÍDO; está en MAPA0003/0006/0008 [hip: permite escalar] |
-| 0x80 | PExplo | 6009 | consumidor NO LEÍDO [hip: permite efectos de explosión] |
+| 0x40 | PEscal | 60 | solo el cargador (ver Cierre de R4) |
+| 0x80 | PExplo | 6009 | sin lector (ver Cierre de R4) |
 | 0x100 | NVista | 8303 (crudo) | solo se conserva en sectores NTrans; lo lee el render de sectores (`FUN_006B8860` descarta con 0x100; `0x6BA390`/`0x52B7A0` con 0x104). **No es la oclusión de la Vista** (esa es Ocluso). Puerta cerrada = NTrans+NVista (`FUN_00454100`) |
-| 0x200 | NCorri | nunca | ningún lector encontrado (el flag de correr no se consulta en `AcUsuarioGoto`) |
+| 0x200 | NCorri | nunca | sin lector (confirmado por escaneo) |
 | 0x400 | **SoloAg** | 126 | solo pasa agachado (`FUN_0053A250`, `FUN_0066AD30`); `AUDisparar` (`FUN_004EF7E0`) no dispara en SoloAg (voz 3) salvo disfrazado; excluye destinos de lanzamiento |
 | 0x800 | NTirar | 233 | `FUN_00675DC0`: no se puede aterrizar/lanzar ahí |
-| 0x1000 | NTirAt | 6 | ningún lector encontrado |
+| 0x1000 | NTirAt | 6 | ver Cierre de R4 |
 | 0x2000 | (sin nombre) | 1 | pasa la máscara de carga; sin lector |
 | 0x10000 | Cubierto | vía TW3 | lo pone TW3; lo mira `FUN_005F9820` (parte de sector Cubierto/Superp) |
 Mensajes de MIS que cambian flags en juego (`FUN_005A6EF0`): `SECTORESHARANTRANSITABLES/INTRANSITABLES` (±NTrans), `SECTORESHARANSOLOAGACHADO/NOSOLOAGACHADO` (±SoloAg).
@@ -147,6 +147,18 @@ Mensajes de MIS que cambian flags en juego (`FUN_005A6EF0`): `SECTORESHARANTRANS
 
 ### NO LEÍDO (R4)
 `CHOQ*.VOL` y su relación con los sectores (`VOLCOLISIONSUBIDA`, `FUN_0057B660` test 0x4 sectores/volúmenes, `FUN_0057E520`); `FUN_005F5B80` (cruce de arista) y las variantes aceleradas (`FUN_005F4EE0/4FF0`, `FUN_005FBB40`), `FUN_005F8680` (sin TW2); consumidores de los grupos con nombre; `FUN_005D1420` (id de nieve); CONVEYOR/RAPIDS; PEscal/PExplo/NCorri/NTirAt; `u1/u2` (descartados); cómo `TPathTool` (`FUN_00624B90`) usa NCamin/SoloAg (R3).
+
+## Cierre de R4 (2026-10-29) [hecho]
+Escaneo exhaustivo del `.text` (desensamblado completo, máscaras inmediatas contra `[reg+0x50]`, directas e indirectas vía registro) para los flags de sector:
+| Flag | Lectores en el binario |
+|---|---|
+| **PEscal 0x40** | solo el cargador `FUN_005FBB40` (+ el volcado del editor): **lo apaga** y marca como **muro escalable** (`edge+0x14 \|= 1`, arista y espejo) toda arista del sector cuyo vecino no es NTrans y cuya diferencia de altura en el punto medio supera **8.0**. Detalle y uso por el cursor: `q1-escaleras.md` §4c. |
+| **PExplo 0x80**, **NCorri 0x200** | **ningún lector** (solo el volcado del editor `FUN_0053E2E0`): no tienen efecto en el juego. |
+| **NTirar 0x800** | `FUN_00675DC0` (¿se puede lanzar al punto?): el sector de destino no puede tenerlo, y `FUN_00675810` (callback de la caminata del lanzamiento) bloquea si el trayecto pasa por uno. Además exige destino a ≤ radio (`param_1²`), a menos de `z_lanzador + param_2`, tipo de sector 0/1/2, y `flags & 0xC14 == 0` (sin NTrans, Ocluso, SoloAg, NTirar). |
+| **NTirAt 0x1000** | solo `FUN_00675810`: un lanzamiento **puede entrar** a una zona NTirAt pero **no salir**: al pasar a un sector con NTirAt marca `lanz+8 = 1` y sigue; si después pasa a un sector sin ese flag con la marca puesta, se bloquea. |
+| **0x2000 (sin nombre)** | `FUN_00510130` (por ciclo): el bicho parado en un sector con 0x2000, con `bicho+0x19C < 1` y sin `+0x23C & 0x800000`, recibe `bicho+0xCBC = 1` y `+0x23C \|= 0x40000000`; al salir del sector se limpia. Está en 1 sector de los datos; el bit `0x40000000` no tiene lector directo. |
+`FUN_005FBB40` además construye los dos aceleradores espaciales de sectores (`+0x3C` rejilla de 0x28 B, `+0x40` de 0xA0 B; celdas de **50.0**, `0x795C74`) con `FUN_005FAB80/5F8B80/5FAFD0`: solo aceleran la búsqueda de sector por punto (`FUN_005F4EE0/4FF0`); no cambian resultados salvo el desempate entre sectores solapados (gana el de mayor z, ver `sectors.ts#pick`).
+Tipos de sector reales: LAND 8795 · WATER 55 · SNOW 179 · DEEPWATER 307; **CONVEYOR y RAPIDS no aparecen en ningún dato** (el comportamiento de tipo 4/5 no se necesita). SNOW: `+0x4C` = el volumen de render `BASE*` que contiene el centroide (`FUN_005D1420`, `FUN_0062E800` punto-en-polígono).
 
 ## Hallazgos para otros
 - **Render/z-order (otro agente)**: `FUN_006B8860/6B9580/6BA390/52B7A0` recorren sectores y filtran por `flags & 0x100 / 0x101 / 0x104` (NVista, Inclin, NTrans).
