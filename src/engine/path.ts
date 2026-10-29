@@ -13,6 +13,11 @@ import { SectorFlag, type Sector } from '../formats/sec.ts';
 import { groundZ, TYPE_DEEPWATER, type SectorMap } from './sectors.ts';
 import type { Vec } from './walk.ts';
 
+/** Punto de ruta con la altura del suelo en él (para dibujar la ruta; el movimiento usa solo x, y). */
+export interface Waypoint extends Vec {
+  z: number;
+}
+
 /** Un paso de la cadena de sectores: sector, arista de salida (-1 = último) y márgenes de la arista (w1 extremo 0, w2 extremo 1). */
 export interface PathStep {
   readonly sector: number;
@@ -325,12 +330,20 @@ export class Nav {
     };
   }
 
-  /** Puntos de giro y destino de una cadena (embudo sobre los portales recortados). No incluye el punto de partida. */
-  waypoints(steps: readonly PathStep[], start: Vec, goal: Vec): Vec[] {
-    const portals = [{ left: start, right: start }, ...steps.filter((s) => s.edge >= 0).map((s) => this.portal(s)), { left: goal, right: goal }];
-    const out: Vec[] = [];
+  /**
+   * Puntos de giro y destino de una cadena (embudo sobre los portales recortados). No incluye el punto de partida.
+   * La altura de cada punto es la del suelo del sector que deja (el último, la del sector destino).
+   */
+  waypoints(steps: readonly PathStep[], start: Vec, goal: Vec): Waypoint[] {
+    const exits = steps.filter((s) => s.edge >= 0);
+    const portals = [{ left: start, right: start }, ...exits.map((s) => this.portal(s)), { left: goal, right: goal }];
+    const sectorOf = (i: number): Sector | undefined => this.list[(exits[i - 1] ?? steps[steps.length - 1])?.sector ?? -1];
+    const out: Waypoint[] = [];
+    let at = 0;
     const emit = (p: Vec): void => {
-      if (out.length === 0 || !same(out[out.length - 1] as Vec, p)) out.push(p);
+      const s = sectorOf(at);
+      const q = { x: p.x, y: p.y, z: s ? groundZ(s, p.x, p.y) : 0 };
+      if (out.length === 0 || !same(out[out.length - 1] as Vec, q)) out.push(q);
     };
     let apex = start;
     let left = start;
@@ -344,6 +357,7 @@ export class Nav {
           right = p.right;
           ri = i;
         } else {
+          at = li;
           emit(left);
           apex = left;
           right = left;
@@ -357,6 +371,7 @@ export class Nav {
           left = p.left;
           li = i;
         } else {
+          at = ri;
           emit(right);
           apex = right;
           left = right;
@@ -365,6 +380,7 @@ export class Nav {
         }
       }
     }
+    at = portals.length - 1;
     emit(goal);
     return out;
   }
@@ -373,7 +389,7 @@ export class Nav {
    * Ruta completa: puntos por los que pasar para ir de `start` (en `from`) a `goal` (en `to`); [] si ya está a menos de 2 u;
    * null si no hay camino o el destino no cae en un sector.
    */
-  route(start: Vec, from: Sector, goal: Vec, to: Sector | null, crouched = false): Vec[] | null {
+  route(start: Vec, from: Sector, goal: Vec, to: Sector | null, crouched = false): Waypoint[] | null {
     if ((start.x - goal.x) ** 2 + (start.y - goal.y) ** 2 < ALREADY_THERE_D2) return [];
     const steps = to ? this.steps(start, from, goal, to, crouched) : null;
     return steps ? this.waypoints(steps, start, goal) : null;

@@ -2,10 +2,16 @@
  * Consultas sobre los sectores (.SEC): sector en un punto, altura del suelo y reglas de paso. Fuentes (exe de la raíz) y evidencia:
  * docs/research/q1-movimiento.md §R4 — FUN_005F6C60 (sector en x,y), FUN_005F6DB0 (en x,y,z), FUN_0053A250 (destino válido),
  * FUN_0066AD30 (Parachoques del peatón), FUN_0066BFE0 (escalón [-20,+15]).
+ * Picking del cursor: FUN_005F7D50 -> FUN_005F5590 traza el rayo del píxel contra el plano de cada sector (FUN_005F51A0/FUN_005F52E0) y se
+ * queda con el de menor t, o sea el más cercano a la cámara = el de mayor z. `pick` hace lo mismo.
  * shortcut: búsqueda lineal por bbox + polígono (el original usa un acelerador espacial, FUN_005FBB40) y siempre desde cero
  *           (el original sigue los vecinos desde el sector actual, FUN_005F9E60); cuándo mejorar: si el perfil lo pide.
  */
 import { SectorFlag, type Sec, type Sector } from '../formats/sec.ts';
+
+/** cos 50° y sin 50°: la cámara del juego (docs/research/q1-render.md); mundo -> pantalla es px = x, py = COS50·y − SIN50·z. */
+export const COS50 = Math.cos((50 * Math.PI) / 180);
+export const SIN50 = Math.sin((50 * Math.PI) / 180);
 
 export const TYPE_WATER = 1;
 export const TYPE_DEEPWATER = 3;
@@ -38,6 +44,24 @@ export class SectorMap {
   /** Igual, pero un sector B solo vale si el punto está sobre su suelo (`plano_B(x,y) < z + 1`): pisos y puentes. */
   atZ(x: number, y: number, z: number): Sector | null {
     return this.find(x, y, z);
+  }
+
+  /**
+   * Punto del mundo bajo un píxel del mapa (px, py): en cada sector se resuelve y = (py + SIN50·(a·px + c)) / (COS50 − SIN50·b)
+   * (px = x y py = COS50·y − SIN50·z sobre el plano z = a·x + b·y + c) y gana el de mayor z. null si ningún sector lo cubre.
+   * shortcut: recorre todos los sectores (el original mira la celda de 128 u del acelerador, FUN_005F4B90), y desempata por orden de lista.
+   */
+  pick(px: number, py: number): { x: number; y: number; z: number; sector: Sector } | null {
+    let best: { x: number; y: number; z: number; sector: Sector } | null = null;
+    for (const s of this.sec.sectors) {
+      const den = COS50 - SIN50 * s.b;
+      if (Math.abs(den) < 1e-3) continue; // plano casi paralelo al rayo
+      const y = (py + SIN50 * (s.a * px + s.c)) / den;
+      if (!(px >= s.minX && px <= s.maxX && y >= s.minY && y <= s.maxY) || !this.contains(s, px, y)) continue;
+      const z = groundZ(s, px, y);
+      if (!best || z > best.z) best = { x: px, y, z, sector: s };
+    }
+    return best;
   }
 
   private find(x: number, y: number, z: number | null): Sector | null {

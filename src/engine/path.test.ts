@@ -42,7 +42,7 @@ describe('rutas por sectores', () => {
     const steps = got(nav.steps(from, at(m, from.x, from.y), to, at(m, to.x, to.y)));
     expect(steps.map((s) => s.sector)).toEqual([id(0, 1), id(1, 1), id(2, 1)]);
     expect(steps.map((s) => s.edge)).toEqual([1, 1, -1]);
-    expect(nav.route(from, at(m, from.x, from.y), to, at(m, to.x, to.y))).toEqual([to]);
+    expect(nav.route(from, at(m, from.x, from.y), to, at(m, to.x, to.y))).toMatchObject([to]);
   });
 
   it('un sector NTrans en el medio se rodea (A*): los puntos de giro quedan fuera del muro', () => {
@@ -52,7 +52,7 @@ describe('rutas por sectores', () => {
     const to = { x: 250, y: 150 };
     const route = got(nav.route(from, at(m, from.x, from.y), to, at(m, to.x, to.y)));
     expect(route.length).toBeGreaterThan(1);
-    expect(route[route.length - 1]).toEqual(to);
+    expect(route[route.length - 1]).toMatchObject(to);
     let prev = from;
     for (const p of route) {
       for (let t = 0; t <= 1; t += 0.02) {
@@ -68,7 +68,7 @@ describe('rutas por sectores', () => {
     const nav = navFor(m);
     const a = { x: 50, y: 50 };
     expect(nav.route(a, at(m, 50, 50), { x: 250, y: 250 }, at(m, 250, 250))).toBeNull();
-    expect(nav.route(a, at(m, 50, 50), { x: 80, y: 20 }, at(m, 80, 20))).toEqual([{ x: 80, y: 20 }]);
+    expect(nav.route(a, at(m, 50, 50), { x: 80, y: 20 }, at(m, 80, 20))).toMatchObject([{ x: 80, y: 20 }]);
     expect(nav.route(a, at(m, 50, 50), { x: 51, y: 50 }, at(m, 51, 50))).toEqual([]);
     expect(nav.route(a, at(m, 50, 50), { x: 500, y: 500 }, null)).toBeNull();
   });
@@ -96,10 +96,18 @@ describe('rutas por sectores', () => {
     expect(route.length).toBeGreaterThan(1); // rodea la celda alta
     // pendiente suave (0.09·x): sube 9 en x=100 y baja 18 en x=200 (dentro de +15 / -20) -> pasa recto
     const slope = grid((cx, cy) => (cx === 1 && cy === 1 ? { plane: [0.09, 0, 0] } : {}));
-    expect(got(navFor(slope).route(a, at(slope, a.x, a.y), b, at(slope, b.x, b.y)))).toEqual([b]);
+    expect(got(navFor(slope).route(a, at(slope, a.x, a.y), b, at(slope, b.x, b.y)))).toMatchObject([b]);
     // pendiente fuerte (0.4·x): en x=100 el plano vale 40 -> bloqueada la arista
     const steep = grid((cx, cy) => (cx === 1 && cy === 1 ? { plane: [0.4, 0, 0] } : {}));
     expect(got(navFor(steep).route(a, at(steep, a.x, a.y), b, at(steep, b.x, b.y))).length).toBeGreaterThan(1);
+  });
+
+  it('cada punto de ruta trae la altura del suelo del sector donde está (para dibujarla)', () => {
+    const m = grid((cx) => (cx === 2 ? { plane: [0, 0, 7] } : {}));
+    const a = { x: 50, y: 150 };
+    const b = { x: 250, y: 150 };
+    const route = got(navFor(m).route(a, at(m, a.x, a.y), b, at(m, b.x, b.y)));
+    expect(route).toEqual([{ x: 250, y: 150, z: 7 }]);
   });
 
   it('SoloAg solo se cruza agachado; agua profunda nunca a pie', () => {
@@ -110,7 +118,7 @@ describe('rutas por sectores', () => {
     const sa = at(low, a.x, a.y);
     const sb = at(low, b.x, b.y);
     expect(got(nav.route(a, sa, b, sb)).length).toBeGreaterThan(1); // de pie lo rodea
-    expect(nav.route(a, sa, b, sb, true)).toEqual([b]); // agachado pasa recto
+    expect(nav.route(a, sa, b, sb, true)).toMatchObject([b]); // agachado pasa recto
   });
 
   it('un sector sin índice en el mapa no tiene ruta', () => {

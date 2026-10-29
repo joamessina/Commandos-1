@@ -13,11 +13,10 @@ import type { Anm } from '../formats/anm.ts';
 import type { Sector } from '../formats/sec.ts';
 import { Animator } from './anim.ts';
 import { navFor, type Nav } from './path.ts';
-import { groundZ, isWater, simBlocked, stepOk, validTarget, type SectorMap } from './sectors.ts';
+import { COS50, groundZ, isWater, SIN50, simBlocked, stepOk, validTarget, type SectorMap } from './sectors.ts';
 import { newBody, runSpeed, stepBody, WALK_SPEED, type Body, type Vec } from './walk.ts';
 
-export const COS50 = Math.cos((50 * Math.PI) / 180);
-export const SIN50 = Math.sin((50 * Math.PI) / 180);
+export { COS50, SIN50 };
 
 /** Mundo (x,y,z) -> píxel de mapa. Verificado con 19 edificios del mapa 0 (mediana 0,3 px): docs/research/q1-render.md. */
 export const project = (x: number, y: number, z: number): { px: number; py: number } => ({ px: x, py: COS50 * y - SIN50 * z });
@@ -29,13 +28,18 @@ export const unproject = (px: number, py: number, z: number): Vec => ({ x: px, y
 const STUCK_CYCLES = 9;
 const MAX_REPLANS = 3;
 
+/** Punto del mundo con la altura del suelo en él. */
+export interface Vec3 extends Vec {
+  z: number;
+}
+
 export class Unit {
   readonly body: Body;
   readonly anim: Animator;
-  /** Destino final de la orden vigente. */
-  target: Vec | null = null;
+  /** Destino final de la orden vigente (con la altura del suelo ahí, para dibujarlo). */
+  target: Vec3 | null = null;
   /** Puntos que faltan hasta `target` (el primero es al que va el cuerpo). */
-  private path: Vec[] = [];
+  private path: Vec3[] = [];
   private stuck = 0;
   private replans = 0;
   private goalSector: Sector | null = null;
@@ -60,13 +64,15 @@ export class Unit {
     this.land();
   }
 
-  /** Ordena caminar (o correr) hasta un punto del mundo. Devuelve false si el destino no es transitable (FUN_0053A250). */
-  goTo(p: Vec, run: boolean): boolean {
-    // shortcut: el sector destino sale de atZ con la z del comando (el clic se proyectó sobre su plano); el original usa FUN_005F6C60 por (x,y)
-    //           o lo recibe de quien da la orden (FUN_00628470), no leído. Cuándo mejorar: al leer ClassAcUsuarioGoto.
-    const to = this.sectors?.atZ(p.x, p.y, this.z) ?? null;
+  /**
+   * Ordena caminar (o correr) hasta un punto del mundo. Devuelve false si el destino no es transitable (FUN_0053A250).
+   * `to` = sector del destino: quien da la orden lo recibe del picking del cursor (SectorMap.pick, FUN_00628470 lo toma como parámetro).
+   * shortcut: sin `to`, sale de atZ con la z del comando; cuándo mejorar: si algún llamador no pasa por el cursor.
+   */
+  goTo(p: Vec, run: boolean, to: Sector | null = this.sectors?.atZ(p.x, p.y, this.z) ?? null): boolean {
     if (this.sectors && !validTarget(to)) return false;
-    let path = [p];
+    const goalZ = to ? groundZ(to, p.x, p.y) : this.z;
+    let path: Vec3[] = [{ ...p, z: goalZ }];
     if (this.nav) {
       const route = this.sector ? this.nav.route(this.body, this.sector, p, to) : null;
       if (!route) return false;
@@ -76,7 +82,7 @@ export class Unit {
     this.path = path;
     this.goalSector = to;
     this.stuck = this.replans = 0;
-    this.target = p;
+    this.target = { ...p, z: goalZ };
     this.running = run;
     const run1 = ['CORRE', 'CORRER'].find((n) => this.anim.has(n));
     this.anim.set(run && run1 ? run1 : 'ANDAR');
@@ -134,7 +140,7 @@ export class Unit {
   }
 
   /** Puntos que faltan hasta el destino (para dibujar la ruta). */
-  get waypoints(): readonly Vec[] {
+  get waypoints(): readonly Vec3[] {
     return this.path;
   }
 

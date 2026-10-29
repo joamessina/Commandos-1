@@ -3,6 +3,7 @@
  * DATOS/recursos/bmps/map_mp/Fase000N.wad. Nada se sube ni se hace fetch: todo se lee con la File API.
  * Controles: clic izquierdo = elegir comando / caminar; clic derecho = caminar; Mayús+clic o doble clic derecho = correr;
  * flechas o WASD = mover la cámara; 1-4 = elegir comando; Inicio = centrar en el elegido.
+ * El clic se traduce al mundo con el picking del original (sector más alto bajo el píxel), así que se puede ordenar ir a cualquier altura.
  * Rutas: el comando sigue el camino por sectores (A* + embudo, R3); si no hay camino a pie la orden se rechaza y se avisa en la barra de estado.
  * shortcut: orden de dibujo por y de los pies (R2 pendiente); sin agua/buceo (los comandos que arrancan en el mar, p. ej. mapa 0000, no pueden moverse);
  *           los controles (derecho = mover) son los del original según el juego conocido, NO leídos del exe todavía.
@@ -43,6 +44,8 @@ interface UnitView {
 interface Game {
   readonly map: HTMLCanvasElement;
   readonly units: UnitView[];
+  /** Sectores del mapa (picking del cursor); null si el mapa no trae .SEC. */
+  readonly sectors: SectorMap | null;
   selected: number;
   camX: number;
   camY: number;
@@ -128,7 +131,7 @@ async function load(): Promise<void> {
   }
   const first = units[0]?.unit;
   const p = first ? project(first.body.x, first.body.y, first.z) : { px: img.width / 2, py: img.height / 2 };
-  game = { map, units, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic para elegir/caminar, Mayús+clic corre.`);
@@ -211,13 +214,13 @@ function draw(g: Game): void {
   }
   const t = g.units[g.selected]?.unit;
   if (t?.target) {
-    const q = project(t.target.x, t.target.y, t.z);
+    const q = project(t.target.x, t.target.y, t.target.z);
     ctx.strokeStyle = '#c9a24a';
     ctx.beginPath();
     const here = project(t.body.x, t.body.y, t.z);
     ctx.moveTo(here.px, here.py);
     for (const w of t.waypoints) {
-      const p = project(w.x, w.y, t.z);
+      const p = project(w.x, w.y, w.z);
       ctx.lineTo(p.px, p.py);
     }
     ctx.stroke();
@@ -251,7 +254,10 @@ function onMouse(e: MouseEvent): void {
     const now = performance.now();
     const run = e.shiftKey || (e.button === 2 && now - lastRight < 350);
     if (e.button === 2) lastRight = now;
-    if (!sel.goTo(unproject(mx, my, sel.z), run)) say(`${sel.token}: no hay camino a pie hasta ese punto.`);
+    // el cursor apunta al sector más alto que cruza el rayo del píxel (FUN_005F5590), no a un plano fijo
+    const hit = g.sectors ? g.sectors.pick(mx, my) : { ...unproject(mx, my, sel.z), sector: null }; // sin .SEC: plano fijo del comando
+    if (!hit) say('Ese punto está fuera de los sectores del mapa.');
+    else if (!sel.goTo(hit, run, hit.sector)) say(`${sel.token}: no hay camino a pie hasta ese punto.`);
   }
 }
 

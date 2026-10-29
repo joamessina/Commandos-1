@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseAnm } from '../formats/anm.ts';
 import { parseSec, SectorFlag } from '../formats/sec.ts';
 import { anmSeq, bnm, must, secBytes } from '../testing/builders.ts';
-import { groundZ, isWater, SectorMap, simBlocked, stepOk, validTarget } from './sectors.ts';
+import { COS50, groundZ, isWater, SectorMap, SIN50, simBlocked, stepOk, validTarget } from './sectors.ts';
 import { Unit } from './unit.ts';
 
 // A0 (0..100) con pendiente en x y un piso B0 a z=50; A1 (100..200) intransitable; A2 (200..300) agua; A3 (300..400) agua profunda;
@@ -52,6 +52,35 @@ describe('SectorMap', () => {
   it('altura del suelo = plano del sector', () => {
     expect(groundZ(sector(0), 40, 70)).toBeCloseTo(4);
     expect(groundZ(sector(5), 550, 10)).toBe(30);
+  });
+});
+
+describe('picking del cursor', () => {
+  it('un píxel sobre terreno llano da el punto del mundo de ese plano', () => {
+    const hit = map.pick(450, COS50 * 60); // sector A4 (400..500), z = 0
+    expect(hit?.sector).toBe(sector(4));
+    expect(hit?.x).toBe(450);
+    expect(hit?.y).toBeCloseTo(60, 6);
+    expect(hit?.z).toBeCloseTo(0, 6);
+  });
+
+  it('en una cuesta resuelve y con la inclinación del plano (z = 0.1·x)', () => {
+    // A0 (0..100) plano z = 0.1·x: en x=40 el suelo está en z=4; el píxel de (40, 70, z=4)
+    const hit = map.pick(40, COS50 * 70 - SIN50 * 4);
+    expect(hit?.y).toBeCloseTo(70, 6);
+    expect(hit?.z).toBeCloseTo(4, 6);
+  });
+
+  it('si el rayo cruza dos pisos gana el más alto (el más cercano a la cámara)', () => {
+    // A0 a z≈5 y el piso B0 a z=50 cubren la misma zona (0..100); el píxel de (50, 40, z=50) también cae sobre A0 más abajo
+    const hit = map.pick(50, COS50 * 40 - SIN50 * 50);
+    expect(hit?.sector).toBe(sector(7));
+    expect(hit?.z).toBeCloseTo(50, 6);
+  });
+
+  it('fuera de todos los sectores devuelve null', () => {
+    expect(map.pick(5000, 100)).toBeNull();
+    expect(map.pick(450, -5000)).toBeNull();
   });
 });
 
