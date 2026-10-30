@@ -75,3 +75,18 @@ describe('Attack', () => {
     expect(b.done).toBe(true);
   });
 });
+
+describe('Attack: munición', () => {
+  it('con munición limitada gasta 1 por disparo y al llegar a 0 la acción termina sin disparar más', () => {
+    const s = new Soldier('S', mk(200, 0, 'S'), null);
+    const log = { noise: 0, shots: 0 };
+    const u = mk(0);
+    u.ammo['MIRILLA'] = 2;
+    s.unit.energy = 1000; // no muere: hacen falta más de 2 tiros
+    const a = new Attack(u, s, 'MIRILLA');
+    run(a, world(log), 300);
+    expect(log.shots).toBe(2);
+    expect(u.ammo['MIRILLA']).toBe(0);
+    expect(a.done).toBe(true);
+  });
+});

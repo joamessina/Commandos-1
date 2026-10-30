@@ -262,6 +262,9 @@ async function load(): Promise<void> {
       if (guns.includes('PISTOLA')) weapons.push('PISTOLA');
       if (guns.includes('MIRILLA')) weapons.push('MIRILLA');
       if (e.actions.some((x) => x.name.toUpperCase() === 'AUACUCHILLAR')) weapons.push('CUCHILLO');
+      const aud = e.actions.find((x) => x.name.toUpperCase() === 'AUDISPARAR')?.params ?? [];
+      const mun = asNumber(find(aud, '.MUNMIRILLA'));
+      if (mun !== undefined) unit.ammo['MIRILLA'] = mun;
       units.push({ unit, sprites: a.sprites, weapons, maxEnergy: unit.energy });
     } else if (e.bando === 'ALEMAN' && e.anim && e.actions.some((x) => /^ac(bap|banpe|metrallero)/i.test(x.name))) {
       const a = asset(e.anim);
@@ -693,7 +696,7 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   const sel = g.units[g.selected];
   ctx.fillStyle = '#d9dde3';
   ctx.fillText(`Arma: ${g.planting ? 'bomba (clic donde plantar)' : (g.mode ?? 'ninguna (clic = mover)')}  ·  F pistola · R fusil · C cuchillo · G agacharse · Esc mover · E subir al bote · V conos`, 10, 14 + g.units.length * 34);
-  if (sel) ctx.fillText(`Disponibles: ${sel.weapons.join(', ') || '—'}`, 10, 30 + g.units.length * 34);
+  if (sel) ctx.fillText(`Disponibles: ${sel.weapons.map((w) => (sel.unit.ammo[w] === undefined ? w : `${w} (${Math.max(0, sel.unit.ammo[w] ?? 0).toString()})`)).join(', ') || '—'}`, 10, 30 + g.units.length * 34);
   let oy = 14;
   ctx.fillStyle = 'rgba(0,0,0,.55)';
   ctx.fillRect(ctx.canvas.width - 210, 8, 200, 20 + g.demo.objectives.size * 15 + 18);

@@ -66,6 +66,10 @@ export class Attack {
     }
     const b = u.body;
     const d = Math.hypot(tg.x - b.x, tg.y - b.y);
+    if ((u.ammo[this.weapon] ?? 1) <= 0) {
+      this.done = true; // sin munición (estado 1 de AUDisparar: munición 0 → termina)
+      return;
+    }
     const reach = RANGE[this.weapon];
     const clear = this.weapon === 'CUCHILLO' || lineClear(w.sectors, b.x, b.y, tg.x, tg.y);
     if (d > reach || !clear) {
@@ -91,6 +95,7 @@ export class Attack {
       w.onShot(b.x, b.y, tg.x, tg.y);
       if (this.weapon === 'PISTOLA') w.noise(b.x, b.y, PISTOL_NOISE);
     }
+    if (u.ammo[this.weapon] !== undefined) u.ammo[this.weapon] = (u.ammo[this.weapon] ?? 0) - 1; // gasta 1 por disparo (tabla +0x78)
     tg.hurt(this.weapon, u);
     if (isDead(tg)) this.done = true; // hurt() cambia `dead`
     else this.aim = need - SHOT_GAP;

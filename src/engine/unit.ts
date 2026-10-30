@@ -56,6 +56,12 @@ export class Unit {
   crouched = false;
   /** Velocidad al andar (VEL de la ruta del soldado); null = la del jugador, 2,5. */
   speed: number | null = null;
+  /**
+   * Munición por arma (`AuDisparar .MUNMIRILLA n`, acción+0x48+id·4); un arma sin entrada es ilimitada.
+   * shortcut: el ctor del exe copia 1 como munición inicial de pistola/arpón/escopeta cuando el MAC no trae `MUN…` (tabla 0x8143C0 +0x74), lo que no se pudo interpretar
+   *           (¿un solo tiro?); solo se limita lo que el MIS fija (MUNMIRILLA 6). Cuándo mejorar: al leer FUN_004F1680 / el uso real de la columna +0x74.
+   */
+  readonly ammo: Record<string, number> = {};
   /** Trepada en curso (escalera); null si no trepa. */
   climb: Climb | null = null;
   /** Oculto (el cuerpo `DESAPARECE` de MATABICHOSSECTOR): no se dibuja ni se ve. */
