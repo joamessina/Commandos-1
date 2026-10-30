@@ -152,6 +152,24 @@ describe('minas', () => {
   });
 });
 
+describe('minas: buzo', () => {
+  it('el buzo que roza la mina muere y la dispara; el que no bucea o está lejos no', () => {
+    const d = new Demolition([], [], { soldiers: [], commandos: [] });
+    d.addMine(200, 0);
+    const swimmer = unit(200, 0, 'LANCHERO');
+    d.tickMines(null, [swimmer]);
+    expect(d.mines[0]?.fuse).toBeNull(); // no bucea
+    swimmer.diving = true;
+    swimmer.body.x = 100;
+    d.tickMines(null, [swimmer]);
+    expect(d.mines[0]?.fuse).toBeNull(); // lejos
+    swimmer.body.x = 210;
+    d.tickMines(null, [swimmer]);
+    expect(swimmer.dead).toBe(true);
+    expect(d.mines[0]?.fuse).not.toBeNull();
+  });
+});
+
 describe('MATABICHOSSECTOR', () => {
   const MIS2 = `.MISSION [ .INTENDENCIAINFO [ .MATABICHOSSECTOR [ [ .TOKEN ANTI01 .SECTORS [ [ .XYZ [ 1 2 3 ] .DESAPARECE 1 ] [ .XYZ [ 9 9 9 ] ] [ .XYZ [ 1 2 ] ] ] ] [ .SECTORS [ ] ] ] ] .AUTOEXPCASAS [ [ .MAP ANTI01 ] ] ]`;
   const { sites, kills } = parseSites(MIS2, vol, []);

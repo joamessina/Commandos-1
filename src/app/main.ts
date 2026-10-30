@@ -59,6 +59,8 @@ interface UnitView {
   /** Armas que el MIS le da (`AuDisparar .ARMAS`, `AuAcuchillar`). */
   readonly weapons: Weapon[];
   readonly maxEnergy: number;
+  /** Tiene `AuBucear` (traje de buzo). */
+  readonly canDive: boolean;
 }
 interface SoldierView {
   readonly soldier: Soldier;
@@ -267,7 +269,7 @@ async function load(): Promise<void> {
       const aud = e.actions.find((x) => x.name.toUpperCase() === 'AUDISPARAR')?.params ?? [];
       const mun = asNumber(find(aud, '.MUNMIRILLA'));
       if (mun !== undefined) unit.ammo['MIRILLA'] = mun;
-      units.push({ unit, sprites: a.sprites, weapons, maxEnergy: unit.energy });
+      units.push({ unit, sprites: a.sprites, weapons, maxEnergy: unit.energy, canDive: e.actions.some((x) => x.name.toUpperCase() === 'AUBUCEAR') });
     } else if (e.bando === 'ALEMAN' && e.anim && e.actions.some((x) => /^ac(bap|banpe|metrallero)/i.test(x.name))) {
       const a = asset(e.anim);
       if (!a) continue;
@@ -691,7 +693,7 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
       ctx.strokeRect(x + 0.5, y + 0.5, 189, 29);
     }
     ctx.fillStyle = u.unit.dead ? '#e0826f' : '#d9dde3';
-    ctx.fillText(`${(i + 1).toString()} ${u.unit.token}${u.unit.dead ? ' (muerto)' : u.unit.inHouse ? ` (en ${u.unit.inHouse})` : u.unit.boat ? ' (en el bote)' : u.unit.crouched ? ' (agachado)' : ''}`, x + 6, y + 13);
+    ctx.fillText(`${(i + 1).toString()} ${u.unit.token}${u.unit.dead ? ' (muerto)' : u.unit.inHouse ? ` (en ${u.unit.inHouse})` : u.unit.diving ? ' (buceando)' : u.unit.boat ? ' (en el bote)' : u.unit.crouched ? ' (agachado)' : ''}`, x + 6, y + 13);
     ctx.fillStyle = '#333';
     ctx.fillRect(x + 6, y + 18, 176, 6);
     ctx.fillStyle = u.unit.energy / u.maxEnergy > 0.4 ? '#6cc070' : '#e0826f';
@@ -699,7 +701,7 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   });
   const sel = g.units[g.selected];
   ctx.fillStyle = '#d9dde3';
-  ctx.fillText(`Arma: ${g.planting ? 'bomba (clic donde plantar)' : (g.mode ?? 'ninguna (clic = mover)')}  ·  F pistola · R fusil · C cuchillo · G agacharse · Esc mover · E subir al bote · V conos`, 10, 14 + g.units.length * 34);
+  ctx.fillText(`Arma: ${g.planting ? 'bomba (clic donde plantar)' : (g.mode ?? 'ninguna (clic = mover)')}  ·  F pistola · R fusil · C cuchillo · G agacharse · N bucear · Esc mover · E subir al bote · V conos`, 10, 14 + g.units.length * 34);
   if (sel) ctx.fillText(`Disponibles: ${sel.weapons.map((w) => (sel.unit.ammo[w] === undefined ? w : `${w} (${Math.max(0, sel.unit.ammo[w] ?? 0).toString()})`)).join(', ') || '—'}`, 10, 30 + g.units.length * 34);
   let oy = 14;
   ctx.fillStyle = 'rgba(0,0,0,.55)';
@@ -765,6 +767,10 @@ function onRightUp(e: MouseEvent): void {
     const u = g.units[g.selected]?.unit;
     if (!u || u.dead) return;
     g.battle.cancel(u);
+    if (u.diving) {
+      say(u.toggleDive() ? `${u.token}: no se puede salir en agua profunda (acercate a la orilla).` : `${u.token} sale del agua.`);
+      return;
+    }
     if (u.climb) {
       u.pauseClimb(); // MSG_BOTON2VIRTUAL trepando: queda congelado a esa altura
       say(`${u.token}: pausado en la escalera (clic más alto sube, más bajo baja).`);
@@ -928,6 +934,12 @@ window.addEventListener('keydown', (e) => {
       g.mode = null;
       say('Clic donde plantar la bomba (Esc cancela). X detona.');
     }
+  }
+  if (k === 'n' && cur && !cur.dead) {
+    if (!g.units[g.selected]?.canDive) say(`${cur.token} no tiene traje de buzo (solo el LANCHERO).`);
+    else if (cur.boat) say(cur.diveOut() ? `${cur.token} se tira al agua (buceando). N o clic derecho para salir.` : 'El bote debe estar parado y con agua a mano.');
+    else if (cur.diving) say(cur.toggleDive() ? 'No se puede salir en agua profunda: acercate a la orilla.' : `${cur.token} sale del agua.`);
+    else say(cur.toggleDive() ? `${cur.token} bucea. N o clic derecho para salir.` : 'Solo se puede empezar a bucear en el agua.');
   }
   if (k === 'x' && g.demo.detonate() === 0) say('No hay bombas plantadas.');
   if (k === 'l' && g.lift && cur) {

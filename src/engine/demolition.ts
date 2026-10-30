@@ -206,13 +206,20 @@ export class Demolition {
   /**
    * Minas: un cuerpo con masa > PESOACT (60; el Zodiac pesa 400) que toque el cilindro (R 17 + el del bote) la dispara y explota 20 ciclos después con
    * potencia 10000: lo que esté dentro del radio de la mina o a bordo del bote muere y el bote se hunde.
-   * shortcut: solo el bote pisa minas (los comandos a pie no tienen masa suficiente; el buceo no está portado); la mina no se activa por impactos.
+   * shortcut: pisan minas el bote y el buzo (la masa del comando no se leyó: el exe exige masa > PESOACT; a pie no la pisa nadie); la mina no se activa por impactos.
    */
   tickMines(boat: Boat | null, riders: readonly Unit[]): void {
     for (const m of this.mines) {
       if (m.done) continue;
       if (m.fuse === null) {
         if (boat && !this.boatSunk && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_R + boat.radius) m.fuse = MINE_FUSE;
+        // un buzo que la toca recibe el impacto EXPLOSIONMENOR de 10000 (muere en el acto) y la mina explota 20 ciclos después
+        for (const u of riders) {
+          if (u.diving && !u.dead && Math.hypot(u.body.x - m.x, u.body.y - m.y) < MINE_R + 10) {
+            u.hit(1e9);
+            m.fuse = MINE_FUSE;
+          }
+        }
         continue;
       }
       if (--m.fuse > 0) continue;

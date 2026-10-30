@@ -126,6 +126,54 @@ describe('Unit en un bote', () => {
   });
 });
 
+describe('Unit: buceo (AuBucear)', () => {
+  const anmD = parseAnm(bnm([{ type: 0, slots: [3] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8), ...anmSeq(1, 'BUCEAR', 2, 30, 0, 8)]));
+  const at = (x: number): Unit => {
+    const u = new Unit('LANCHERO', anmD, x, 50, 0, 0, sectors);
+    u.tick();
+    return u;
+  };
+
+  it('solo empieza en el agua; bajo el agua solo se pisa agua (también profunda) y se sale con otro AuBucear salvo en agua profunda', () => {
+    expect(at(150).toggleDive()).toBe(false); // tierra
+    const u = at(50);
+    expect(u.toggleDive()).toBe(true);
+    expect(u.anim.name).toBe('BUCEAR');
+    expect(u.goTo({ x: 150, y: 50 }, false)).toBe(false); // tierra
+    expect(u.goTo({ x: 250, y: 50 }, false)).toBe(true); // agua profunda
+    u.stop();
+    expect(u.toggleDive()).toBe(false);
+    expect(u.diving).toBe(false);
+    expect(u.anim.name).toBe('REPOSO');
+    const deep = at(250);
+    deep.diving = true;
+    expect(deep.toggleDive()).toBe(true); // no se sale en agua profunda
+    expect(new Unit('X', anmD, 0, 0, 0, 0, sectors).toggleDive()).toBe(false); // sin sector
+    const dead = at(50);
+    dead.hit(1e9);
+    expect(dead.toggleDive()).toBe(false);
+  });
+
+  it('se tira desde el bote parado a una salida con agua; no con el bote en marcha ni sin agua', () => {
+    const boat = new Boat(20, 50, 0, 0, slots, sectors); // salida 0 = (75,50) mar
+    const u = new Unit('LANCHERO', anmD, 0, 0, 0, 0, sectors);
+    u.board(boat, 0);
+    boat.vx = 1;
+    expect(u.diveOut()).toBe(false);
+    boat.vx = 0;
+    expect(u.diveOut()).toBe(true);
+    expect(u.boat).toBeNull();
+    expect(u.diving).toBe(true);
+    expect(u.body.x).toBeCloseTo(75, 5);
+    expect(u.anim.name).toBe('BUCEAR');
+    const land = new Boat(120, 50, 0, 0, slots, sectors); // salidas en tierra
+    const v = new Unit('LANCHERO', anmD, 0, 0, 0, 0, sectors);
+    v.board(land, 0);
+    expect(v.diveOut()).toBe(false);
+    expect(new Unit('Z', anmD, 0, 0, 0, 0, sectors).diveOut()).toBe(false);
+  });
+});
+
 describe('loadWorld: casos límite', () => {
   const mac = (n: string): string | undefined =>
     ({

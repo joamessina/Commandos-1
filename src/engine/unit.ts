@@ -15,7 +15,7 @@ import { Animator } from './anim.ts';
 import type { Boat } from './boat.ts';
 import { CLIMB_DOWN_MIN, CLIMB_UP_MIN, newClimb, reverse, stepClimb, wallXY, type Climb, type Ladder } from './ladder.ts';
 import { navFor, type Nav } from './path.ts';
-import { COS50, groundZ, isWater, SIN50, simBlocked, stepOk, validTarget, type SectorMap } from './sectors.ts';
+import { COS50, groundZ, isWater, SIN50, simBlocked, stepOk, TYPE_DEEPWATER, validTarget, type SectorMap } from './sectors.ts';
 import { newBody, norm360, runSpeed, stepBody, WALK_SPEED, type Body, type Vec } from './walk.ts';
 
 export { COS50, SIN50 };
@@ -64,6 +64,8 @@ export class Unit {
   readonly ammo: Record<string, number> = {};
   /** Trepada en curso (escalera); null si no trepa. */
   climb: Climb | null = null;
+  /** Buceando (AuBucear): solo se pisan sectores de agua y los enemigos lo ven a la mitad de alcance. shortcut: va en línea recta (sin rutas por el mar). */
+  diving = false;
   /** Casa en la que está (oculto dentro). */
   inHouse: string | null = null;
   /** Oculto (el cuerpo `DESAPARECE` de MATABICHOSSECTOR): no se dibuja ni se ve. */
@@ -99,10 +101,10 @@ export class Unit {
    * shortcut: sin `to`, sale de atZ con la z del comando; cuándo mejorar: si algún llamador no pasa por el cursor.
    */
   goTo(p: Vec, run: boolean, to: Sector | null = this.sectors?.atZ(p.x, p.y, this.z) ?? null): boolean {
-    if (this.sectors && !validTarget(to)) return false;
+    if (this.sectors && !validTarget(to, this.diving ? { water: true } : {})) return false;
     const goalZ = to ? groundZ(to, p.x, p.y) : this.z;
     let path: Vec3[] = [{ ...p, z: goalZ }];
-    if (this.nav) {
+    if (this.nav && !this.diving) {
       const route = this.sector ? this.nav.route(this.body, this.sector, p, to) : null;
       if (!route) return false;
       if (route.length === 0) return true; // ya está a menos de 2 u: la orden se ignora
@@ -114,7 +116,7 @@ export class Unit {
     // agachado (0x23C & 0x40) el flag de correr se fuerza a 0 y solo cambia la animación (ARRASTRARSE); la velocidad es la de andar (FUN_004BC460, q1-movimiento.md)
     this.running = run && !this.crouched;
     const run1 = ['CORRE', 'CORRER'].find((n) => this.anim.has(n));
-    this.anim.set(this.crouched && this.anim.has('ARRASTRARSE') ? 'ARRASTRARSE' : this.running && run1 ? run1 : 'ANDAR');
+    this.anim.set(this.diving && this.anim.has('BUCEAR') ? 'BUCEAR' : this.crouched && this.anim.has('ARRASTRARSE') ? 'ARRASTRARSE' : this.running && run1 ? run1 : 'ANDAR');
     return true;
   }
 
@@ -137,7 +139,7 @@ export class Unit {
   private blocked = (x: number, y: number): boolean => {
     if (!this.sectors) return false;
     const s = this.sectorAt(x, y);
-    return !s || simBlocked(s) || (s !== this.sector && !stepOk(groundZ(s, x, y) - this.z));
+    return !s || simBlocked(s, this.diving ? { water: true } : {}) || (s !== this.sector && !stepOk(groundZ(s, x, y) - this.z));
   };
 
   /**
@@ -210,6 +212,45 @@ export class Unit {
     this.climb = null;
     this.land();
     this.anim.set(this.anim.has('REPOSO') ? 'REPOSO' : 'ANDAR');
+  }
+
+  /**
+   * AuBucear: empieza solo si el sector que pisa es de agua (`MSGO_MOTOR_GETSECTORESPISADOS`), anima BUCEAR y pasa al modo agua. Devuelve el nuevo estado.
+   */
+  toggleDive(): boolean {
+    if (this.dead || this.boat) return this.diving;
+    if (this.diving) {
+      // salir (clic derecho): quita buceando/oculto; solo donde se pueda estar de pie (agua somera o tierra)
+      if (this.sector?.type === TYPE_DEEPWATER) return true;
+      this.diving = false;
+      this.stop();
+      this.anim.set(this.anim.has('REPOSO') ? 'REPOSO' : 'ANDAR');
+      return false;
+    }
+    if (!isWater(this.sector)) return false;
+    this.diving = true;
+    this.stop();
+    if (this.anim.has('BUCEAR')) this.anim.set('BUCEAR');
+    return true;
+  }
+
+  /** Se tira al agua desde el bote parado (la salida es cualquier sector de agua, también profunda) y empieza a bucear. */
+  diveOut(): boolean {
+    const boat = this.boat;
+    if (!boat || boat.speed >= 0.01 || !this.sectors) return false;
+    for (const slot of boat.slots) {
+      const p = boat.slotPoint(slot.exit);
+      const s = this.sectors.atZ(p.x, p.y, boat.z) ?? this.sectors.at(p.x, p.y);
+      if (!isWater(s)) continue;
+      this.boat = null;
+      this.body.x = p.x;
+      this.body.y = p.y;
+      this.land();
+      this.diving = true;
+      if (this.anim.has('BUCEAR')) this.anim.set('BUCEAR');
+      return true;
+    }
+    return false;
   }
 
   /** AUAgacharse (`AGAC`, 0x4E5E00): alterna agachado/de pie (en bote no); agachado los enemigos lo ven a la mitad de alcance. Devuelve el nuevo estado. */
