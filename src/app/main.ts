@@ -22,10 +22,11 @@ import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engin
 import { Boat, boatSlots } from '../engine/boat.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
 import { parseRoutes } from '../engine/patrol.ts';
-import { Soldier } from '../engine/soldier.ts';
+import { Order, Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
-import { rayReach } from '../engine/vision.ts';
+import { rayReach, vistaOf } from '../engine/vision.ts';
+import { asNumber, find } from '../formats/clave.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
 import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
@@ -85,6 +86,8 @@ interface Prop {
   ang: number;
 }
 interface Game {
+  /** Nido de ametralladora: su gráfico dispara cuando el artillero dispara. */
+  readonly nests: { readonly soldier: Soldier; readonly prop: Prop }[];
   readonly ladders: Ladder[];
   readonly lift: Lift | null;
   readonly demo: Demolition;
@@ -232,6 +235,7 @@ async function load(): Promise<void> {
   };
   const props: Prop[] = [];
   const soldiers: SoldierView[] = [];
+  const nestOf = new Map<Soldier, Elem>();
   let bombCount = 0;
   const barrelProps: { elem: Elem; prop: Prop }[] = [];
   const boats = new Map<Elem, { boat: Boat; prop: Prop }>();
@@ -259,13 +263,23 @@ async function load(): Promise<void> {
       if (guns.includes('MIRILLA')) weapons.push('MIRILLA');
       if (e.actions.some((x) => x.name.toUpperCase() === 'AUACUCHILLAR')) weapons.push('CUCHILLO');
       units.push({ unit, sprites: a.sprites, weapons, maxEnergy: unit.energy });
-    } else if (e.bando === 'ALEMAN' && e.anim && e.actions.some((x) => /^ac(bap|banpe)/i.test(x.name))) {
+    } else if (e.bando === 'ALEMAN' && e.anim && e.actions.some((x) => /^ac(bap|banpe|metrallero)/i.test(x.name))) {
       const a = asset(e.anim);
       if (!a) continue;
       const unit = new Unit(e.token, a.anm, e.x, e.y, e.z, e.angle, sectors);
       const pat = e.actions.find((x) => x.name.toUpperCase() === 'ACPATRULLA');
       const route = pat ? (parseRoutes(pat.params, diffSel.value as Difficulty)[0] ?? null) : null;
-      soldiers.push({ soldier: new Soldier(e.token, unit, route), sprites: a.sprites });
+      const nest = e.actions.some((x) => x.name.toUpperCase() === 'ACMETRALLERO');
+      const vig = e.actions.find((x) => x.name.toUpperCase() === 'ACVIGILAR')?.params ?? [];
+      const sweep = asNumber(find(vig, '.ANGBARRIDO'));
+      const soldier = new Soldier(e.token, unit, route, {
+        ...vistaOf(e.block),
+        ...(nest ? { fixed: true, noise: 500 } : {}),
+        ...(sweep === undefined ? {} : { sweep }),
+        elliptical: asNumber(find(vig, '.VISTAELIPTICA')) !== 0,
+      });
+      soldiers.push({ soldier, sprites: a.sprites });
+      if (nest && e.parent?.anim) nestOf.set(soldier, e.parent);
     } else if (e.parent?.cls === 'BICHOALIADO') {
       // lo que cuelga de un comando es su inventario (las 4 bombas del ARTIFIC), no un objeto del mapa
       if (e.macro?.toUpperCase() === 'BOMBAACT') bombCount++;
@@ -286,7 +300,11 @@ async function load(): Promise<void> {
   const barrelMap = new Map<Barrel, Prop>();
   for (const e of elems) if (e.macro?.toUpperCase() === 'MINASUB') demo.addMine(e.x, e.y);
   for (const b of barrelProps) barrelMap.set(demo.addBarrel(b.elem.token, b.elem.x, b.elem.y), b.prop);
-  game = { ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  const nests = [...nestOf].flatMap(([s, el]) => {
+    const prop = props.find((x) => x.elem === el);
+    return prop ? [{ soldier: s, prop }] : [];
+  });
+  game = { nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.`);
@@ -402,6 +420,10 @@ function setupStage(): void {
       if (!g.battle.lost && !g.won) g.battle.tick();
       g.demo.tick();
       tickWorld(g);
+      for (const n of g.nests) {
+        const want = n.soldier.dead ? 'NODISPARA' : n.soldier.order === Order.Shoot ? 'DISPARA' : 'NODISPARA';
+        if (n.prop.anim.has(want)) n.prop.anim.set(want);
+      }
       g.demo.tickMines(g.boat?.boat ?? null, g.units.map((u) => u.unit));
       if (g.demo.boatSunk && g.boat?.prop.anim.has('PINCHAR')) g.boat.prop.anim.set('PINCHAR');
       if (g.demo.dirty) recompose(g);

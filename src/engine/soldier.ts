@@ -81,7 +81,23 @@ export class Soldier implements Target {
   private spot: { x: number; y: number } | null = null;
   private readonly seenBodies = new Set<string>();
 
-  constructor(token: string, unit: Unit, route: Route | null, opts: { readonly range?: number; readonly angle?: number } = {}) {
+  /** Artillero de un nido: no se mueve (investiga girando, no caminando). */
+  private readonly fixed: boolean;
+  private readonly sweepAmp: number;
+  private readonly elliptical: boolean;
+  /** Radio del ruido de su disparo (fusil 400 `FUSL`; el nido `NIDO` 500). */
+  readonly noiseRadius: number;
+
+  constructor(
+    token: string,
+    unit: Unit,
+    route: Route | null,
+    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number } = {},
+  ) {
+    this.fixed = opts.fixed ?? false;
+    this.sweepAmp = opts.sweep ?? SWEEP_AMP;
+    this.elliptical = opts.elliptical ?? true;
+    this.noiseRadius = opts.noise ?? GUNSHOT_RADIUS;
     this.token = token;
     this.unit = unit;
     this.patrol = route && route.points.length > 0 ? new Patrol(route) : null;
@@ -135,6 +151,10 @@ export class Soldier implements Target {
   }
 
   private investigate(x: number, y: number): void {
+    if (this.fixed) {
+      this.face(x, y); // el artillero del nido solo gira hacia el ruido
+      return;
+    }
     this.order = Order.Investigate;
     this.spot = { x, y };
     this.timer = INVESTIGATE_WAIT;
@@ -181,8 +201,8 @@ export class Soldier implements Target {
     const aiming = this.order === Order.Aim || this.order === Order.Shoot;
     // AcVigilar: la cabeza barre ±ANGBARRIDO; apuntando, mira al frente (el cuerpo ya se giró hacia el blanco)
     this.phase++;
-    this.headAngle = aiming ? 0 : Math.sin((2 * Math.PI * (this.phase % SWEEP_PERIOD)) / SWEEP_PERIOD) * SWEEP_AMP;
-    this.reach = lookRange(this.range, this.headAngle);
+    this.headAngle = aiming ? 0 : Math.sin((2 * Math.PI * (this.phase % SWEEP_PERIOD)) / SWEEP_PERIOD) * this.sweepAmp;
+    this.reach = this.elliptical ? lookRange(this.range, this.headAngle) : this.range; // VISTAELIPTICA 0: el alcance no varía con la cabeza
     const seen = this.scan(w);
     if (seen) {
       this.lost = 0;

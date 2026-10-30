@@ -4,7 +4,7 @@
  */
 import { Attack, type Target, type Weapon } from './attack.ts';
 import type { SectorMap } from './sectors.ts';
-import { GUNSHOT_RADIUS, type Shot, type Soldier } from './soldier.ts';
+import type { Shot, Soldier } from './soldier.ts';
 import type { Unit } from './unit.ts';
 
 /** Rastro de un disparo (se dibuja unos ciclos). */
@@ -74,7 +74,7 @@ export class Battle {
         rng: this.rng,
         onShot: (from, shot) => {
           this.tracers.push({ ...shot, ttl: TRACER_CYCLES, enemy: true });
-          for (const o of this.soldiers) if (o !== from && Math.hypot(o.unit.body.x - shot.fromX, o.unit.body.y - shot.fromY) < GUNSHOT_RADIUS) o.hear(shot.fromX, shot.fromY);
+          for (const o of this.soldiers) if (o !== from && Math.hypot(o.unit.body.x - shot.fromX, o.unit.body.y - shot.fromY) < from.noiseRadius) o.hear(shot.fromX, shot.fromY);
         },
       });
     }

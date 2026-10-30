@@ -5,6 +5,7 @@
  * shortcut: la oclusión real (`0x5F9820` recorre sectores/portales y `0x63E200` los volúmenes) no se leyó a fondo; aquí el rayo se muestrea cada
  *           8 u y se corta en un sector con el flag Ocluso (0x10), sin mirar alturas ni volúmenes; sin luz/noche. Cuándo mejorar: al leer 0x5F9820.
  */
+import { asList, asNumber, find, type Node } from '../formats/clave.ts';
 import { SectorFlag } from '../formats/sec.ts';
 import { groundZ, type SectorMap } from './sectors.ts';
 
@@ -33,6 +34,15 @@ export interface Seen {
   readonly radius: number;
   /** Agachado o buceando: alcance a la mitad. */
   readonly low: boolean;
+}
+
+/** `.ORGANOS [ .VISTA [ Vista01 [ .MOD n .ANG a ] ] ]` de un bloque expandido: `.MOD` guarda `2·n` en el órgano (percepcion.md §3.1); sin claves, los defectos (800, 70°). */
+export function vistaOf(block: readonly Node[]): { range?: number; angle?: number } {
+  const vista = asList(find(asList(find(block, '.ORGANOS')) ?? [], '.VISTA')) ?? [];
+  const params = asList(vista[1]) ?? [];
+  const mod = asNumber(find(params, '.MOD'));
+  const ang = asNumber(find(params, '.ANG'));
+  return { ...(mod === undefined ? {} : { range: mod * 2 }), ...(ang === undefined ? {} : { angle: ang }) };
 }
 
 export const DEFAULT_RANGE = 800;

@@ -213,3 +213,26 @@ describe('Soldier: cuerpos', () => {
     expect(solo.order).toBe(Order.Patrol);
   });
 });
+
+describe('artillero de nido (soldado fijo)', () => {
+  it('vistaOf lee .MOD (×2) y .ANG del órgano Vista01; sin claves no hay opciones', async () => {
+    const { parseClave } = await import('../formats/clave.ts');
+    const { vistaOf } = await import('./vision.ts');
+    expect(vistaOf(parseClave('.ORGANOS [ .VISTA [ Vista01 [ .MOD 320 .ANG 40 ] ] ]'))).toEqual({ range: 640, angle: 40 });
+    expect(vistaOf(parseClave('.ORGANOS [ .VISTA [ Vista01 [ ] ] ]'))).toEqual({});
+    expect(vistaOf(parseClave('.X 1'))).toEqual({});
+  });
+
+  it('no se mueve al oír un disparo (solo gira), dispara con su ruido de 500 y VISTAELIPTICA 0 mantiene el alcance', () => {
+    const u = unit(0, 0);
+    const s = new Soldier('N', u, null, { fixed: true, noise: 500, elliptical: false, sweep: 65, range: 640, angle: 40 });
+    expect(s.noiseRadius).toBe(500);
+    s.hear(100, 100);
+    expect(s.order).toBe(Order.Patrol);
+    expect(u.body.ang).toBeCloseTo(45, 5);
+    const w = mkWorld([]).world;
+    for (let i = 0; i < 100; i++) s.tick(w);
+    expect(s.reach).toBe(640); // sin elipse el alcance no baja al girar la cabeza
+    expect(Math.hypot(u.body.x, u.body.y)).toBe(0);
+  });
+});
