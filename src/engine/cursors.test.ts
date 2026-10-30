@@ -10,7 +10,7 @@ describe('cursorFor', () => {
     expect(cursorFor('PUNO', false, true).sprite).toBe('C_GOLPE.RLE');
     expect(cursorFor('ESPOSAS', false, false).sprite).toBe('C_ESPOS.RLE');
     expect(cursorFor('PIEDRA', false, false).sprite).toBe('C_PIEDRA.RLE');
-    expect(cursorFor('MIRILLA', false, false).sprite).toBe('C_MIRA2.RLE');
+    expect(cursorFor('MIRILLA', false, false).sprite).toBe('C_MIRILL.RLE');
   });
 
   it('plantar una bomba usa el cursor del explosivo, aunque haya un arma elegida', () => {

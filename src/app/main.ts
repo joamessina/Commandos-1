@@ -246,7 +246,8 @@ function loadHud(tokens: readonly string[], bag: ReadonlyMap<string, readonly Ba
 
 function loadCursors(): Cursors | null {
   const b = bytes('DATOS/RECURSOS/BMPS/SYSTEM/GLOBAL/CURSORES.WAD');
-  return b ? new Cursors(parseWad(b)) : null;
+  const scope = bytes('DATOS/RECURSOS/BMPS/SYSTEM/OPCIONES/MIRILLA.WAD'); // retícula C_MIRILL.RLE
+  return b ? new Cursors(parseWad(b), ...(scope ? [parseWad(scope)] : [])) : null;
 }
 
 function bytes(path: string): Uint8Array | undefined {
