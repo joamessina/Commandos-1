@@ -17,14 +17,14 @@
 | [ ] | Casas y cuarteles (`AcCasa`, `AcUsaHab`, refuerzos con alarma) | 80 % | Media-alta | `obj-contenedores.md`. **Parcial:** Hecho entrar/salir, ocultos y cuartel mortal; faltan refuerzos con alarma (`NUMREGENSOLDIERS`). |
 | [ ] | Alarma y voces de los soldados (grito, cadáver avisa a los demás) | 60 % | Alta | `soldado-acbap.md`; `AcBap2` (17 funciones) sin leer. |
 | [x] | Reacción a cadáveres vistos | 70 % | Baja-media | Clasificador `FUN_006AFC10` leído. Hecho: investigan una vez. |
-| [ ] | Objetos del mapa: BOYA, BANDERA, SEGNUELO, TESTIGO, CEPO, puertas, focos | 75 % | Media | `obj-explosivos.md`, `obj-puertas.md`; se dibujan pero no hacen nada. |
+| [ ] | Objetos del mapa: BOYA, BANDERA, SEGNUELO, TESTIGO, CEPO, puertas, focos | 75 % | Media | `obj-explosivos.md`, `obj-puertas.md`. **Parcial:** BOYA y BANDERA ya giran (secuencia cíclica por tiempo); `.STARTFRAME` (`bicho+0x1E0`) se lee pero no se halló su consumidor; faltan BANDERA `ARRIADA`, TESTIGO, SEGNUELO, CEPO, puertas, focos. |
 | [ ] | Eventos de misión y patrullas (`EVENTO`, `ENLAZAR`, `ESPERAEVENTO`, cambio de ruta) | 80 % | Media | `patrulla.md`, `mision-intendencia.md` §5. **Parcial:** La misión 0 no los usa (`ESPERAEVENTO 0`); no implementado. |
 | [x] | Energía real de los alemanes (hoy 100 por defecto, sin leer) | 30 % | Baja | Hay que leer `ENEGIA` por defecto del cargador del bicho. Hecho: 100 confirmado en `ClassBicho`. |
 | [ ] | Munición y armas de los comandos (hoy infinita; faltan granada, piedra, tabaco…) | 80 % | Media | `au-disparar.md`. **Parcial:** Hecho MUNMIRILLA 6 + HUD; resto ilimitado (shortcut); faltan granada, piedra, tabaco… |
 | [ ] | Explosiones: cráteres, partículas, temblor de cámara | 60 % | Media | `obj-explosivos.md`, `render.md` (temblor leído). |
 | [ ] | Sonido de la misión (olas, disparos, explosiones, voces) | 65 % | Media-alta | `sonido.md`; falta todo Web Audio. |
 | [ ] | HUD real (libretas, caras, mochila, tooltips) | 20 % | Alta | Marco de ventanas leído; reglas del HUD no. |
-| [ ] | Fin de misión: pantalla de resultados, puntuación por tiempo y energía, textos | 75 % | Media | `ui-misiones-guardado.md` §3 (fórmulas). |
+| [x] | Fin de misión: pantalla de resultados, puntuación por tiempo y energía, textos | 75 % | Media | `ui-misiones-guardado.md` §3 (fórmulas). Hecho en `engine/score.ts`: estrellas de tiempo/energía, rango, FINM/ALMU, par de `PUNTUACIONES`. Faltan rango de campaña, bajas por tipo y los códigos 2/3/6/7/8/0xB. |
 | [ ] | Sombras de personajes y partículas de agua (estelas) | 50 % | Media | `render.md`. |
 | [ ] | Noche y luces (la misión 0 es de día: baja prioridad) | 85 % | Media | Curvas leídas en `render.md` cierre 2. |
 

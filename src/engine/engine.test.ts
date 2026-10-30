@@ -29,6 +29,7 @@ describe('frameIndex', () => {
 describe('Animator', () => {
   it('avanza por distancia (a) y reduce módulo el período en las cíclicas', () => {
     const a = new Animator(anm, 'ANDAR');
+    expect(a.cyclic).toBe(true);
     expect(a.step).toBe(0);
     a.advance(4.9, 1);
     expect(a.step).toBe(0);

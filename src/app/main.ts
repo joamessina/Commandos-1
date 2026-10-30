@@ -462,6 +462,7 @@ function setupStage(): void {
         g.boat.prop.y = g.boat.boat.y;
         g.boat.prop.ang = g.boat.boat.ang;
       }
+      for (const p of g.props) if (p.anim.cyclic) p.anim.advance(0, 1); // BANDERA, BOYA: secuencias cíclicas por tiempo (shortcut: `.STARTFRAME` sin leer su efecto, todas en la misma fase)
       if (g.water?.drawn) stepWater(g, g.water);
       g.ticks++;
       acc -= TICK;

@@ -47,6 +47,11 @@ export class Animator {
     return this.seq.name;
   }
 
+  /** ¿La secuencia vigente es cíclica? (las banderas y boyas giran solas con el tiempo) */
+  get cyclic(): boolean {
+    return this.seq.cyclic;
+  }
+
   has(name: string): boolean {
     return this.anm.sequences.has(name);
   }
