@@ -1,0 +1,111 @@
+import { describe, expect, it } from 'vitest';
+import { parseAnm } from '../formats/anm.ts';
+import type { Vol } from '../formats/vol.ts';
+import { anmSeq, bnm } from '../testing/builders.ts';
+import { BARREL_RADIUS, BOMB_RADIUS, Demolition, parseSites } from './demolition.ts';
+import { Soldier } from './soldier.ts';
+import { Unit } from './unit.ts';
+import { loadWorld, flatten } from './world.ts';
+
+const anm = parseAnm(bnm([{ type: 0, slots: [3] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8), ...anmSeq(2, 'MUERTE1', 2, 0, 20, 8)]));
+const unit = (x: number, y: number, token = 'X'): Unit => new Unit(token, anm, x, y, 0, 0);
+const poly = (name: string, cx: number, cy: number): Vol['polys'][number] => ({
+  name,
+  ramp: false,
+  header: [cx, cy, 0, 0, 4, 0],
+  points: [{ x: -20, y: -20 }, { x: 20, y: -20 }, { x: 20, y: 20 }, { x: -20, y: 20 }],
+  tiles: [],
+  radio: null,
+  extraInfo: null,
+});
+const vol = { width: 1000, height: 1000, extraSprites: [], polys: [poly('ANTI01', 500, 500), poly('FARO01', 800, 200), poly('ANTENA', 100, 100), poly('CASA04', 120, 120)] } as unknown as Vol;
+
+const MIS = `.MISSION [
+  .AUTOEXPCASAS [ [ .MAP ANTI01 ] [ .MAP FARO01 .TILES [ A.RLE B.RLE C.RLE NADA ] ] [ .MAP NOEXISTE ] 4 ]
+  .INTENDENCIAINFO [ .PUNTOHUIDA [ 7 9 ] .OBJETIVOS [ [ .OBJETIVO ANTI01 ] [ .OBJETIVO FARO01 ] [ .OBJETIVO CASA04 ] [ .X 1 ] ] ]
+  .ELEMENTOS [ [ .CLASS BICHO .TOKEN EXPL .XYZ [ 100 100 0 ] .VOLCOLISION [ CILINDRO [ .R 50 .H 100 ] ]
+    .ACCIONES [ [ acExplotaCasa [ .CAMBIATILES [ [ .MAPA ANTENA .TILES [ ANTE.RLE ANTD.RLE ] ] [ .MAPA CASA04 .TILES [ X.RLE NADA ] ] 5 ] ] ] ] ] ]
+]`;
+const elems = flatten(loadWorld(MIS, { difficulty: 'FACIL', macro: () => undefined }));
+
+describe('parseSites', () => {
+  const { sites, objectives } = parseSites(MIS, vol, elems);
+  it('AUTOEXPCASAS (caja del polígono, TILES en pares) y acExplotaCasa (caja del cilindro, CAMBIATILES)', () => {
+    expect(sites.map((s) => s.name)).toEqual(['ANTI01', 'FARO01', 'EXPL']);
+    expect(sites[0]?.rect).toEqual({ x0: 480, y0: 480, x1: 520, y1: 520 });
+    expect(sites[0]?.swaps[0]?.pairs).toBeNull();
+    expect(sites[1]?.swaps[0]?.pairs?.get('A.RLE')).toBe('B.RLE');
+    expect(sites[2]?.rect).toEqual({ x0: 50, y0: 50, x1: 150, y1: 150 });
+    expect(sites[2]?.swaps.map((s) => s.poly)).toEqual(['ANTENA', 'CASA04']);
+    expect(sites[2]?.swaps[1]?.pairs?.get('X.RLE')).toBe('NADA');
+    expect(objectives).toEqual(['ANTI01', 'FARO01', 'CASA04']);
+    expect(parseSites(MIS, vol, elems).escape).toEqual({ x: 7, y: 9 });
+    expect(parseSites('.MISSION [ ]', vol, []).escape).toBeNull();
+  });
+});
+
+describe('Demolition', () => {
+  const mk = (bombs = 2) => {
+    const s1 = new Soldier('S1', unit(520, 500, 'S1'), null);
+    const s2 = new Soldier('S2', unit(900, 900, 'S2'), null);
+    const c = unit(480, 520, 'COMANDO');
+    const { sites, objectives } = parseSites(MIS, vol, elems);
+    const d = new Demolition(sites, objectives, { soldiers: [s1, s2], commandos: [c] }, bombs);
+    return { d, s1, s2, c };
+  };
+
+  it('la bomba plantada y detonada mata a quien esté a ≤250, destruye el sitio cercano, cumple el objetivo y marca el mapa sucio', () => {
+    const { d, s1, s2, c } = mk();
+    expect(d.plant(500, 500)).toBe(true);
+    expect(d.bombs).toBe(1);
+    expect(d.objectivesDone).toBe(false);
+    expect(d.detonate()).toBe(1);
+    expect(s1.dead && c.dead).toBe(true);
+    expect(s2.dead).toBe(false);
+    expect(d.objectives.get('ANTI01')).toBe(true);
+    expect(d.dirty).toBe(true);
+    expect(d.mapState().ruined.has('ANTI01')).toBe(true);
+    expect(d.blasts).toHaveLength(1);
+    for (let i = 0; i < 12; i++) d.tick();
+    expect(d.blasts).toHaveLength(0);
+    expect(BOMB_RADIUS).toBe(250);
+  });
+
+  it('sin bombas no se planta; el segundo detonador no hace nada', () => {
+    const { d } = mk(0);
+    expect(d.plant(1, 1)).toBe(false);
+    expect(d.detonate()).toBe(0);
+  });
+
+  it('un barril explota con disparo (no con cuchillo), encadena barriles y bombas cercanos y alerta a los soldados a <1200', () => {
+    const { d, s2 } = mk();
+    const a = d.addBarrel('B1', 800, 205);
+    const b = d.addBarrel('B2', 880, 205);
+    const far = d.addBarrel('B3', 5000, 5000);
+    d.plant(830, 210);
+    a.hurt('CUCHILLO');
+    expect(a.dead).toBe(false);
+    a.hurt('PISTOLA');
+    expect(a.dead && b.dead).toBe(true);
+    expect(far.dead).toBe(false);
+    expect(d.planted).toHaveLength(0); // la bomba también estalló en cadena
+    expect(d.objectives.get('FARO01')).toBe(true);
+    expect(d.mapState().rename.get('FARO01')?.get('C.RLE')).toBe('NADA');
+    expect(s2.order).not.toBe(4); // a 800 u: lo oyó
+    a.hurt('MIRILLA'); // ya explotó: no repite
+    expect(d.blasts.filter((e) => e.radius === BARREL_RADIUS)).toHaveLength(2);
+  });
+
+  it('la antena (acExplotaCasa con CAMBIATILES) cambia dos volúmenes y cumple CASA04; un sitio no se destruye dos veces', () => {
+    const { d } = mk();
+    d.explode(100, 100, 10);
+    const st = d.mapState();
+    expect(st.rename.get('ANTENA')?.get('ANTE.RLE')).toBe('ANTD.RLE');
+    expect(st.rename.get('CASA04')?.get('X.RLE')).toBe('NADA');
+    expect(d.objectives.get('CASA04')).toBe(true);
+    d.dirty = false;
+    d.explode(100, 100, 10);
+    expect(d.dirty).toBe(false);
+    expect(d.objectivesDone).toBe(false);
+  });
+});

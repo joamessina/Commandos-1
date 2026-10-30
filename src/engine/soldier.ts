@@ -5,8 +5,10 @@
  * Órdenes de `AcBap` portadas: 4 patrulla/puesto · 8 apuntar al visto (0x28 ciclos) · 0x11 disparar · 9 ir a investigar · 0x14 volver al puesto · 0x15 muerto.
  * shortcut: sin la cadena de reacciones por sonidos/cuerpos/compañeros (alarma, voces, refuerzos), sin fumar/charlar/mirar alrededor (órdenes 5/0xD/0xE),
  *           sin esposado/atontado/desnudo ni Gestapo; el disparo de otro soldado a <200 u (SONIDO_PELIGRO) los manda a investigar; giro del cuerpo instantáneo
- *           al apuntar; energía del alemán por defecto sin leer: muere de un golpe de pistola o cuchillo. Cuándo mejorar: al portar AcBap2 completo (0x43A0E0…).
+ *           al apuntar; los golpes del jugador usan la energía por defecto 100 (armas-danio.md §5: pistola 3 tiros, fusil de mira 1, cuchillo 1) y un soldado herido
+ *           que sobrevive apunta al agresor. Cuándo mejorar: al portar AcBap2 completo (0x43A0E0…).
  */
+import { DAMAGE, type Target, type Weapon } from './attack.ts';
 import { DEFAULT_ANGLE, DEFAULT_RANGE, sees } from './vision.ts';
 import { Patrol, type Route } from './patrol.ts';
 import type { SectorMap } from './sectors.ts';
@@ -45,7 +47,7 @@ export interface SoldierWorld {
   readonly onShot: (from: Soldier, shot: Shot) => void;
 }
 
-export class Soldier {
+export class Soldier implements Target {
   readonly unit: Unit;
   readonly token: string;
   order: Order = Order.Patrol;
@@ -80,7 +82,24 @@ export class Soldier {
     return this.unit.dead;
   }
 
-  /** Pistola o cuchillo del jugador: el soldado muere (shortcut de energía). */
+  get x(): number {
+    return this.unit.body.x;
+  }
+
+  get y(): number {
+    return this.unit.body.y;
+  }
+
+  /** Golpe de un comando (daño de `DAMAGE`): si sobrevive se vuelve hacia quien lo hirió. */
+  hurt(weapon: Weapon, from: Unit): void {
+    if (this.dead) return;
+    if (this.unit.hit(DAMAGE[weapon])) {
+      this.order = Order.Dead;
+      this.target = null;
+    } else if (this.order === Order.Patrol || this.order === Order.Return || this.order === Order.Investigate) this.startAim(from);
+  }
+
+  /** Muerte directa (explosión). */
   kill(): void {
     if (this.dead) return;
     this.unit.hit(1e9);

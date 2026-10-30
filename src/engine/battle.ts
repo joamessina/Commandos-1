@@ -2,7 +2,7 @@
  * Combate de una misión: reparte el ciclo entre soldados y ataques de los comandos, propaga el ruido de los disparos (a menos de 200 u, `SONIDO_PELIGRO`)
  * y guarda los rastros de disparo para dibujarlos. Reglas en soldier.ts y attack.ts.
  */
-import { Attack, type Weapon } from './attack.ts';
+import { Attack, type Target, type Weapon } from './attack.ts';
 import type { SectorMap } from './sectors.ts';
 import { GUNSHOT_RADIUS, type Shot, type Soldier } from './soldier.ts';
 import type { Unit } from './unit.ts';
@@ -36,7 +36,7 @@ export class Battle {
   }
 
   /** Ordena un ataque (reemplaza el que tuviera). */
-  attack(unit: Unit, target: Soldier, weapon: Weapon): void {
+  attack(unit: Unit, target: Target, weapon: Weapon): void {
     this.attacks.set(unit, new Attack(unit, target, weapon));
   }
 

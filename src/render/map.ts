@@ -14,6 +14,23 @@ export interface MapOptions {
   readonly skipWater?: boolean;
   /** Capas para animar el mar: 'water' = solo el polígono AGUA sobre negro; 'land' = todo lo demás sobre transparente. */
   readonly layer?: 'water' | 'land';
+  /** Volúmenes destruidos con renombre de tiles (CAMBIATILES: pares sprite → sprite, `NADA` = quitar) por nombre de polígono. */
+  readonly rename?: ReadonlyMap<string, ReadonlyMap<string, string>>;
+  /** Volúmenes destruidos sin lista (AUTOEXPCASAS): los tiles con guion se muestran sin él y el resto se quita. */
+  readonly ruined?: ReadonlySet<string>;
+}
+
+/** Tiles de un polígono según su estado de destrucción. */
+function tilesOf(poly: Vol['polys'][number], opts: MapOptions): Tile[] {
+  const pairs = opts.rename?.get(poly.name);
+  if (pairs) {
+    return poly.tiles.flatMap((t) => {
+      const to = pairs.get(t.sprite.toUpperCase());
+      return to === undefined ? [t] : to === 'NADA' ? [] : [{ ...t, sprite: to }];
+    });
+  }
+  if (opts.ruined?.has(poly.name)) return poly.tiles.filter((t) => t.sprite.startsWith('-')).map((t) => ({ ...t, sprite: t.sprite.slice(1) }));
+  return poly.tiles;
 }
 
 export interface MapImage {
@@ -72,7 +89,7 @@ export function composeMap(vol: Vol, wad: Wad, opts: MapOptions = {}): MapImage 
   for (const poly of vol.polys) {
     if (opts.skipWater === true && poly.name === 'AGUA') continue;
     if (opts.layer !== undefined && (poly.name === 'AGUA') !== (opts.layer === 'water')) continue;
-    for (const t of poly.tiles) {
+    for (const t of tilesOf(poly, opts)) {
       const s = wad.byName.get(t.sprite.toUpperCase());
       const pal = s ? wad.palettes[s.palette] : undefined;
       if (!s || !pal) {

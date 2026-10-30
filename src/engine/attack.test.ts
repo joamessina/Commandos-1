@@ -21,16 +21,25 @@ const run = (a: Attack, w: AttackWorld, n = 400): void => {
 };
 
 describe('Attack', () => {
-  it('pistola: se acerca hasta el alcance, apunta, dispara (con ruido) y mata al soldado', () => {
+  it('pistola (40 de daño): se acerca hasta el alcance y dispara con ruido; el soldado de 100 de energía muere al 3.er tiro', () => {
     const s = new Soldier('S', mk(500, 0, 'S'), null);
     const log = { noise: 0, shots: 0 };
     const a = new Attack(mk(0), s, 'PISTOLA');
     run(a, world(log));
     expect(a.done).toBe(true);
     expect(s.dead).toBe(true);
-    expect(log).toEqual({ noise: 1, shots: 1 });
+    expect(log).toEqual({ noise: 3, shots: 3 });
     expect(a.unit.body.x).toBeGreaterThan(150); // tuvo que acercarse
     expect(a.unit.anim.name).toBe('DISPARAPISTOLA');
+  });
+
+  it('un soldado herido que sobrevive se vuelve a apuntar al agresor', () => {
+    const s = new Soldier('S', mk(500, 0, 'S'), null);
+    const shooter = mk(300, 0);
+    s.hurt('PISTOLA', shooter);
+    expect(s.dead).toBe(false);
+    expect(s.unit.energy).toBe(60);
+    expect(s.order).toBe(8);
   });
 
   it('mirilla: alcance 1000 y sin ruido; desde lejos mata sin moverse', () => {

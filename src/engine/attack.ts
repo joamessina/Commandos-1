@@ -1,23 +1,35 @@
 /**
- * Ataque de un comando a un soldado (AuDisparar / AuAcuchillar): se acerca hasta el alcance del arma con el blanco a la vista, apunta y dispara.
- * Datos del exe: tabla de armas `0x8143C0` (docs/lectura/au-disparar.md): PISTOLA alcance 300 y enfriamiento 1 ciclo, MIRILLA (rifle del francotirador)
- * 1000 y 10, con sonido solo la pistola (`DISPAROPISTOLA`; la tabla no trae sonido de la mirilla); cuchillo = `FUN_005986A0(.., tipo 7 CUCHILLADA, 120)` al
- * cuadro 6 de la animación, sin ruido (au-jugador.md §0b).
- * shortcut: el soldado muere de un golpe (energía de alemán por defecto sin leer); el apuntado tarda lo de la animación DESENFUNDA+APUNTA, aquí fijo en
- *           `AIM_CYCLES`; el cuchillo golpea a `KNIFE_RANGE` tras `KNIFE_CYCLES`; sin munición ni piedras/granadas. Cuándo mejorar: al leer AUDisparar completo.
+ * Ataque de un comando a un blanco (soldado o barril): se acerca hasta el alcance del arma con el blanco a la vista, apunta y dispara hasta matarlo.
+ * Datos del exe: tabla de armas `0x8143C0` (docs/lectura/au-disparar.md) y rutinas de bala del jugador (docs/engine/armas-danio.md §3): PISTOLA alcance 300
+ * y daño 40, MIRILLA (rifle del francotirador) 1000 y 100, con sonido solo la pistola (`DISPAROPISTOLA`; la tabla no trae sonido de la mirilla);
+ * cuchillo = `FUN_005986A0(.., tipo 7 CUCHILLADA, 120)` al cuadro 6 de la animación, sin ruido (au-jugador.md §0b).
+ * shortcut: el apuntado tarda `AIM_CYCLES` fijos y entre tiros `SHOT_GAP` (no la duración de las animaciones); el cuchillo golpea tras `KNIFE_CYCLES`;
+ *           sin munición, ni piedras/granadas. Cuándo mejorar: al leer AUDisparar completo.
  */
 import { lineClear } from './vision.ts';
 import type { SectorMap } from './sectors.ts';
-import type { Soldier } from './soldier.ts';
 import type { Unit } from './unit.ts';
 import { norm360 } from './walk.ts';
 
 export type Weapon = 'PISTOLA' | 'MIRILLA' | 'CUCHILLO';
 
 export const RANGE: Readonly<Record<Weapon, number>> = { PISTOLA: 300, MIRILLA: 1000, CUCHILLO: 28 };
+export const DAMAGE: Readonly<Record<Weapon, number>> = { PISTOLA: 40, MIRILLA: 100, CUCHILLO: 120 };
 const AIM_CYCLES = 8;
+const SHOT_GAP = 6;
 const KNIFE_CYCLES = 12;
 const REPATH_EVERY = 10;
+
+/** Algo contra lo que se puede disparar. */
+export interface Target {
+  readonly x: number;
+  readonly y: number;
+  readonly dead: boolean;
+  /** Recibe el golpe de `from` con `weapon`. */
+  hurt(weapon: Weapon, from: Unit): void;
+}
+
+const isDead = (t: Target): boolean => t.dead;
 
 export interface AttackWorld {
   readonly sectors: SectorMap | null;
@@ -29,46 +41,41 @@ export interface AttackWorld {
 
 export class Attack {
   readonly unit: Unit;
-  readonly target: Soldier;
+  readonly target: Target;
   readonly weapon: Weapon;
-  /** true cuando terminó (blanco muerto o disparo hecho). */
+  /** true cuando terminó (blanco destruido o atacante muerto). */
   done = false;
   private t = 0;
   private aim = 0;
 
-  constructor(unit: Unit, target: Soldier, weapon: Weapon) {
+  constructor(unit: Unit, target: Target, weapon: Weapon) {
     this.unit = unit;
     this.target = target;
     this.weapon = weapon;
   }
 
-  private face(x: number, y: number): void {
-    const b = this.unit.body;
-    b.ang = norm360((Math.atan2(y - b.y, x - b.x) * 180) / Math.PI);
-  }
-
   tick(w: AttackWorld): void {
     const u = this.unit;
-    const tg = this.target.unit;
+    const tg = this.target;
     if (u.dead || tg.dead) {
       this.done = true;
       return;
     }
     const b = u.body;
-    const d = Math.hypot(tg.body.x - b.x, tg.body.y - b.y);
+    const d = Math.hypot(tg.x - b.x, tg.y - b.y);
     const reach = RANGE[this.weapon];
-    const clear = this.weapon === 'CUCHILLO' || lineClear(w.sectors, b.x, b.y, tg.body.x, tg.body.y);
+    const clear = this.weapon === 'CUCHILLO' || lineClear(w.sectors, b.x, b.y, tg.x, tg.y);
     if (d > reach || !clear) {
       this.aim = 0;
       if (this.t++ % REPATH_EVERY === 0) {
         const near = this.weapon === 'CUCHILLO' ? 0 : 0.8;
-        const k = d > 0 ? Math.max(0, d - reach * near) / d : 0;
-        u.goTo({ x: b.x + (tg.body.x - b.x) * k, y: b.y + (tg.body.y - b.y) * k }, false);
+        const k = Math.max(0, d - reach * near) / d;
+        u.goTo({ x: b.x + (tg.x - b.x) * k, y: b.y + (tg.y - b.y) * k }, false);
       }
       return;
     }
     u.stop();
-    this.face(tg.body.x, tg.body.y);
+    b.ang = norm360((Math.atan2(tg.y - b.y, tg.x - b.x) * 180) / Math.PI);
     const need = this.weapon === 'CUCHILLO' ? KNIFE_CYCLES : AIM_CYCLES;
     if (this.aim === 0) {
       const a = this.weapon === 'CUCHILLO' ? 'SACACUCHILLO' : this.weapon === 'MIRILLA' ? 'APUNTARIFLE' : 'APUNTAPISTOLA';
@@ -78,10 +85,11 @@ export class Attack {
     if (this.weapon !== 'CUCHILLO') {
       const a = this.weapon === 'MIRILLA' ? 'DISPARARIFLE' : 'DISPARAPISTOLA';
       if (u.anim.has(a)) u.anim.set(a);
-      w.onShot(b.x, b.y, tg.body.x, tg.body.y);
+      w.onShot(b.x, b.y, tg.x, tg.y);
       if (this.weapon === 'PISTOLA') w.noise(b.x, b.y);
     }
-    this.target.kill();
-    this.done = true;
+    tg.hurt(this.weapon, u);
+    if (isDead(tg)) this.done = true; // hurt() cambia `dead`
+    else this.aim = need - SHOT_GAP;
   }
 }

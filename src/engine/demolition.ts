@@ -1,0 +1,241 @@
+/**
+ * Explosivos y destrucción (docs/lectura/obj-explosivos.md, docs/engine/armas-danio.md §6): barril (radio 100, EXPLOSIONMENOR), bomba del zapador con detonador
+ * (radio 250, BOMBA, instantánea porque BOMBAACT trae `RETARDO 0`), y los volúmenes del mapa que se destruyen (`.AUTOEXPCASAS`, `acExplotaCasa` con
+ * `.CAMBIATILES`): por defecto `th[BOMBA]=th[EXPLOSIONMENOR]=1`, o sea una explosión que alcance basta. El ruido de la explosión (`XPLO`/`EBAR`) lo oyen los
+ * soldados a 1200 u. Cambio de tiles: `CAMBIATILES [ .MAPA X .TILES [ a b … ] ]` son pares «sprite → sprite» (`NADA` = quitarlo; verificado contra
+ * ANTENA/CASA04/FARO01); sin `.TILES` el volumen pasa a ruinas (los tiles con guion `-RUINA…` se muestran sin él y el resto se quita).
+ * shortcut: el daño de área mata a todo el que esté dentro del radio (sin la fórmula de FUN_00571FE0 ni caída con la distancia), sin cráteres, sin
+ *           temblor de cámara ni partículas (un círculo), la bomba se planta al instante donde está el zapador (sin PONEBOMBA ni caminar) y los umbrales
+ *           `.IMPACTOS` distintos de 1 no se leen. Cuándo mejorar: al leer FUN_00571FE0 y AuManejaBomba.
+ */
+import { asList, asNumbers, asText, find, parseClave, type Node } from '../formats/clave.ts';
+import type { Vol } from '../formats/vol.ts';
+import type { Target, Weapon } from './attack.ts';
+import type { Soldier } from './soldier.ts';
+import type { Unit } from './unit.ts';
+import type { Elem } from './world.ts';
+
+export const BARREL_RADIUS = 100;
+export const BOMB_RADIUS = 250;
+const NOISE_RADIUS = 1200; // XPLO / EBAR en la tabla de ruidos (0x821DE0)
+const BLAST_CYCLES = 12;
+
+export interface Rect {
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
+}
+
+/** Qué hacer con un volumen al destruirse: pares de renombre de tiles, o null = ruinas. */
+export interface Swap {
+  readonly poly: string;
+  readonly pairs: ReadonlyMap<string, string> | null;
+}
+
+export interface Site {
+  readonly name: string;
+  readonly rect: Rect;
+  readonly swaps: readonly Swap[];
+  /** Objetivos de la misión que esto cumple al destruirse. */
+  readonly objectives: readonly string[];
+  destroyed: boolean;
+}
+
+export interface Blast {
+  readonly x: number;
+  readonly y: number;
+  readonly radius: number;
+  ttl: number;
+}
+
+const dist2Rect = (r: Rect, x: number, y: number): number => {
+  const dx = Math.max(r.x0 - x, 0, x - r.x1);
+  const dy = Math.max(r.y0 - y, 0, y - r.y1);
+  return dx * dx + dy * dy;
+};
+
+function pairsOf(n: Node | undefined): Map<string, string> | null {
+  const l = asList(n);
+  if (!l || l.length === 0) return null;
+  const m = new Map<string, string>();
+  for (let i = 0; i + 1 < l.length; i += 2) m.set(String(l[i]).toUpperCase(), String(l[i + 1]).toUpperCase());
+  return m;
+}
+
+/** Caja de un polígono del VOL (puntos relativos al centro de la cabecera). */
+function polyRect(vol: Vol, name: string): Rect | null {
+  const p = vol.polys.find((q) => q.name === name);
+  if (!p || p.points.length === 0) return null;
+  const cx = p.header[0] ?? 0;
+  const cy = p.header[1] ?? 0;
+  const xs = p.points.map((q) => cx + q.x);
+  const ys = p.points.map((q) => cy + q.y);
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+}
+
+/**
+ * Sitios destructibles de una misión: cada `.AUTOEXPCASAS [ [ .MAP X (.TILES …) ] ]` y cada elemento con `acExplotaCasa` (su cilindro de colisión es la caja;
+ * `.CAMBIATILES` dice qué volúmenes cambian). Los objetivos son los tokens de `.OBJETIVOS [ [ .OBJETIVO t ] ]`.
+ */
+export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): { sites: Site[]; objectives: string[]; escape: { x: number; y: number } | null } {
+  const mission = asList(find(parseClave(misText), '.MISSION')) ?? [];
+  const sites: Site[] = [];
+  for (const e of asList(find(mission, '.AUTOEXPCASAS')) ?? []) {
+    const l = asList(e) ?? [];
+    const name = asText(find(l, '.MAP'));
+    const rect = name ? polyRect(vol, name) : null;
+    if (name && rect) sites.push({ name, rect, swaps: [{ poly: name, pairs: pairsOf(find(l, '.TILES')) }], objectives: [name], destroyed: false });
+  }
+  for (const el of elems) {
+    const a = el.actions.find((x) => x.name.toUpperCase() === 'ACEXPLOTACASA');
+    if (!a) continue;
+    const swaps: Swap[] = [];
+    for (const c of asList(find(a.params, '.CAMBIATILES')) ?? []) {
+      const cl = asList(c) ?? [];
+      const poly = asText(find(cl, '.MAPA'));
+      if (poly) swaps.push({ poly, pairs: pairsOf(find(cl, '.TILES')) });
+    }
+    const r = Math.max(el.radius, 1);
+    sites.push({ name: el.token, rect: { x0: el.x - r, y0: el.y - r, x1: el.x + r, y1: el.y + r }, swaps, objectives: swaps.map((s) => s.poly), destroyed: false });
+  }
+  const objectives: string[] = [];
+  const info = asList(find(mission, '.INTENDENCIAINFO')) ?? [];
+  for (const o of asList(find(info, '.OBJETIVOS')) ?? []) {
+    const t = asText(find(asList(o) ?? [], '.OBJETIVO'));
+    if (t) objectives.push(t);
+  }
+  const esc = asNumbers(find(info, '.PUNTOHUIDA'));
+  return { sites, objectives, escape: esc && esc.length >= 2 ? { x: esc[0] ?? 0, y: esc[1] ?? 0 } : null };
+}
+
+/** Barril explosivo (`AcBarrilExpl`): estalla con un disparo (DISPARO está en su lista) o con otra explosión. */
+export class Barrel implements Target {
+  readonly token: string;
+  readonly x: number;
+  readonly y: number;
+  dead = false;
+  private readonly owner: Demolition;
+
+  constructor(owner: Demolition, token: string, x: number, y: number) {
+    this.owner = owner;
+    this.token = token;
+    this.x = x;
+    this.y = y;
+  }
+
+  hurt(weapon: Weapon): void {
+    if (weapon !== 'CUCHILLO') this.owner.blowBarrel(this);
+  }
+}
+
+export interface People {
+  readonly soldiers: readonly Soldier[];
+  readonly commandos: readonly Unit[];
+}
+
+export class Demolition {
+  readonly sites: Site[];
+  readonly barrels: Barrel[] = [];
+  readonly planted: { x: number; y: number }[] = [];
+  readonly blasts: Blast[] = [];
+  readonly objectives: Map<string, boolean>;
+  /** Bombas que le quedan al zapador. */
+  bombs: number;
+  /** El mapa cambió (hay que recomponerlo). */
+  dirty = false;
+  private readonly people: People;
+  private readonly queue: { x: number; y: number; r: number }[] = [];
+
+  constructor(sites: Site[], objectives: readonly string[], people: People, bombs = 0) {
+    this.sites = sites;
+    this.objectives = new Map(objectives.map((o) => [o, false]));
+    this.people = people;
+    this.bombs = bombs;
+  }
+
+  addBarrel(token: string, x: number, y: number): Barrel {
+    const b = new Barrel(this, token, x, y);
+    this.barrels.push(b);
+    return b;
+  }
+
+  /** Planta una bomba (AuManejaBomba, sin la animación) donde está el zapador. */
+  plant(x: number, y: number): boolean {
+    if (this.bombs <= 0) return false;
+    this.bombs--;
+    this.planted.push({ x, y });
+    return true;
+  }
+
+  /** Activa el detonador: explotan todas las bombas plantadas. */
+  detonate(): number {
+    const n = this.planted.length;
+    for (const b of this.planted.splice(0)) this.explode(b.x, b.y, BOMB_RADIUS);
+    return n;
+  }
+
+  blowBarrel(b: Barrel): void {
+    if (b.dead) return;
+    b.dead = true;
+    this.explode(b.x, b.y, BARREL_RADIUS);
+  }
+
+  /** Explosión en (x,y): mata a las personas dentro del radio, encadena barriles y bombas, destruye sitios y avisa a los soldados. */
+  explode(x: number, y: number, radius: number): void {
+    this.queue.push({ x, y, r: radius });
+    while (this.queue.length > 0) {
+      const e = this.queue.shift();
+      if (e) this.blast(e.x, e.y, e.r);
+    }
+  }
+
+  private blast(x: number, y: number, r: number): void {
+    this.blasts.push({ x, y, radius: r, ttl: BLAST_CYCLES });
+    for (const s of this.people.soldiers) if (!s.dead && Math.hypot(s.x - x, s.y - y) <= r) s.kill();
+    for (const c of this.people.commandos) if (!c.dead && Math.hypot(c.body.x - x, c.body.y - y) <= r) c.hit(1e9);
+    for (const b of this.barrels) {
+      if (b.dead || Math.hypot(b.x - x, b.y - y) > r) continue;
+      b.dead = true;
+      this.queue.push({ x: b.x, y: b.y, r: BARREL_RADIUS });
+    }
+    for (let i = this.planted.length - 1; i >= 0; i--) {
+      const p = this.planted[i];
+      if (p && Math.hypot(p.x - x, p.y - y) <= r) {
+        this.planted.splice(i, 1);
+        this.queue.push({ x: p.x, y: p.y, r: BOMB_RADIUS });
+      }
+    }
+    for (const s of this.sites) {
+      if (s.destroyed || dist2Rect(s.rect, x, y) > r * r) continue;
+      s.destroyed = true;
+      this.dirty = true;
+      for (const o of s.objectives) if (this.objectives.has(o)) this.objectives.set(o, true);
+    }
+    for (const s of this.people.soldiers) if (!s.dead && Math.hypot(s.x - x, s.y - y) <= NOISE_RADIUS) s.hear(x, y);
+  }
+
+  /** Estado del mapa para recomponerlo: renombres de tiles por volumen y volúmenes en ruinas. */
+  mapState(): { rename: Map<string, ReadonlyMap<string, string>>; ruined: Set<string> } {
+    const rename = new Map<string, ReadonlyMap<string, string>>();
+    const ruined = new Set<string>();
+    for (const s of this.sites) {
+      if (!s.destroyed) continue;
+      for (const w of s.swaps) {
+        if (w.pairs) rename.set(w.poly, w.pairs);
+        else ruined.add(w.poly);
+      }
+    }
+    return { rename, ruined };
+  }
+
+  /** Todos los objetivos cumplidos. */
+  get objectivesDone(): boolean {
+    return [...this.objectives.values()].every(Boolean);
+  }
+
+  /** Un ciclo: apaga las explosiones viejas. */
+  tick(): void {
+    for (let i = this.blasts.length - 1; i >= 0; i--) if (--(this.blasts[i] as Blast).ttl <= 0) this.blasts.splice(i, 1);
+  }
+}

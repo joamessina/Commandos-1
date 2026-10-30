@@ -17,6 +17,7 @@ import { parseWad, type Wad } from '../formats/wad.ts';
 import { Animator } from '../engine/anim.ts';
 import type { Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
+import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
 import { Boat, boatSlots } from '../engine/boat.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
 import { parseRoutes } from '../engine/patrol.ts';
@@ -80,6 +81,14 @@ interface Prop {
   ang: number;
 }
 interface Game {
+  readonly demo: Demolition;
+  /** Barril del juego -> su gráfico (se oculta al explotar). */
+  readonly barrelProps: ReadonlyMap<Barrel, Prop>;
+  readonly vol: Vol;
+  readonly wad: Wad;
+  /** Punto de huida del MIS (`PUNTOHUIDA`): el bote con todos a bordo debe llegar allí. */
+  readonly escape: { x: number; y: number } | null;
+  won: boolean;
   readonly battle: Battle;
   readonly soldiers: SoldierView[];
   /** Arma elegida: el clic en un soldado ataca con ella (null = clic mueve). */
@@ -190,6 +199,8 @@ async function load(): Promise<void> {
   };
   const props: Prop[] = [];
   const soldiers: SoldierView[] = [];
+  let bombCount = 0;
+  const barrelProps: { elem: Elem; prop: Prop }[] = [];
   const boats = new Map<Elem, { boat: Boat; prop: Prop }>();
   for (const e of elems) {
     const slots = boatSlots(e);
@@ -222,16 +233,26 @@ async function load(): Promise<void> {
       const pat = e.actions.find((x) => x.name.toUpperCase() === 'ACPATRULLA');
       const route = pat ? (parseRoutes(pat.params, diffSel.value as Difficulty)[0] ?? null) : null;
       soldiers.push({ soldier: new Soldier(e.token, unit, route), sprites: a.sprites });
+    } else if (e.parent?.cls === 'BICHOALIADO') {
+      // lo que cuelga de un comando es su inventario (las 4 bombas del ARTIFIC), no un objeto del mapa
+      if (e.macro?.toUpperCase() === 'BOMBAACT') bombCount++;
     } else if (e.anim && !boats.has(e) && e.macro?.toUpperCase() !== 'MINASUB') {
       const a = asset(e.anim);
-      if (a) props.push({ elem: e, anim: new Animator(a.anm, defaultSeq(a.anm)), sprites: a.sprites, x: e.x, y: e.y, z: e.z, ang: e.angle });
+      if (!a) continue;
+      const prop = { elem: e, anim: new Animator(a.anm, defaultSeq(a.anm)), sprites: a.sprites, x: e.x, y: e.y, z: e.z, ang: e.angle };
+      props.push(prop);
+      if (e.macro?.toUpperCase() === 'BARRIL') barrelProps.push({ elem: e, prop });
     }
   }
   const mainBoat = [...boats.values()][0] ?? null;
   const first = units[0]?.unit;
   const p = first ? project(first.body.x, first.body.y, first.z) : { px: img.width / 2, py: img.height / 2 };
   const battle = new Battle(soldiers.map((s) => s.soldier), units.map((u) => u.unit), sectors);
-  game = { battle, soldiers, mode: null, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  const { sites, objectives, escape } = parseSites(misText, vol, elems);
+  const demo = new Demolition(sites, objectives, { soldiers: battle.soldiers, commandos: battle.commandos }, bombCount);
+  const barrelMap = new Map<Barrel, Prop>();
+  for (const b of barrelProps) barrelMap.set(demo.addBarrel(b.elem.token, b.elem.x, b.elem.y), b.prop);
+  game = { demo, barrelProps: barrelMap, vol, wad, escape, won: false, battle, soldiers, mode: null, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic para elegir/caminar, Mayús+clic corre.`);
@@ -247,6 +268,22 @@ const asArmas = (e: Elem): string[] => {
 
 /** Secuencia en reposo de un gráfico: REPOSO si existe; si no, la primera (shortcut: la pose real la elige cada acción, no leída para objetos). */
 const defaultSeq = (anm: Anm): string => (anm.sequences.has('REPOSO') ? 'REPOSO' : (anm.sequences.keys().next().value as string));
+
+/** Vuelve a componer el mapa con los volúmenes destruidos (se llama al explotar algo). */
+function recompose(g: Game): void {
+  g.demo.dirty = false;
+  const st = g.demo.mapState();
+  const img = composeMap(g.vol, g.wad, { ...(g.water ? { layer: 'land' as const } : { skipWater: waterBox.checked }), rename: st.rename, ruined: st.ruined });
+  g.map.getContext('2d')?.putImageData(new ImageData(img.pixels, img.width, img.height), 0, 0);
+}
+
+/** Victoria: todos los objetivos, todos los comandos vivos a bordo del bote y el bote en el punto de huida (Intend00; evaluador de docs/lectura/mision-intendencia.md §6). */
+function checkWin(g: Game): void {
+  const b = g.boat?.boat;
+  if (g.won || !b || !g.escape || !g.demo.objectivesDone) return;
+  const alive = g.units.filter((u) => !u.unit.dead);
+  if (alive.length > 0 && alive.every((u) => u.unit.boat === b) && Math.hypot(b.x - g.escape.x, b.y - g.escape.y) < 250) g.won = true;
+}
 
 function makeWater(vol: Vol, wad: Wad, def: NonNullable<ReturnType<typeof parseWater>>, index: Uint8Array, bounds: Rect): WaterView {
   const img = composeMap(vol, wad, { layer: 'water' });
@@ -295,7 +332,10 @@ function setupStage(): void {
     acc = Math.min(acc + dt, 500);
     last = now;
     while (acc >= TICK) {
-      if (!g.battle.lost) g.battle.tick();
+      if (!g.battle.lost && !g.won) g.battle.tick();
+      g.demo.tick();
+      if (g.demo.dirty) recompose(g);
+      checkWin(g);
       g.boat?.boat.tick();
       for (const u of g.units) u.unit.tick();
       if (g.boat) {
@@ -350,6 +390,7 @@ function draw(g: Game): void {
   for (const pr of g.props) {
     const { px, py } = project(pr.x, pr.y, pr.z);
     if (px < ox - 150 || px > ox + vw + 150 || py < oy - 150 || py > oy + vh + 150) continue;
+    if ([...g.barrelProps].some(([b, bp]) => bp === pr && b.dead)) continue;
     items.push({ py: py - (pr === g.boat?.prop ? 1000 : 0), paint: () => pr.sprites.draw(ctx, pr.anim.frame(pr.ang), px, py) });
   }
   g.units.forEach((u, i) => {
@@ -398,6 +439,20 @@ function draw(g: Game): void {
   }
   items.sort((a, b) => a.py - b.py);
   for (const it of items) it.paint();
+  for (const bm of g.demo.planted) {
+    const q = project(bm.x, bm.y, 0);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(q.px - 5, q.py - 4, 10, 6);
+    ctx.fillStyle = '#e33';
+    ctx.fillRect(q.px - 1, q.py - 3, 3, 3);
+  }
+  for (const bl of g.demo.blasts) {
+    const q = project(bl.x, bl.y, 0);
+    ctx.fillStyle = `rgba(255,170,40,${(bl.ttl / 14).toFixed(2)})`;
+    ctx.beginPath();
+    ctx.ellipse(q.px, q.py, bl.radius, bl.radius * COS_VIEW, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
   for (const tr of g.battle.tracers) {
     const a = project(tr.fromX, tr.fromY, 25);
     const b = project(tr.toX, tr.toY, 25);
@@ -433,6 +488,8 @@ function draw(g: Game): void {
   }
 }
 
+const COS_VIEW = Math.cos((50 * Math.PI) / 180);
+
 /** HUD mínimo: comandos con su energía, arma elegida y fin de partida (shortcut: el HUD real —libretas, mochila, caras— no se leyó). */
 function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   ctx.font = '12px system-ui';
@@ -454,8 +511,27 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   });
   const sel = g.units[g.selected];
   ctx.fillStyle = '#d9dde3';
-  ctx.fillText(`Arma: ${g.mode ?? 'ninguna (clic = mover)'}  ·  F pistola · R fusil de mira · C cuchillo · Esc mover · V conos de visión`, 10, 14 + g.units.length * 34);
+  ctx.fillText(`Arma: ${g.mode ?? 'ninguna (clic = mover)'}  ·  F pistola · R fusil · C cuchillo · Esc mover · E subir al bote · V conos`, 10, 14 + g.units.length * 34);
   if (sel) ctx.fillText(`Disponibles: ${sel.weapons.join(', ') || '—'}`, 10, 30 + g.units.length * 34);
+  let oy = 14;
+  ctx.fillStyle = 'rgba(0,0,0,.55)';
+  ctx.fillRect(ctx.canvas.width - 210, 8, 200, 20 + g.demo.objectives.size * 15 + 18);
+  ctx.fillStyle = '#c9a24a';
+  ctx.fillText('Objetivos', ctx.canvas.width - 202, oy + 6);
+  for (const [name, done] of g.demo.objectives) {
+    oy += 15;
+    ctx.fillStyle = done ? '#6cc070' : '#d9dde3';
+    ctx.fillText(`${done ? '✔' : '○'} ${name}`, ctx.canvas.width - 202, oy + 6);
+  }
+  ctx.fillStyle = '#d9dde3';
+  ctx.fillText(`Bombas: ${g.demo.bombs.toString()} (B planta, X detona) · plantadas ${g.demo.planted.length.toString()}`, ctx.canvas.width - 202, oy + 24);
+  if (g.won) {
+    ctx.fillStyle = 'rgba(0,0,0,.7)';
+    ctx.fillRect(0, ctx.canvas.height / 2 - 30, ctx.canvas.width, 60);
+    ctx.fillStyle = '#6cc070';
+    ctx.font = '28px system-ui';
+    ctx.fillText('¡Misión cumplida!', 30, ctx.canvas.height / 2 + 10);
+  }
   if (g.battle.lost) {
     ctx.fillStyle = 'rgba(0,0,0,.7)';
     ctx.fillRect(0, (ctx.canvas.height / 2) - 30, ctx.canvas.width, 60);
@@ -484,7 +560,9 @@ function onMouse(e: MouseEvent): void {
     const p = project(u.body.x, u.body.y, u.z);
     return Math.abs(mx - p.px) < 14 && my > p.py - 40 && my < p.py + 8;
   });
+  const barrel = [...g.barrelProps].find(([b, pr]) => !b.dead && Math.abs(mx - project(pr.x, pr.y, pr.z).px) < 14 && Math.abs(my - project(pr.x, pr.y, pr.z).py + 10) < 20)?.[0];
   if (e.button === 0 && hit >= 0) g.selected = hit;
+  else if (e.button === 0 && (g.mode === 'PISTOLA' || g.mode === 'MIRILLA') && barrel && sel && !sel.dead && !sel.boat && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, barrel, g.mode);
   else if (e.button === 0 && g.mode && foe && sel && !sel.dead && !sel.boat && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, foe.soldier, g.mode);
   else if (sel && !sel.dead && (e.button === 0 || e.button === 2)) {
     g.battle.cancel(sel);
@@ -543,6 +621,23 @@ window.addEventListener('keydown', (e) => {
     else say(`${u?.unit.token ?? ''} no tiene ${w.toLowerCase()}.`);
   }
   if (k === 'escape') g.mode = null;
+  const cur = g.units[g.selected]?.unit;
+  if (k === 'b' && cur && !cur.dead && !cur.boat) {
+    if (cur.token !== 'ARTIFIC') say(`${cur.token} no sabe manejar bombas (solo el zapador, ARTIFIC).`);
+    else if (!g.demo.plant(cur.body.x, cur.body.y)) say('No te quedan bombas.');
+    else say('Bomba plantada. X para detonar.');
+  }
+  if (k === 'x' && g.demo.detonate() === 0) say('No hay bombas plantadas.');
+  if (k === 'e' && cur && !cur.dead && !cur.boat && g.boat) {
+    const bt = g.boat.boat;
+    const seat = g.units.filter((u) => u.unit.boat === bt).length;
+    if (Math.hypot(bt.x - cur.body.x, bt.y - cur.body.y) > 120 || bt.speed >= 0.01) say('Acercate al bote (a menos de 120) y con el bote parado.');
+    else if (seat >= bt.slots.length) say('El bote está lleno.');
+    else {
+      g.battle.cancel(cur);
+      cur.board(bt, seat);
+    }
+  }
   if (k === 'v') g.showCones = !g.showCones;
   if (k === 'home') {
     const u = g.units[g.selected]?.unit;
