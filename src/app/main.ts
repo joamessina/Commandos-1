@@ -26,6 +26,7 @@ import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
+import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
 import { rayReach, vistaOf } from '../engine/vision.ts';
 import { asNumber, find } from '../formats/clave.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
@@ -125,6 +126,11 @@ interface Game {
   camX: number;
   camY: number;
   ticks: number;
+  /** Ticks de par por dificultad (`PUNTUACIONES`) y el resultado fijado al terminar la misión. */
+  readonly par: { easy: number; hard: number };
+  result: { score: Score; text: string; victory: boolean; kills: number } | null;
+  /** Ciclo en que murieron todos (el fin se muestra `DEFEAT_DELAY` ciclos después). */
+  lostAt: number | null;
 }
 
 let loaded: Loaded | null = null;
@@ -313,7 +319,7 @@ async function load(): Promise<void> {
     const prop = props.find((x) => x.elem === el);
     return prop ? [{ soldier: s, prop }] : [];
   });
-  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.`);
@@ -339,8 +345,19 @@ function recompose(g: Game): void {
   g.map.getContext('2d')?.putImageData(new ImageData(img.pixels, img.width, img.height), 0, 0);
 }
 
+/** Fija el resultado (FINM al ganar; ALMU `DEFEAT_DELAY` ciclos después de morir el último comando) con la puntuación del exe (engine/score.ts). */
+function settle(g: Game): void {
+  if (g.result) return;
+  if (g.battle.lost) g.lostAt ??= g.ticks;
+  if (!g.won && (g.lostAt === null || g.ticks - g.lostAt < DEFEAT_DELAY)) return;
+  const lost = g.units.reduce((s, u) => s + (u.unit.dead ? u.maxEnergy : u.maxEnergy - u.unit.energy), 0);
+  const par = diffSel.value === 'FACIL' ? g.par.easy : g.par.hard;
+  g.result = { score: score(g.lostAt ?? g.ticks, par, lost, g.units.length), text: g.won ? END_TEXT.FINM : END_TEXT.ALMU, victory: g.won, kills: g.soldiers.filter((s) => s.soldier.dead).length };
+}
+
 /** Victoria: todos los objetivos, todos los comandos vivos a bordo del bote y el bote en el punto de huida (Intend00; evaluador de docs/lectura/mision-intendencia.md §6). */
 function checkWin(g: Game): void {
+  settle(g);
   const b = g.boat?.boat;
   if (g.won || !b || !g.escape || !g.demo.objectivesDone) return;
   const alive = g.units.filter((u) => !u.unit.dead);
@@ -721,20 +738,30 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
     ctx.fillStyle = '#e0826f';
     ctx.fillText('¡El Zodiac tocó una mina y se hundió!', 10, 46 + g.units.length * 34);
   }
-  if (g.won) {
-    ctx.fillStyle = 'rgba(0,0,0,.7)';
-    ctx.fillRect(0, ctx.canvas.height / 2 - 30, ctx.canvas.width, 60);
-    ctx.fillStyle = '#6cc070';
-    ctx.font = '28px system-ui';
-    ctx.fillText('¡Misión cumplida!', 30, ctx.canvas.height / 2 + 10);
-  }
-  if (g.battle.lost) {
-    ctx.fillStyle = 'rgba(0,0,0,.7)';
-    ctx.fillRect(0, (ctx.canvas.height / 2) - 30, ctx.canvas.width, 60);
-    ctx.fillStyle = '#e0826f';
-    ctx.font = '28px system-ui';
-    ctx.fillText('Misión fracasada: todos los comandos han muerto', 30, ctx.canvas.height / 2 + 10);
-  }
+  if (g.result) drawResult(ctx, g.result);
+}
+
+const stars = (n: number): string => '★'.repeat(n) + '☆'.repeat(3 - n);
+
+/** Pantalla de resultados (la de `0x570510` no se leyó fila a fila: textos de GLOBAL.STR y estrellas de tiempo, energía y rango de la misión). */
+function drawResult(ctx: CanvasRenderingContext2D, r: NonNullable<Game['result']>): void {
+  const w = Math.min(640, ctx.canvas.width - 40);
+  const x = (ctx.canvas.width - w) / 2;
+  const y = ctx.canvas.height / 2 - 120;
+  ctx.fillStyle = 'rgba(0,0,0,.82)';
+  ctx.fillRect(x, y, w, 240);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = r.victory ? '#6cc070' : '#e0826f';
+  ctx.font = '20px system-ui';
+  ctx.fillText(r.text, x + w / 2, y + 44, w - 30);
+  ctx.fillStyle = '#d9dde3';
+  ctx.font = '18px system-ui';
+  const m = Math.floor(r.score.seconds / 60).toString();
+  const s = (r.score.seconds % 60).toString().padStart(2, '0');
+  [`Tiempo ${m}:${s}    ${stars(r.score.time)}`, `Energía    ${stars(r.score.energy)}`, `Rango de la misión: ${r.score.rank.toString()} / 3`, `Enemigos abatidos: ${r.kills.toString()}`].forEach((line, i) => {
+    ctx.fillText(line, x + w / 2, y + 90 + i * 34);
+  });
+  ctx.textAlign = 'start';
 }
 
 /** ManejaBomba (docs/lectura/au-jugador.md): camina hasta el sitio, anima PONEBOMBA (11 ciclos) y entonces deja la bomba. */
