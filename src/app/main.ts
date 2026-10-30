@@ -26,7 +26,7 @@ import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
-import { FaceAnim, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, slotAt, viewRect } from '../engine/hud.ts';
+import { bagItems, FaceAnim, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, parseInterface, slotAt, viewRect } from '../engine/hud.ts';
 import { Hud } from '../render/hud.ts';
 import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
 import { rayReach, vistaOf } from '../engine/vision.ts';
@@ -132,6 +132,8 @@ interface Game {
   readonly hud: Hud | null;
   /** Columna (y mochila) a la izquierda: la tecla º/| la cambia de lado. */
   hudLeft: boolean;
+  /** Archivos de `OPCIONES/` que se dibujan en la mochila de cada comando (por token). */
+  readonly bag: ReadonlyMap<string, readonly string[]>;
   readonly faces: FaceAnim;
   /** Ticks de par por dificultad (`PUNTUACIONES`) y el resultado fijado al terminar la misión. */
   readonly par: { easy: number; hard: number };
@@ -211,7 +213,7 @@ async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffe
 }
 
 /** WAD del HUD (GLOBAL, uno por resolución y las CARAS de los comandos de la misión); null si falta alguno de los básicos. */
-function loadHud(tokens: readonly string[]): Hud | null {
+function loadHud(tokens: readonly string[], bag: ReadonlyMap<string, readonly string[]>): Hud | null {
   const root = 'DATOS/RECURSOS/BMPS/SYSTEM/';
   const wad = (path: string): Wad | null => {
     const b = bytes(root + path);
@@ -228,7 +230,12 @@ function loadHud(tokens: readonly string[]): Hud | null {
     const f = wad(`CARAS/${t}.WAD`);
     if (f) faces.set(t, f);
   }
-  return global && sized.size > 0 ? new Hud(global, sized, faces) : null;
+  const items = new Map<string, Wad>();
+  for (const name of new Set([...bag.values()].flat())) {
+    const w = wad(`OPCIONES/${name}.WAD`);
+    if (w) items.set(name, w);
+  }
+  return global && sized.size > 0 ? new Hud(global, sized, faces, items) : null;
 }
 
 function bytes(path: string): Uint8Array | undefined {
@@ -346,6 +353,7 @@ async function load(): Promise<void> {
   const first = units[0]?.unit;
   const p = first ? project(first.body.x, first.body.y, first.z) : { px: img.width / 2, py: img.height / 2 };
   const battle = new Battle(soldiers.map((s) => s.soldier), units.map((u) => u.unit), sectors);
+  const bag = bagItems(parseInterface(misText));
   const { sites, objectives, escape, kills } = parseSites(misText, vol, elems);
   const demo = new Demolition(sites, objectives, { soldiers: battle.soldiers, commandos: battle.commandos }, bombCount, { sectors, kills });
   const barrelMap = new Map<Barrel, Prop>();
@@ -355,7 +363,7 @@ async function load(): Promise<void> {
     const prop = props.find((x) => x.elem === el);
     return prop ? [{ soldier: s, prop }] : [];
   });
-  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, hud: loadHud(units.map((u) => u.unit.token)), hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.`);
@@ -683,7 +691,7 @@ function draw(g: Game): void {
     ctx.stroke();
   }
   ctx.restore();
-  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => ({ token: u.unit.token, energy: u.unit.energy, max: u.maxEnergy, dead: u.unit.dead })), g.selected, (i) => g.faces.of(i), g.hudLeft);
+  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => ({ token: u.unit.token, energy: u.unit.energy, max: u.maxEnergy, dead: u.unit.dead, items: g.bag.get(u.unit.token) ?? [] })), g.selected, (i) => g.faces.of(i), g.hudLeft);
   drawHud(ctx, g);
   if (t) {
     ctx.fillStyle = '#d9dde3';

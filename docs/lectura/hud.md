@@ -38,3 +38,11 @@ Con la captura del original (1280×720, `imagenesReferncia/HUD.PNG`, no versiona
 - **Dibujo de cada ítem**: `OPCIONES/<NOMBRE>.WAD` (`FUN_00697170`: `"%s%s%s.WAD"` con `OPCIONES\`), con el dibujo y su máscara `M_*` (zona de clic). Tabla ítem→archivo (`ITEM_WAD`) emparejada por nombre; sin archivo hallado: GOLPEAR, ACTSENUELOON/OFF, LEVANTARSE, AGACHARSE, MANOCHICA, PUTADISTRAE, BOMBATIEMPO.
 - **Posición de cada ítem en la mochila: NO está en el `.MIS` ni en la cabecera de los sprites (campos sin uso = basura) ni en la tabla de 47 registros (`FUN_00786E60`: nombre, id, código STR, grupo y par de frames de *cursor*)**. Las crea `FUN_0051EEF0(sprite, máscara, paleta, …)` desde `FUN_00697DD0`; las coordenadas no aparecen ahí. Plan: ubicarlas por coincidencia de plantilla de cada dibujo sobre capturas del original (comando a pie con la mochila abierta).
 - **Qué ítems se ven según el contexto** (el marine en la balsa solo muestra el traje de buzo): sin leer.
+
+## Cierre 4 (2026-10-30): posiciones de ítems medidas sobre captura
+- Fuente: captura pública de Steam (1280×720, boina verde a pie, mochila a la derecha). Coincidencia de plantilla de cada dibujo de `OPCIONES/` (diferencia media por canal 2,6–7,8 de 255 en los aciertos, >17 en el resto):
+  CUCHILLO (MACHETE 121×22) en (1159,572), MANO 63×122 en (1217,504), PUNO 43×37 en (1237,585), PISTOLA 53×71 en (1227,616), PIEDRA 30×30 en (1211,589), ESPOSAS 53×58 en (1192,662), CONTROLA 56×70 en (1148,650).
+- Los ítems **se pegan al borde derecho/inferior de la ventana** (los de la derecha terminan justo en x=1280, los de abajo en y=720): se guardan como hueco al borde (`engine/hud.ts BAG_GAP`) y desbordan la mochila (112×149). No hay posición en la cabecera de los WAD (`cab[400]` y campos sin uso verificados de nuevo).
+- Emparejamiento corregido: `IT_MANO`→`MANO.WAD` (mano abierta) e `IT_GOLPEAR`→`PUNO.WAD` (puño): la captura muestra ambos a la vez y el comando trae los dos.
+- No se vieron señuelo ni interruptor del ascensor (el comando los tiene en el `.MIS`): confirma que hay regla de visibilidad por contexto, sin leer. Sin posición: esos dos, balsa, traje de buzo, arpón, etc.
+- shortcut: se dibujan todos los `.DISPONIBLE` con posición medida, sin la regla de contexto; mochila a la izquierda: el ítem se pega al borde izquierdo sin espejar el dibujo (sin captura de ese caso).

@@ -142,7 +142,8 @@ export const ITEM_WAD: Readonly<Record<string, string>> = {
   IT_CLOROFORMO: 'CLOROF',
   IT_ESPOSAS: 'ESPOSAS',
   IT_PIOLET: 'PIOLET',
-  IT_MANO: 'PUNO',
+  IT_MANO: 'MANO',
+  IT_GOLPEAR: 'PUNO',
   IT_BALSA: 'BALSA',
   IT_TRAJEBUZO: 'TRAJEBU',
   IT_CARTUCHO: 'CARTUCHO',
@@ -167,3 +168,31 @@ export const ITEM_WAD: Readonly<Record<string, string>> = {
   IT_ESPIAA6: 'ESPIAA6',
   IT_ESPIAA7: 'ESPIAA7',
 };
+
+/**
+ * Hueco entre el dibujo de un ítem y el borde derecho/inferior de la ventana, medido por coincidencia de plantilla sobre una captura 1280×720 del original (boina verde
+ * a pie, mochila a la derecha; diferencia media 2,6–7,8 de 255 contra >17 para cualquier otro dibujo). El exe no trae la posición en el `.MIS`, ni en los WAD, ni en la tabla de ítems.
+ * shortcut: solo los 7 ítems que mostraba esa captura (los demás no se dibujan hasta tener su posición); se dibujan todos los `.DISPONIBLE` del comando sin la regla de contexto del exe.
+ */
+export const BAG_GAP: Readonly<Record<string, { readonly right: number; readonly bottom: number }>> = {
+  CUCHILLO: { right: 0, bottom: 126 },
+  MANO: { right: 0, bottom: 94 },
+  PUNO: { right: 0, bottom: 98 },
+  PISTOLA: { right: 0, bottom: 33 },
+  PIEDRA: { right: 39, bottom: 101 },
+  ESPOSAS: { right: 35, bottom: 0 },
+  CONTROLA: { right: 76, bottom: 0 },
+};
+
+/** Archivos de `OPCIONES/` que se dibujan en la mochila de cada comando (disponibles, con archivo y con posición medida), por token de comando. */
+export function bagItems(iface: ReadonlyMap<string, HudCommando>): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const [token, c] of iface) {
+    const names = c.items.flatMap((i) => {
+      const wad = ITEM_WAD[i.token];
+      return i.available && wad !== undefined && wad in BAG_GAP ? [wad] : [];
+    });
+    out.set(token, names);
+  }
+  return out;
+}

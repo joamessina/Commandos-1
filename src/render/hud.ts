@@ -3,7 +3,7 @@
  * de sangre, marco de selección, y los iconos de la esquina (ojo, ayuda, cámara). Todo a 1:1 con el WAD de interfaz que cabe en la ventana.
  * shortcut: si la ventana es más ancha/alta que el WAD, la tira y la columna se alargan repitiendo su último tramo (el exe solo corre a resoluciones fijas).
  */
-import { bagRect, BAG, bloodHeight, columnX, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, SLOT, slotRect } from '../engine/hud.ts';
+import { BAG, BAG_GAP, bagRect, bloodHeight, columnX, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, SLOT, slotRect } from '../engine/hud.ts';
 import type { Sprite, Wad } from '../formats/wad.ts';
 import { SpriteCache } from './sprites.ts';
 
@@ -12,6 +12,8 @@ export interface HudUnit {
   readonly energy: number;
   readonly max: number;
   readonly dead: boolean;
+  /** Archivos de `OPCIONES/` de los ítems que se dibujan en su mochila (engine/hud.ts `bagItems`). */
+  readonly items: readonly string[];
 }
 
 interface Bank {
@@ -25,12 +27,14 @@ export class Hud {
   private readonly global: Bank;
   private readonly sized = new Map<string, Bank>();
   private readonly faces = new Map<string, Bank>();
+  private readonly items = new Map<string, Bank>();
 
-  /** `sized` = `GLOBAL/<ancho>X<alto>.WAD` por "ancho×alto"; `faces` = `CARAS/<TOKEN>.WAD` por token de comando. */
-  constructor(global: Wad, sized: ReadonlyMap<string, Wad>, faces: ReadonlyMap<string, Wad>) {
+  /** `sized` = `GLOBAL/<ancho>X<alto>.WAD` por "ancho×alto"; `faces` = `CARAS/<TOKEN>.WAD` por token de comando; `items` = `OPCIONES/<ITEM>.WAD` por nombre. */
+  constructor(global: Wad, sized: ReadonlyMap<string, Wad>, faces: ReadonlyMap<string, Wad>, items: ReadonlyMap<string, Wad>) {
     this.global = bank(global);
     for (const [mode, wad] of sized) this.sized.set(mode, bank(wad));
     for (const [token, wad] of faces) this.faces.set(token, bank(wad));
+    for (const [name, wad] of items) this.items.set(name, bank(wad));
   }
 
   private static get(b: Bank, name: string): { s: Sprite; c: HTMLCanvasElement } | null {
@@ -104,6 +108,14 @@ export class Hud {
       const fb = this.faces.get(sel.token);
       const photo = fb?.wad.sprites.find((s) => /^FOTO\d+\.RLE$/i.test(s.name));
       if (fb && photo) ctx.drawImage(fb.cache.canvasFor(photo), bag.x + BAG.photoDx, bag.y + BAG.photoDy);
+      for (const name of sel.items) {
+        const ib = this.items.get(name);
+        const gap = BAG_GAP[name];
+        const art = ib?.wad.sprites.find((s) => !/^M[_-]/i.test(s.name));
+        if (!ib || !gap || !art) continue;
+        // el hueco se mide contra el borde del lado de la columna; con la mochila a la izquierda el dibujo se pega al borde izquierdo
+        ctx.drawImage(ib.cache.canvasFor(art), left ? gap.right : width - art.width - gap.right, height - art.height - gap.bottom);
+      }
     }
     ctx.imageSmoothingEnabled = was;
   }

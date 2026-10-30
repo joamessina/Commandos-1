@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, ITEM_WAD, overHud, parseInterface, slotAt, slotRect, viewRect } from './hud.ts';
+import { BAG_GAP, bagItems, bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, ITEM_WAD, overHud, parseInterface, slotAt, slotRect, viewRect } from './hud.ts';
 
 describe('hud', () => {
   it('elige el WAD de interfaz más grande que cabe', () => {
@@ -74,8 +74,21 @@ describe('parseInterface', () => {
 
   it('cada ítem de la misión 0 con dibujo propio tiene archivo en OPCIONES', () => {
     expect(ITEM_WAD['IT_TRAJEBUZO']).toBe('TRAJEBU');
-    expect(ITEM_WAD['IT_MANO']).toBe('PUNO');
-    expect(ITEM_WAD['IT_GOLPEAR']).toBeUndefined();
+    // la captura del original muestra a la vez la mano abierta (MANO) y el puño (PUNO): son dos ítems distintos, MANO y GOLPEAR
+    expect(ITEM_WAD['IT_MANO']).toBe('MANO');
+    expect(ITEM_WAD['IT_GOLPEAR']).toBe('PUNO');
+  });
+
+  it('la mochila dibuja los ítems disponibles que tienen archivo y posición medida', () => {
+    const iface = new Map([['COMANDO', { items: [
+      { token: 'IT_CUCHILLO', available: true },
+      { token: 'IT_MANO', available: true },
+      { token: 'IT_GOLPEAR', available: true },
+      { token: 'IT_TABACO', available: false },
+      { token: 'IT_PIEDRA', available: false },
+      { token: 'IT_SEGNUELO', available: true },
+    ] }]]);
+    expect(bagItems(iface).get('COMANDO')).toEqual(['CUCHILLO', 'MANO', 'PUNO']);
+    expect(Object.keys(BAG_GAP)).toHaveLength(7);
   });
 });
-

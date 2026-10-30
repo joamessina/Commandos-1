@@ -23,7 +23,7 @@
 | [ ] | Munición y armas de los comandos (hoy infinita; faltan granada, piedra, tabaco…) | 80 % | Media | `au-disparar.md`. **Parcial:** Hecho MUNMIRILLA 6 + HUD; resto ilimitado (shortcut); faltan granada, piedra, tabaco… |
 | [ ] | Explosiones: cráteres, partículas, temblor de cámara | 60 % | Media | `obj-explosivos.md`, `render.md` (temblor leído). |
 | [ ] | Sonido de la misión (olas, disparos, explosiones, voces) | 65 % | Media-alta | `sonido.md`; falta todo Web Audio. |
-| [ ] | HUD real (libretas, caras, mochila, tooltips) | 20 % | Alta | Marco de ventanas leído; reglas del HUD no. |
+| [ ] | HUD real (libretas, caras, mochila, tooltips) | 55 % | Alta | **Parcial:** tira, columna, caras+sangre, mochila con foto y 7 ítems (posición medida sobre captura). Faltan posiciones de los demás ítems, regla de visibilidad por contexto, libreta/minimapa, postura, tooltips. |
 | [x] | Fin de misión: pantalla de resultados, puntuación por tiempo y energía, textos | 75 % | Media | `ui-misiones-guardado.md` §3 (fórmulas). Hecho en `engine/score.ts`: estrellas de tiempo/energía, rango, FINM/ALMU, par de `PUNTUACIONES`. Faltan rango de campaña, bajas por tipo y los códigos 2/3/6/7/8/0xB. |
 | [ ] | Sombras de personajes y partículas de agua (estelas) | 50 % | Media | `render.md`. |
 | [ ] | Noche y luces (la misión 0 es de día: baja prioridad) | 85 % | Media | Curvas leídas en `render.md` cierre 2. |
