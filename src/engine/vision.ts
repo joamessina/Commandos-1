@@ -25,11 +25,15 @@ export interface Viewer {
   readonly range?: number;
   /** Apertura total (`+0x68`). */
   readonly angle?: number;
+  /** Altura del cono (`+0x60`, `.ALT`): la caja de búsqueda llega a z ± ALT/2 del observador (`FUN_0061AE90`). */
+  readonly alt?: number;
 }
 
 export interface Seen {
   readonly x: number;
   readonly y: number;
+  /** Altura del suelo de E; sin ella (pruebas) no se aplica el tope vertical. shortcut: se compara el punto de los pies, el exe consulta el volumen de E; cuándo mejorar: al leer la consulta espacial `0x405E07`. */
+  readonly z?: number;
   /** Radio del cilindro de E (`+0x54`): margen del test de ángulo. */
   readonly radius: number;
   /** Agachado o buceando: alcance a la mitad. */
@@ -37,20 +41,23 @@ export interface Seen {
 }
 
 /** `.ORGANOS [ .VISTA [ Vista01 [ .MOD n .ANG a ] ] ]` de un bloque expandido: `.MOD` guarda `2·n` en el órgano (percepcion.md §3.1); sin claves, los defectos (800, 70°). */
-export function vistaOf(block: readonly Node[]): { range?: number; angle?: number } {
+export function vistaOf(block: readonly Node[]): { range?: number; angle?: number; alt?: number } {
   const vista = asList(find(asList(find(block, '.ORGANOS')) ?? [], '.VISTA')) ?? [];
   const params = asList(vista[1]) ?? [];
   const mod = asNumber(find(params, '.MOD'));
   const ang = asNumber(find(params, '.ANG'));
-  return { ...(mod === undefined ? {} : { range: mod * 2 }), ...(ang === undefined ? {} : { angle: ang }) };
+  const alt = asNumber(find(params, '.ALT'));
+  return { ...(alt === undefined ? {} : { alt }), ...(mod === undefined ? {} : { range: mod * 2 }), ...(ang === undefined ? {} : { angle: ang }) };
 }
 
 export const DEFAULT_RANGE = 800;
 export const DEFAULT_ANGLE = 70;
+export const DEFAULT_ALT = 150;
 
 /** ¿Está E dentro del cono de V (alcance y ángulo)? Sin oclusión. */
 export function inCone(v: Viewer, e: Seen): boolean {
   const range = v.range ?? DEFAULT_RANGE;
+  if (v.z !== undefined && e.z !== undefined && Math.abs(e.z - v.z) > (v.alt ?? DEFAULT_ALT) / 2) return false;
   const dx = e.x - v.x;
   const dy = e.y - v.y;
   const d2 = dx * dx + dy * dy;
