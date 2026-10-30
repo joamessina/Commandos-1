@@ -52,4 +52,14 @@ describe('Battle', () => {
     const bb = new Battle([a, o], [c2], null, () => 0);
     for (let i = 0; i < 3; i++) bb.tick();
   });
+
+  it('un comando invulnerable (truco Alt+I) no pierde energía ni muere', () => {
+    const u = mk(0, 0);
+    u.invulnerable = true;
+    expect(u.hit(1e9)).toBe(false);
+    expect([u.energy, u.dead]).toEqual([100, false]);
+    u.invulnerable = false;
+    expect(u.hit(1e9)).toBe(true);
+    expect(u.dead).toBe(true);
+  });
 });

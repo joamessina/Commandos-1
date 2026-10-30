@@ -80,4 +80,12 @@ describe('Boat: límites del Sim', () => {
     b.tick();
     expect([b.x, b.y, b.ang]).toEqual([5, 5, 10]);
   });
+
+  it('place (teletransporte) lo deja parado, sin destino y en el punto', () => {
+    const b = new Boat(0, 0, 0, 0, [], null);
+    b.goTo({ x: 200, y: 0 });
+    for (let i = 0; i < 5; i++) b.tick();
+    b.place(300, 40, 7);
+    expect([b.x, b.y, b.z, b.speed, b.dest]).toEqual([300, 40, 7, 0, null]);
+  });
 });

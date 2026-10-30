@@ -52,6 +52,8 @@ export class Unit {
   /** Energía (`bicho+0x208`): tabla 0x815198 para los comandos. */
   energy = 100;
   dead = false;
+  /** Truco `MSG_INVENCIBLE` (Alt+I): no pierde energía ni muere. shortcut: el consumidor del flag global del exe (`DAT_00840140`) no se leyó; aquí frena todo daño de `hit`. */
+  invulnerable = false;
   /** Agachado (0x23C & 0x40): lo ven a la mitad de alcance. */
   crouched = false;
   /** Velocidad al andar (VEL de la ruta del soldado); null = la del jugador, 2,5. */
@@ -362,7 +364,7 @@ export class Unit {
    * shortcut: sin animación de herido ni voces; la muerte anima MUERTE1 y deja el cuerpo.
    */
   hit(damage: number): boolean {
-    if (this.dead) return false;
+    if (this.dead || this.invulnerable) return false;
     if (this.energy > damage) {
       this.energy -= damage;
       return false;

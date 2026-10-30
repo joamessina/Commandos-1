@@ -110,6 +110,8 @@ interface Game {
   /** Punto de huida del MIS (`PUNTOHUIDA`): el bote con todos a bordo debe llegar allí. */
   readonly escape: { x: number; y: number } | null;
   won: boolean;
+  /** Truco Alt+I (`MSG_INVENCIBLE`). */
+  invincible: boolean;
   readonly battle: Battle;
   readonly soldiers: SoldierView[];
   /** Arma elegida: el clic en un soldado ataca con ella (null = clic mueve). */
@@ -363,10 +365,12 @@ async function load(): Promise<void> {
     const prop = props.find((x) => x.elem === el);
     return prop ? [{ soldier: s, prop }] : [];
   });
-  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
+  if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
-  say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.`);
+  say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.${import.meta.env.DEV ? ' Comandos invencibles (Alt+I), Ctrl+X teletransporta, Ctrl+Alt+N termina la misión.' : ''}`);
 }
 
 /** `.ARMAS [ … ]` de la acción AuDisparar de un comando. */
@@ -877,6 +881,33 @@ function onRightUp(e: MouseEvent): void {
   if (idx >= 0) g.selected = idx;
 }
 
+/**
+ * Trucos de la tabla de atajos del exe (`.data` 0x837000: modificador, tecla, nombre, id): Ctrl+X = Teletransportación (`MSG_TELEPORTSELECCIONADO`: el comando elegido, o su vehículo,
+ * va a la posición del cursor), Alt+I = Invencibilidad de los comandos (`MSG_INVENCIBLE`, alterna), Ctrl+Alt+N = termina la misión.
+ */
+function setInvincible(g: Game, on: boolean): void {
+  g.invincible = on;
+  for (const u of g.units) u.unit.invulnerable = on;
+}
+
+function teleportAction(g: Game): void {
+  const v = g.units[g.selected];
+  if (!v || v.unit.dead || !cursor.inside || !stage) return;
+  const z = zoom();
+  const vw = vp(g);
+  const mx = g.camX - vw.w / z / 2 + (cursor.x - vw.x) / z;
+  const my = g.camY - vw.h / z / 2 + (cursor.y - vw.y) / z;
+  const spot = g.sectors ? g.sectors.pick(mx, my) : { ...unproject(mx, my, v.unit.z), sector: null };
+  if (!spot) {
+    say('Ese punto está fuera de los sectores del mapa.');
+    return;
+  }
+  g.battle.cancel(v.unit);
+  if (v.unit.boat) v.unit.boat.place(spot.x, spot.y, v.unit.z);
+  else v.unit.place(spot.x, spot.y, v.unit.body.ang);
+  say(`${v.unit.token}: teletransportado${v.unit.boat ? ' con el bote' : ''}.`);
+}
+
 const WEAPON_OF_WAD: Readonly<Record<string, Weapon>> = { PISTOLA: 'PISTOLA', MIRILLA: 'MIRILLA', CUCHILLO: 'CUCHILLO' };
 
 /** Datos del comando para el HUD (caras, mochila, balas). */
@@ -1072,6 +1103,23 @@ window.addEventListener('keydown', (e) => {
   keys.add(k);
   const g = game;
   if (!g) return;
+  if (e.ctrlKey && !e.altKey && e.code === 'KeyX') {
+    e.preventDefault();
+    teleportAction(g);
+    return;
+  }
+  if (e.altKey && !e.ctrlKey && e.code === 'KeyI') {
+    e.preventDefault();
+    setInvincible(g, !g.invincible);
+    say(g.invincible ? 'Comandos invencibles (Alt+I lo quita).' : 'Comandos vulnerables.');
+    return;
+  }
+  if (e.ctrlKey && e.altKey && e.code === 'KeyN') {
+    e.preventDefault();
+    g.won = true;
+    say('Misión terminada (Ctrl+Alt+N).');
+    return;
+  }
   if (k >= '1' && k <= '9' && g.units[Number(k) - 1]) g.selected = Number(k) - 1;
   if (e.code === 'Backquote' && g.hud) {
     // la tecla a la izquierda del 1 (º/|) pasa la columna, la libreta y la mochila al otro lado

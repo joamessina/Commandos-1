@@ -50,6 +50,15 @@ export class Boat {
     this.vmax = vmax;
   }
 
+  /** Teletransporte (`MSG_TELEPORTSELECCIONADO` sobre un vehículo): lo pone en el punto, parado y sin destino. */
+  place(x: number, y: number, z: number): void {
+    this.x = x;
+    this.y = y;
+    this.z = z;
+    this.dest = null;
+    this.vx = this.vy = 0;
+  }
+
   /** `GoTo` del motor: la marcha atrás se decide una sola vez (balsa: |Δ| > 135° y d² < 16·R²). */
   goTo(p: Vec): void {
     const dx = p.x - this.x;
