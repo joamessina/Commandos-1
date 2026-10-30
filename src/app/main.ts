@@ -584,17 +584,33 @@ function drawCone(ctx: CanvasRenderingContext2D, g: Game, s: Soldier): void {
     const sec = g.sectors?.atZ(x, y, u.z) ?? g.sectors?.at(x, y) ?? null;
     return sec ? groundZ(sec, x, y) : u.z;
   };
-  const zone = (range: number, fill: string, edge: string): void => {
-    const pts: { px: number; py: number }[] = [project(u.body.x, u.body.y, u.z)];
-    for (let k = -half; k <= half; k += 5) {
-      const a = ((head + k) * Math.PI) / 180;
-      const d = rayReach(g.sectors, u.body.x, u.body.y, a, range);
-      const x = u.body.x + Math.cos(a) * d;
-      const y = u.body.y + Math.sin(a) * d;
-      pts.push(project(x, y, ground(x, y)));
-    }
+  // Un solo cono: las dos zonas comparten las mismas rayas (cortadas por oclusión) y las aristas siguen el relieve punto a punto, así en terreno elevado
+  // la zona larga rodea a la corta sin que se vean dos conos distintos.
+  const rays: { k: number; a: number; d: number }[] = [];
+  for (let k = -half; k <= half + 1e-9; k += 5) {
+    const a = ((head + k) * Math.PI) / 180;
+    rays.push({ k, a, d: rayReach(g.sectors, u.body.x, u.body.y, a, s.reach) });
+  }
+  const at = (a: number, r: number): { px: number; py: number } => {
+    const x = u.body.x + Math.cos(a) * r;
+    const y = u.body.y + Math.sin(a) * r;
+    return project(x, y, r === 0 ? u.z : ground(x, y));
+  };
+  const edge = (ray: { a: number; d: number }, r0: number, r1: number): { px: number; py: number }[] => {
+    const top = Math.min(r1, ray.d);
+    const out: { px: number; py: number }[] = [];
+    for (let r = r0; r < top; r += 25) out.push(at(ray.a, r));
+    out.push(at(ray.a, top));
+    return out;
+  };
+  const zone = (r0: number, r1: number, fill: string, line: string): void => {
+    const first = rays[0];
+    const last = rays[rays.length - 1];
+    if (!first || !last) return;
+    const pts = [...edge(first, r0, r1), ...rays.slice(1, -1).map((ray) => at(ray.a, Math.min(r1, ray.d))), ...edge(last, r0, r1).reverse() ];
+    if (r0 > 0) pts.push(...rays.slice(1, -1).reverse().map((ray) => at(ray.a, Math.min(r0, ray.d))));
     ctx.fillStyle = fill;
-    ctx.strokeStyle = edge;
+    ctx.strokeStyle = line;
     ctx.lineWidth = 1;
     ctx.beginPath();
     pts.forEach((p, i) => {
@@ -605,8 +621,8 @@ function drawCone(ctx: CanvasRenderingContext2D, g: Game, s: Soldier): void {
     ctx.fill();
     ctx.stroke();
   };
-  zone(s.reach, 'rgba(110,200,80,.20)', 'rgba(110,200,80,.55)');
-  zone(s.reach * 0.5, 'rgba(30,140,50,.32)', 'rgba(30,140,50,.8)');
+  zone(s.reach * 0.5, s.reach, 'rgba(110,200,80,.20)', 'rgba(110,200,80,.55)');
+  zone(0, s.reach * 0.5, 'rgba(30,140,50,.32)', 'rgba(30,140,50,.8)');
 }
 
 function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
