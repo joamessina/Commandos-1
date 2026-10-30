@@ -6,7 +6,7 @@ import { RouteType, type Route } from './patrol.ts';
 import { SectorMap } from './sectors.ts';
 import { Order, Soldier, type Shot, type SoldierWorld } from './soldier.ts';
 import { COMMANDO_ENERGY, Unit } from './unit.ts';
-import { inCone, lineClear, sees } from './vision.ts';
+import { inCone, lineClear, rayReach, sees } from './vision.ts';
 
 const anm = parseAnm(
   bnm([{ type: 0, slots: [5] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8), ...anmSeq(1, 'APUNTAR', 1, 0, 0, 8), ...anmSeq(2, 'DISPARAR', 1, 0, 5, 8), ...anmSeq(2, 'MUERTE1', 2, 0, 20, 8)]),
@@ -42,6 +42,9 @@ describe('vision', () => {
     expect(lineClear(map, 50, 50, 150, 50)).toBe(true); // el blanco está dentro
     expect(lineClear(map, 10, 50, 90, 50)).toBe(true);
     expect(lineClear(null, 50, 50, 250, 50)).toBe(true);
+    expect(rayReach(map, 50, 50, 0, 800)).toBe(56); // entra en el sector Ocluso a x=100 (50 + 8·7)
+    expect(rayReach(map, 50, 50, Math.PI, 800)).toBe(800);
+    expect(rayReach(null, 0, 0, 0, 300)).toBe(300);
     expect(sees({ x: 50, y: 50, heading: 0 }, { x: 250, y: 50, radius: 10, low: false }, map)).toBe(false);
     expect(sees({ x: 50, y: 50, heading: 0 }, { x: 90, y: 50, radius: 10, low: false }, map)).toBe(true);
   });

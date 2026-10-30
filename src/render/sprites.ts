@@ -35,6 +35,25 @@ export class SpriteCache {
     return c;
   }
 
+  /** Canvas del sprite (con su paleta; el 50 % de las sombras como alfa 128). */
+  canvasFor(s: Sprite): HTMLCanvasElement {
+    let c = this.cache.get(s);
+    if (!c) {
+      c = this.build(s);
+      this.cache.set(s, c);
+    }
+    return c;
+  }
+
+  /** Rectángulo (en píxeles de mapa) que cubre el fotograma dibujado en (px,py), o null si el sprite no existe. */
+  bounds(f: AnmFrame, px: number, py: number): { x0: number; y0: number; x1: number; y1: number } | null {
+    const s = this.wad.byName.get(f.sprite.toUpperCase());
+    if (!s) return null;
+    const left = Math.round(px + f.hx);
+    const top = Math.round(py + f.hy);
+    return { x0: left, y0: top, x1: left + s.width, y1: top + s.height };
+  }
+
   /** Dibuja el fotograma con su punto del mundo ya proyectado a píxel de mapa. Devuelve false si el sprite no existe en el WAD. */
   draw(ctx: CanvasRenderingContext2D, f: AnmFrame, px: number, py: number): boolean {
     const s = this.wad.byName.get(f.sprite.toUpperCase());

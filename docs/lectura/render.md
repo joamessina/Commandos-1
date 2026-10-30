@@ -164,3 +164,10 @@ Ver **`docs/lectura/agua.md`**: el mar es el bitmap `MAR0DST` (256×256) que `FU
 - **Sombras**: el píxel mezclado (50 %) se compone con alfa en la capa de tierra (`alfa' = (255+a)/2`, `color' = a·c/(255+a)`) para que oscurezca el agua de debajo en vez de dejar negro opaco.
 - **Agua**: el vector cámara−centro se normaliza (`FUN_005CACA0`), ver `agua.md`.
 - **Scroll**: inercia leída (`q1-camara.md`): impulso `n·0,1875`, tope `n·1,5`, ×0,7 al soltar; n = 16 (Mayús 32, Ctrl 4); el borde de pantalla se activa a 24 px (el exe pide el píxel exacto).
+
+### Cierre 7b (2026-10-29): personajes entre volúmenes, contorno exacto, espejos y conos
+- **Contorno** (`FUN_0062DC50`): polígonos de ≤ 14 vértices = silueta del prisma recorrida desde el vértice de mayor x (cadena superior levantada por la altura, inferior en la base); más vértices o cilindros = cuadrilátero. Solape = el de `FUN_0062DAF0` (vértice dentro o aristas que se cortan). Implementado en `volorder.ts`; quedan como atajo declarado el cuadrilátero de >14 vértices y el rombo del cilindro (valores en coprocesador oculto del decompilado).
+- **Personajes**: soldados, comandos, objetos y el bote entran en la misma lista de niveles que los volúmenes (`VolOrder.place`); el que queda por detrás de un edificio se dibuja y el edificio se repinta encima (`paintPoly`). Los pasajeros del bote van justo encima (RENDERVOL del bote `H 0,01`).
+- **Flags X/Y de los tiles** espejan el sprite ENTERO (columna origen `W−1−(sx+xx)`), no cada recorte en sí mismo. Era la causa de los "bloques negros" bajo las antiaéreas (pilas de cajas `CAOC000x` = varios tiles del mismo sprite con flag X): con 3574 px sin cubrir en el mapa 0 se pasa a 5. Corrige §9 de este documento (los huecos NO estaban en el juego).
+- **Cono de visión dibujado** sobre el terreno (cada punto con la altura del suelo) y cortado en el primer sector Ocluso, igual que `sees`; antes se dibujaba a la altura del soldado y desde una torre parecía no cubrir lo que sí veía.
+- **Zoom** con la rueda: paso 0,1 (0,05 bajo 1), tope 3,4, mínimo el mapa entero (`q1-camara.md`).

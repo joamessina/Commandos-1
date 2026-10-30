@@ -4,10 +4,13 @@
  * solapan en pantalla y asigna niveles por camino más largo (A antes que B ⇒ nivel(B) ≥ nivel(A)+1); se dibuja por nivel ascendente y, a igual nivel, por orden
  * de inserción (= archivo). Relaciones: polígono contra otro = aristas (lado sur/norte) y alturas (base/techo = cz, cz+alt); cilindro (sin aristas) contra cilindro =
  * altura, y de los pies, y radio.
- * shortcut: el contorno en pantalla (`+0x50`, FUN_0062DC50, no leído) se aproxima por el casco convexo del prisma proyectado (z = cz y z = cz+alt); el centro y
- *           el radio de un polígono son los de su caja y su radio circunscrito (en el exe `+0x34/+0x38` y `+0x8`); la rampa (`POLYRAMPA`) se trata como techo
- *           plano; sin el bit 2 (DibuPoly, no se sabe qué polígonos lo llevan); con relaciones cíclicas el resultado depende del límite de pasadas (`MAX_PASSES`).
- *           Cuándo mejorar: al leer FUN_0062DC50 y los bits de `vol+4`.
+ * Contorno en pantalla (`FUN_0062DC50`, leído): polígonos de hasta 14 vértices = silueta del prisma, recorrida desde el vértice de mayor x: cadena superior con los
+ * vértices levantados por la altura (`−alt·sin 50°` en pantalla) y cadena inferior en la base, con ambos puntos en los vértices de x mínima y máxima (el recorrido sigue
+ * el contorno real, cóncavo incluido); más de 14 vértices o cilindros = cuadrilátero (rombo del cilindro). El solape de contornos es el del exe (`FUN_0062DAF0`:
+ * vértice dentro del otro o aristas que se cortan).
+ * shortcut: el centro y el radio de un polígono son los de su caja y su radio circunscrito (en el exe `+0x34/+0x38` y `+0x8`, no verificado con los datos); la rampa
+ *           (`POLYRAMPA`) se trata como techo plano; sin el bit 2 (DibuPoly, no se sabe qué polígonos lo llevan); el cuadrilátero de >14 vértices y el rombo del cilindro
+ *           usan la caja/los extremos del prisma (los valores salen de coprocesador oculto en el decompilado); con relaciones cíclicas el resultado depende de `MAX_PASSES`.
  */
 import type { Poly, Vol } from '../formats/vol.ts';
 import { COS50, SIN50 } from './sectors.ts';
@@ -34,7 +37,9 @@ interface Info {
   readonly lines: readonly Line[];
   /** Rectángulo en pantalla de los tiles y contorno (casco convexo). */
   readonly rect: { readonly x0: number; readonly y0: number; readonly x1: number; readonly y1: number };
+  /** Contorno en pantalla (`+0x54…`). */
   readonly hull: readonly Pt[];
+  readonly dynamic: boolean;
 }
 
 const MAX_PASSES = 64;
@@ -58,33 +63,78 @@ function hull(pts: readonly Pt[]): Pt[] {
   return [...lower.slice(0, -1), ...upper.slice(0, -1)];
 }
 
-/** ¿Se solapan dos polígonos convexos? (SAT; equivale a "algún vértice dentro o aristas que se cruzan" de FUN_0062DAF0 para formas convexas). */
+/** `FUN_0062D7E0`: ¿está el punto dentro del polígono? (por el signo del producto cruzado con cada arista; cualquier orientación). */
+function inside(pt: Pt, poly: readonly Pt[]): boolean {
+  let pos = 0;
+  let neg = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i] as Pt;
+    const q = poly[(i + 1) % poly.length] as Pt;
+    const c = (q.x - p.x) * (pt.y - p.y) - (q.y - p.y) * (pt.x - p.x);
+    if (c > 0) pos++;
+    else if (c < 0) neg++;
+  }
+  return pos === 0 || neg === 0;
+}
+
+/** `FUN_0062D8C0`: intersección segmento-segmento paramétrica, t ∈ [0,1], u ∈ [0,1). */
+function cross(p1: Pt, p2: Pt, q1: Pt, q2: Pt): boolean {
+  const rx = p2.x - p1.x;
+  const ry = p2.y - p1.y;
+  const sx = q2.x - q1.x;
+  const sy = q2.y - q1.y;
+  const det = rx * sy - ry * sx;
+  if (Math.abs(det) < 1e-9) return false;
+  const t = ((q1.x - p1.x) * sy - (q1.y - p1.y) * sx) / det;
+  const u = ((q1.x - p1.x) * ry - (q1.y - p1.y) * rx) / det;
+  return t >= 0 && t <= 1 && u >= 0 && u < 1;
+}
+
+/** `FUN_0062DAF0`: los contornos se solapan si un vértice de uno cae dentro del otro o alguna arista de uno corta una del otro. */
 function overlap(a: readonly Pt[], b: readonly Pt[]): boolean {
   if (a.length < 3 || b.length < 3) return true;
-  for (const poly of [a, b]) {
-    for (let i = 0; i < poly.length; i++) {
-      const p = poly[i] as Pt;
-      const q = poly[(i + 1) % poly.length] as Pt;
-      const nx = q.y - p.y;
-      const ny = p.x - q.x;
-      let a0 = Infinity;
-      let a1 = -Infinity;
-      let b0 = Infinity;
-      let b1 = -Infinity;
-      for (const v of a) {
-        const d = v.x * nx + v.y * ny;
-        a0 = Math.min(a0, d);
-        a1 = Math.max(a1, d);
-      }
-      for (const v of b) {
-        const d = v.x * nx + v.y * ny;
-        b0 = Math.min(b0, d);
-        b1 = Math.max(b1, d);
-      }
-      if (a1 < b0 || b1 < a0) return false;
-    }
+  if (a.some((p) => inside(p, b)) || b.some((p) => inside(p, a))) return true;
+  for (let i = 0; i < a.length; i++) {
+    for (let j = 0; j < b.length; j++) if (cross(a[i] as Pt, a[(i + 1) % a.length] as Pt, b[j] as Pt, b[(j + 1) % b.length] as Pt)) return true;
   }
-  return true;
+  return false;
+}
+
+/** Silueta del prisma de un polígono de ≤ 14 vértices (FUN_0062DC50): cadena superior levantada y cadena inferior en la base. */
+function silhouette(world: readonly Pt[], cz: number, alt: number): Pt[] {
+  const n = world.length;
+  const base = world.map((p) => proj(p.x, p.y, cz));
+  const top = world.map((p) => proj(p.x, p.y, cz + alt));
+  let mn = 0;
+  let mx = 0;
+  for (let i = 1; i < n; i++) {
+    if ((world[i] as Pt).x < (world[mn] as Pt).x) mn = i;
+    if ((world[i] as Pt).x > (world[mx] as Pt).x) mx = i;
+  }
+  // de mx a mn en orden de índices (cadena 1) y de mn a mx (cadena 2): la de menor y media en pantalla es la norte (se levanta)
+  const chain = (from: number, to: number): number[] => {
+    const out = [from];
+    for (let i = (from + 1) % n; i !== to; i = (i + 1) % n) out.push(i);
+    if (to !== from) out.push(to);
+    return out;
+  };
+  const c1 = chain(mx, mn);
+  const c2 = chain(mn, mx);
+  const avg = (c: number[]): number => c.reduce((s, i) => s + (base[i] as Pt).y, 0) / c.length;
+  const northIsC1 = avg(c1) <= avg(c2);
+  const out: Pt[] = [];
+  const north = northIsC1 ? c1 : c2;
+  const south = northIsC1 ? c2 : c1;
+  // base del extremo oeste, norte (levantado) de oeste a este, base del extremo este, sur (base) de este a oeste
+  const west = (northIsC1 ? north[north.length - 1] : north[0]) as number;
+  const east = (northIsC1 ? north[0] : north[north.length - 1]) as number;
+  const northWE = northIsC1 ? [...north].reverse() : north; // oeste → este
+  const southEW = northIsC1 ? [...south].reverse() : south; // este → oeste
+  out.push(base[west] as Pt);
+  for (const i of northWE) out.push(top[i] as Pt);
+  out.push(base[east] as Pt);
+  for (const i of southEW.slice(1, -1)) out.push(base[i] as Pt);
+  return out;
 }
 
 function info(poly: Poly, index: number): Info | null {
@@ -121,6 +171,7 @@ function info(poly: Poly, index: number): Info | null {
   }
   const prism: Pt[] = [];
   for (const p of base) prism.push(proj(p.x, p.y, cz), proj(p.x, p.y, cz + alt));
+  const outline = world.length >= 2 && world.length <= 14 ? silhouette(world, cz, alt) : hull(prism);
   let x0 = Infinity;
   let y0 = Infinity;
   let x1 = -Infinity;
@@ -131,7 +182,7 @@ function info(poly: Poly, index: number): Info | null {
     x1 = Math.max(x1, t.x + t.w);
     y1 = Math.max(y1, t.y + t.h);
   }
-  return { index, cx, cy, r, base: cz, top: cz + alt, lines, rect: { x0, y0, x1, y1 }, hull: hull(prism) };
+  return { index, cx, cy, r, base: cz, top: cz + alt, lines, rect: { x0, y0, x1, y1 }, hull: outline, dynamic: false };
 }
 
 /** `FUN_0062EF30(P, Q)`: relación vista desde el polígono P (+1 = P se dibuja antes que Q, −1 = después, 0 = sin relación). */
@@ -181,35 +232,122 @@ function relation(a: Info, b: Info): number {
   return relCyl(a, b);
 }
 
+/** Orden de dibujo estático de los polígonos del VOL (índices de `vol.polys`; los sin tiles no aparecen). */
+export const drawOrder = (vol: Vol): number[] => new VolOrder(vol).order;
+
+/** Un elemento dinámico (soldado, comando, objeto, bote): `.RENDERVOL [ CILINDRO [ .R .H ] ]` en (x,y) sobre el suelo `z`. */
+export interface Actor {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly r: number;
+  readonly h: number;
+}
+
+function actorInfo(a: Actor, index: number): Info {
+  const pts: Pt[] = [];
+  for (const [dx, dy] of [[-a.r, 0], [a.r, 0], [0, -a.r], [0, a.r]] as const) pts.push(proj(a.x + dx, a.y + dy, a.z), proj(a.x + dx, a.y + dy, a.z + a.h));
+  const hl = hull(pts);
+  const xs = hl.map((p) => p.x);
+  const ys = hl.map((p) => p.y);
+  return {
+    index,
+    cx: a.x,
+    cy: a.y,
+    r: a.r,
+    base: a.z,
+    top: a.z + a.h,
+    lines: [],
+    rect: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) },
+    hull: hl,
+    dynamic: true,
+  };
+}
+
+const rectsCross = (a: Info, b: Info): boolean => !(a.rect.x0 >= b.rect.x1 || b.rect.x0 >= a.rect.x1 || a.rect.y0 >= b.rect.y1 || b.rect.y0 >= a.rect.y1);
+
+/** Resultado de ordenar actores contra los volúmenes: orden de dibujo de los actores y, para cada uno, los polígonos que se dibujan DESPUÉS (encima) de él. */
+export interface Placement {
+  /** Índices de actores en orden de dibujo. */
+  readonly order: number[];
+  /** Por actor: índices de `vol.polys` que van después y se solapan con su rectángulo. */
+  readonly after: number[][];
+}
+
 /**
- * Orden de dibujo de los polígonos del VOL: índices de `vol.polys` (los sin tiles no aparecen). Se inserta en orden de archivo; para cada pareja que se
- * solapa y tiene relación se anota «X antes que Y»; los niveles son el camino más largo y el desempate el orden de archivo.
+ * Orden de los volúmenes del mapa y de los elementos dinámicos en una sola lista de niveles (`FUN_005D1C40`): los volúmenes son fijos y se calculan una vez; cada
+ * cuadro se anotan las relaciones de los actores contra los volúmenes que tocan en pantalla (los actores se insertan después de los del mapa y entre ellos por la regla
+ * cilindro-cilindro).
  */
-export function drawOrder(vol: Vol): number[] {
-  const items = vol.polys.map((p, i) => info(p, i)).filter((x): x is Info => x !== null);
-  const edges: [number, number][] = []; // [antes, después] (posiciones en `items`)
-  for (let j = 1; j < items.length; j++) {
-    const n = items[j] as Info;
-    for (let i = 0; i < j; i++) {
-      const b = items[i] as Info;
-      if (n.rect.x0 >= b.rect.x1 || b.rect.x0 >= n.rect.x1 || n.rect.y0 >= b.rect.y1 || b.rect.y0 >= n.rect.y1) continue;
-      if (!overlap(n.hull, b.hull)) continue;
-      const r = relation(n, b);
-      if (r > 0) edges.push([j, i]);
-      else if (r < 0) edges.push([i, j]);
-    }
-  }
-  const level = new Array<number>(items.length).fill(0);
-  for (let pass = 0; pass < MAX_PASSES; pass++) {
-    let changed = false;
-    for (const [x, y] of edges) {
-      const need = (level[x] ?? 0) + 1;
-      if ((level[y] ?? 0) < need && need <= items.length) {
-        level[y] = need;
-        changed = true;
+export class VolOrder {
+  /** Orden de dibujo estático (índices de `vol.polys`). */
+  readonly order: number[];
+  private readonly items: Info[];
+  private readonly edges: [number, number][] = [];
+
+  constructor(vol: Vol) {
+    this.items = vol.polys.map((p, i) => info(p, i)).filter((x): x is Info => x !== null);
+    const n = this.items.length;
+    for (let j = 1; j < n; j++) {
+      for (let i = 0; i < j; i++) {
+        const r = this.rel(this.items[j] as Info, this.items[i] as Info);
+        if (r > 0) this.edges.push([j, i]);
+        else if (r < 0) this.edges.push([i, j]);
       }
     }
-    if (!changed) break;
+    const level = this.levels(n, this.edges);
+    this.order = this.items.map((it, k) => ({ it, k })).sort((p, q) => (level[p.k] ?? 0) - (level[q.k] ?? 0) || p.k - q.k).map((e) => e.it.index);
   }
-  return items.map((it, k) => ({ it, k })).sort((p, q) => (level[p.k] ?? 0) - (level[q.k] ?? 0) || p.k - q.k).map((e) => e.it.index);
+
+  private rel(n: Info, b: Info): number {
+    if (!rectsCross(n, b) || !overlap(n.hull, b.hull)) return 0;
+    return relation(n, b);
+  }
+
+  private levels(count: number, edges: readonly [number, number][]): number[] {
+    const level = new Array<number>(count).fill(0);
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      let changed = false;
+      for (const [x, y] of edges) {
+        const need = (level[x] ?? 0) + 1;
+        if ((level[y] ?? 0) < need && need <= count) {
+          level[y] = need;
+          changed = true;
+        }
+      }
+      if (!changed) break;
+    }
+    return level;
+  }
+
+  /** Coloca los actores (en el orden en que se insertan) entre los volúmenes. */
+  place(actors: readonly Actor[]): Placement {
+    const n = this.items.length;
+    const infos = actors.map((a, k) => actorInfo(a, n + k));
+    const edges = [...this.edges];
+    infos.forEach((a, k) => {
+      const ai = n + k;
+      for (let i = 0; i < n; i++) {
+        const r = this.rel(a, this.items[i] as Info);
+        if (r > 0) edges.push([ai, i]);
+        else if (r < 0) edges.push([i, ai]);
+      }
+      for (let m = 0; m < k; m++) {
+        const r = this.rel(a, infos[m] as Info);
+        if (r > 0) edges.push([ai, n + m]);
+        else if (r < 0) edges.push([n + m, ai]);
+      }
+    });
+    const level = this.levels(n + actors.length, edges);
+    const order = actors.map((_, k) => k).sort((p, q) => (level[n + p] ?? 0) - (level[n + q] ?? 0) || p - q);
+    const after = infos.map((a, k) => {
+      const lv = level[n + k] ?? 0;
+      const out: number[] = [];
+      this.items.forEach((it, i) => {
+        if ((level[i] ?? 0) > lv && rectsCross(a, it)) out.push(it.index);
+      });
+      return out;
+    });
+    return { order, after };
+  }
 }

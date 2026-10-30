@@ -19,15 +19,17 @@ import type { Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
 import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
 import { Boat, boatSlots } from '../engine/boat.ts';
-import { isWater, SectorMap } from '../engine/sectors.ts';
+import { groundZ, isWater, SectorMap } from '../engine/sectors.ts';
 import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
-import { drawOrder } from '../engine/volorder.ts';
+import { VolOrder, type Actor } from '../engine/volorder.ts';
+import { rayReach } from '../engine/vision.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
-import { composeMap, repaintWater, waterBounds, type MapImage, type Rect } from '../render/map.ts';
+import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
 import { SpriteCache } from '../render/sprites.ts';
+import type { AnmFrame } from '../formats/anm.ts';
 
 const byId = (id: string): HTMLElement => {
   const el = document.getElementById(id);
@@ -88,6 +90,10 @@ interface Game {
   readonly vol: Vol;
   readonly wad: Wad;
   readonly order: readonly number[];
+  /** Orden de volúmenes + personajes (engine/volorder.ts) y los sprites del WAD del mapa para repintar edificios encima de ellos. */
+  readonly volOrder: VolOrder;
+  readonly mapSprites: SpriteCache;
+  mapOpts: MapOptions;
   /** Punto de huida del MIS (`PUNTOHUIDA`): el bote con todos a bordo debe llegar allí. */
   readonly escape: { x: number; y: number } | null;
   won: boolean;
@@ -119,7 +125,25 @@ const say = (msg: string, error = false): void => {
   status.textContent = msg;
   status.className = error ? 'error' : '';
 };
-const zoom = (): number => Number(zoomSel.value);
+let zoomLevel = 1;
+const zoom = (): number => zoomLevel;
+const ZOOM_MAX = 3.4; // docs/research/q1-camara.md §Cierre
+
+/** Zoom del exe (NUM+/NUM−): paso 0,1 (0,05 por debajo de 1), tope 3,4 y mínimo = el mapa entero en la ventana; la cámara sigue centrada en el mismo punto. */
+function setZoom(next: number): void {
+  const g = game;
+  const min = g && stage ? Math.max(stage.width / g.map.width, stage.height / g.map.height) : 0.25;
+  zoomLevel = Math.round(Math.max(min, Math.min(ZOOM_MAX, next)) * 1000) / 1000;
+  let o = zoomSel.querySelector<HTMLOptionElement>('option[data-custom]');
+  if (!o) {
+    o = document.createElement('option');
+    o.dataset['custom'] = '1';
+    zoomSel.append(o);
+  }
+  o.value = String(zoomLevel);
+  o.textContent = `${Math.round(zoomLevel * 100).toString()} %`;
+  zoomSel.value = o.value;
+}
 
 async function onFolder(): Promise<void> {
   const files = Array.from(dirInput.files ?? []);
@@ -175,7 +199,8 @@ async function load(): Promise<void> {
   const wsprite = wdef ? wad.byName.get(wdef.dst.toUpperCase()) : undefined;
   const bounds = wsprite?.width === 256 && wsprite.height === 256 ? waterBounds(vol) : null; // el generador del exe asume 256×256
   const water = wdef && wsprite && bounds ? makeWater(vol, wad, wdef, wsprite.index, bounds) : null;
-  const order = drawOrder(vol); // orden de dibujo del exe (docs/research/q1-orden-dibujo.md), una vez por mapa
+  const volOrder = new VolOrder(vol); // orden de dibujo del exe (docs/research/q1-orden-dibujo.md), los volúmenes una vez por mapa
+  const order = volOrder.order;
   const img = composeMap(vol, wad, { ...(water ? { layer: 'land' as const } : { skipWater: waterBox.checked }), order });
   const map = document.createElement('canvas');
   map.width = img.width;
@@ -256,7 +281,7 @@ async function load(): Promise<void> {
   const barrelMap = new Map<Barrel, Prop>();
   for (const e of elems) if (e.macro?.toUpperCase() === 'MINASUB') demo.addMine(e.x, e.y);
   for (const b of barrelProps) barrelMap.set(demo.addBarrel(b.elem.token, b.elem.x, b.elem.y), b.prop);
-  game = { demo, barrelProps: barrelMap, vol, wad, order, escape, won: false, battle, soldiers, mode: null, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, battle, soldiers, mode: null, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic para elegir/caminar, Mayús+clic corre.`);
@@ -277,6 +302,7 @@ const defaultSeq = (anm: Anm): string => (anm.sequences.has('REPOSO') ? 'REPOSO'
 function recompose(g: Game): void {
   g.demo.dirty = false;
   const st = g.demo.mapState();
+  g.mapOpts = { rename: st.rename, ruined: st.ruined };
   const img = composeMap(g.vol, g.wad, { order: g.order, ...(g.water ? { layer: 'land' as const } : { skipWater: waterBox.checked }), rename: st.rename, ruined: st.ruined });
   g.map.getContext('2d')?.putImageData(new ImageData(img.pixels, img.width, img.height), 0, 0);
 }
@@ -322,6 +348,15 @@ function setupStage(): void {
       e.preventDefault();
     });
     stage.addEventListener('mousedown', onMouse);
+    stage.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        const step = zoomLevel < 1 || (e.deltaY > 0 && zoomLevel <= 1) ? 0.05 : 0.1;
+        setZoom(zoomLevel + (e.deltaY < 0 ? step : -step));
+      },
+      { passive: false },
+    );
     stage.addEventListener('mousemove', (e) => {
       const r = stage?.getBoundingClientRect();
       cursor.x = e.clientX - (r?.left ?? 0);
@@ -428,59 +463,63 @@ function draw(g: Game): void {
     ctx.drawImage(g.water.canvas, 0, 0);
   }
   ctx.drawImage(g.map, 0, 0);
-  const items: { py: number; paint: () => void }[] = [];
-  for (const pr of g.props) {
-    const { px, py } = project(pr.x, pr.y, pr.z);
-    if (px < ox - 150 || px > ox + vw + 150 || py < oy - 150 || py > oy + vh + 150) continue;
-    if ([...g.barrelProps].some(([b, bp]) => bp === pr && b.dead)) continue;
-    items.push({ py: py - (pr === g.boat?.prop ? 1000 : 0), paint: () => pr.sprites.draw(ctx, pr.anim.frame(pr.ang), px, py) });
+  if (g.showCones) for (const s of g.soldiers) if (!s.soldier.dead) drawCone(ctx, g, s.soldier);
+  // Personajes y objetos entre los volúmenes del mapa (FUN_005D1C40): se ordenan juntos y, si un edificio va después, se repinta encima.
+  interface Drawable {
+    actor: Actor;
+    rect: Clip | null;
+    paint: () => void;
   }
-  g.units.forEach((u, i) => {
-    const { px, py } = project(u.unit.body.x, u.unit.body.y, u.unit.z);
-    items.push({
-      py: py + (u.unit.boat ? 1 : 0),
+  const drawables: Drawable[] = [];
+  const off = (px: number, py: number): boolean => px < ox - 150 || px > ox + vw + 150 || py < oy - 150 || py > oy + vh + 150;
+  const add = (actor: Actor, sprites: SpriteCache, frame: AnmFrame, px: number, py: number, before?: () => void): void => {
+    drawables.push({
+      actor,
+      rect: sprites.bounds(frame, px, py),
       paint: () => {
-        if (i === g.selected) {
-          ctx.strokeStyle = '#c9a24a';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.ellipse(px, py, 14, 7, 0, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-        if (!u.sprites.draw(ctx, u.unit.anim.frame(u.unit.body.ang), px, py)) {
+        before?.();
+        if (!sprites.draw(ctx, frame, px, py)) {
           ctx.fillStyle = '#f0f';
           ctx.fillRect(px - 4, py - 30, 8, 30);
         }
       },
     });
+  };
+  for (const pr of g.props) {
+    const { px, py } = project(pr.x, pr.y, pr.z);
+    if (off(px, py)) continue;
+    if ([...g.barrelProps].some(([b, bp]) => bp === pr && b.dead)) continue;
+    const isBoat = pr === g.boat?.prop;
+    add({ x: pr.x, y: pr.y, z: pr.z, r: isBoat ? 30 : pr.elem.radius || 10, h: isBoat ? 0.01 : pr.elem.height || 20 }, pr.sprites, pr.anim.frame(pr.ang), px, py);
+  }
+  g.units.forEach((u, i) => {
+    const { px, py } = project(u.unit.body.x, u.unit.body.y, u.unit.z);
+    // los que van en el bote se pintan justo encima de él (RENDERVOL del bote: H 0,01)
+    add({ x: u.unit.body.x, y: u.unit.body.y, z: u.unit.z + (u.unit.boat ? 0.02 : 0), r: 10, h: 40 }, u.sprites, u.unit.anim.frame(u.unit.body.ang), px, py, () => {
+      if (i !== g.selected) return;
+      ctx.strokeStyle = '#c9a24a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(px, py, 14, 7, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    });
   });
   for (const s of g.soldiers) {
     const u = s.soldier.unit;
     const { px, py } = project(u.body.x, u.body.y, u.z);
-    if (px < ox - 150 || px > ox + vw + 150 || py < oy - 150 || py > oy + vh + 150) continue;
-    items.push({
-      py: s.soldier.dead ? py - 500 : py, // los cuerpos van debajo de los vivos (shortcut: sin la regla de orden real)
-      paint: () => {
-        s.sprites.draw(ctx, u.anim.frame(u.body.ang), px, py);
-        if (g.showCones && !s.soldier.dead) {
-          const a = project(u.body.x, u.body.y, u.z + 30);
-          const h = ((u.body.ang + s.soldier.headAngle) * Math.PI) / 180;
-          ctx.fillStyle = s.soldier.order === Order.Patrol ? 'rgba(255,255,100,.12)' : 'rgba(255,60,60,.2)';
-          ctx.beginPath();
-          ctx.moveTo(a.px, a.py);
-          for (let k = -35; k <= 35; k += 7) {
-            const r = h + (k * Math.PI) / 180;
-            const q = project(u.body.x + Math.cos(r) * 800, u.body.y + Math.sin(r) * 800, u.z + 30);
-            ctx.lineTo(q.px, q.py);
-          }
-          ctx.closePath();
-          ctx.fill();
-        }
-      },
-    });
+    if (off(px, py)) continue;
+    add({ x: u.body.x, y: u.body.y, z: u.z, r: 10, h: s.soldier.dead ? 0.5 : 40 }, s.sprites, u.anim.frame(u.body.ang), px, py);
   }
-  items.sort((a, b) => a.py - b.py);
-  for (const it of items) it.paint();
+  const placed = g.volOrder.place(drawables.map((d) => d.actor));
+  for (const k of placed.order) {
+    const d = drawables[k];
+    if (!d) continue;
+    d.paint();
+    if (d.rect) for (const pi of placed.after[k] ?? []) {
+      const poly = g.vol.polys[pi];
+      if (poly) paintPoly(ctx, poly, g.wad, (sp) => g.mapSprites.canvasFor(sp), d.rect, g.mapOpts);
+    }
+  }
   for (const bm of g.demo.planted) {
     const q = project(bm.x, bm.y, 0);
     ctx.fillStyle = '#222';
@@ -531,6 +570,42 @@ function draw(g: Game): void {
 }
 
 const COS_VIEW = Math.cos((50 * Math.PI) / 180);
+
+/**
+ * Cono de visión del soldado sobre el SUELO: cada punto se proyecta con la altura del terreno bajo él (antes se dibujaba a la altura del soldado y, desde una torre,
+ * quedaba desplazado en pantalla respecto de donde de verdad ve) y se corta en el primer sector Ocluso, o sea lo mismo que decide `sees`.
+ */
+function drawCone(ctx: CanvasRenderingContext2D, g: Game, s: Soldier): void {
+  const u = s.unit;
+  const head = u.body.ang + s.headAngle;
+  const half = 35;
+  const range = 800;
+  const ground = (x: number, y: number): number => {
+    const sec = g.sectors?.atZ(x, y, u.z) ?? g.sectors?.at(x, y) ?? null;
+    return sec ? groundZ(sec, x, y) : u.z;
+  };
+  const pts: { px: number; py: number }[] = [];
+  const o = project(u.body.x, u.body.y, u.z);
+  pts.push(o);
+  for (let k = -half; k <= half; k += 5) {
+    const a = ((head + k) * Math.PI) / 180;
+    const d = rayReach(g.sectors, u.body.x, u.body.y, a, range);
+    const x = u.body.x + Math.cos(a) * d;
+    const y = u.body.y + Math.sin(a) * d;
+    pts.push(project(x, y, ground(x, y)));
+  }
+  ctx.fillStyle = s.order === Order.Patrol ? 'rgba(255,255,100,.16)' : 'rgba(255,60,60,.24)';
+  ctx.strokeStyle = s.order === Order.Patrol ? 'rgba(255,255,100,.5)' : 'rgba(255,60,60,.7)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  pts.forEach((p, i) => {
+    if (i === 0) ctx.moveTo(p.px, p.py);
+    else ctx.lineTo(p.px, p.py);
+  });
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+}
 
 /** HUD mínimo: comandos con su energía, arma elegida y fin de partida (shortcut: el HUD real —libretas, mochila, caras— no se leyó). */
 function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
@@ -653,6 +728,9 @@ dirInput.addEventListener('change', guarded(onFolder));
 mapSel.addEventListener('change', guarded(load));
 waterBox.addEventListener('change', guarded(load));
 diffSel.addEventListener('change', guarded(load));
+zoomSel.addEventListener('change', () => {
+  setZoom(Number(zoomSel.value));
+});
 window.addEventListener('resize', resize);
 window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();

@@ -66,3 +66,14 @@ export function lineClear(sectors: SectorMap | null, ax: number, ay: number, bx:
 
 /** Vista completa: cono y rayo despejado. */
 export const sees = (v: Viewer, e: Seen, sectors: SectorMap | null): boolean => inCone(v, e) && lineClear(sectors, v.x, v.y, e.x, e.y);
+
+/** Hasta dónde llega un rayo desde (x,y) con rumbo `ang` (rad) antes de entrar en un sector Ocluso o de llegar a `range` (el mismo corte que `lineClear`). */
+export function rayReach(sectors: SectorMap | null, x: number, y: number, ang: number, range: number): number {
+  if (!sectors) return range;
+  const own = sectors.at(x, y);
+  for (let d = 8; d < range; d += 8) {
+    const s = sectors.at(x + Math.cos(ang) * d, y + Math.sin(ang) * d);
+    if (s && s !== own && (s.flags & SectorFlag.Ocluso) !== 0) return d;
+  }
+  return range;
+}

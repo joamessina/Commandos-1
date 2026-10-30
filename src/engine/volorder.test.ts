@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Poly, Vol } from '../formats/vol.ts';
-import { drawOrder } from './volorder.ts';
+import { drawOrder, VolOrder } from './volorder.ts';
 
 const tile = { x: 0, y: 0, w: 1000, h: 1000, sx: 0, sy: 0, sprite: 'A.RLE', flags: '' };
 /** Polígono rectangular centrado en (cx,cy) de lado `s`, o cilindro (sin puntos) si `s` es 0. */
@@ -80,5 +80,52 @@ describe('drawOrder', () => {
     const dentro = names(vol(poly('grande', 0, 0, 0, 40, 400), poly('chico', 0, 0, 0, 40, 40)));
     expect(dentro).toHaveLength(2);
     expect(names(vol(poly('x', 0, 0, 0, 0, 0, { header: [] })))).toEqual(['x']);
+  });
+});
+
+/** Polígono de n vértices (regular) de radio `rad` centrado en (cx,cy). */
+const ngon = (name: string, cx: number, cy: number, cz: number, alt: number, rad: number, n: number): Poly => ({
+  ...poly(name, cx, cy, cz, alt, 40),
+  header: [cx, cy, cz, alt, n, 1],
+  points: Array.from({ length: n }, (_, i) => ({ x: Math.cos((2 * Math.PI * i) / n) * rad, y: Math.sin((2 * Math.PI * i) / n) * rad })),
+});
+
+describe('silueta del contorno', () => {
+  it('polígonos de ≤14 vértices (incluso cóncavos) y de >14 se ordenan igual que un cuadrado', () => {
+    const sur = poly('sur', 0, 150, 0, 80, 40);
+    for (const norte of [ngon('n6', 0, 100, 0, 80, 20, 6), ngon('n16', 0, 100, 0, 80, 20, 16)]) {
+      expect(names(vol(sur, norte))).toEqual([norte.name, 'sur']);
+    }
+    // cóncavo en L: el contorno sigue el recorrido real
+    const ele: Poly = { ...poly('ele', 0, 100, 0, 80, 40), points: [{ x: -20, y: -20 }, { x: 20, y: -20 }, { x: 20, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 20 }, { x: -20, y: 20 }] };
+    expect(names(vol(sur, ele))).toEqual(['ele', 'sur']);
+  });
+});
+
+describe('VolOrder.place (personajes y volúmenes)', () => {
+  const edif = poly('edif', 0, 100, 0, 100, 60);
+  const v = vol(poly('suelo', 0, 100, -10, 1, 400), edif);
+  const vo = new VolOrder(v);
+
+  it('el orden estático es el de drawOrder', () => {
+    expect(vo.order).toEqual(drawOrder(v));
+  });
+
+  it('un personaje detrás del edificio (al norte) queda por debajo de él: el edificio va después y se repinta encima', () => {
+    const p = vo.place([{ x: 0, y: 40, z: 0, r: 10, h: 40 }]);
+    expect(p.order).toEqual([0]);
+    expect(p.after[0]).toContain(1);
+    expect(p.after[0]).not.toContain(0); // el suelo siempre va antes
+  });
+
+  it('un personaje delante (al sur) se dibuja después del edificio: nada se repinta encima', () => {
+    const p = vo.place([{ x: 0, y: 160, z: 0, r: 10, h: 40 }]);
+    expect(p.after[0]).toEqual([]);
+  });
+
+  it('entre actores manda la regla de cilindros (el de más al sur, después) y sin actores no hay nada', () => {
+    const p = vo.place([{ x: 0, y: 180, z: 0, r: 10, h: 40 }, { x: 0, y: 165, z: 0, r: 10, h: 40 }]);
+    expect(p.order).toEqual([1, 0]);
+    expect(vo.place([])).toEqual({ order: [], after: [] });
   });
 });
