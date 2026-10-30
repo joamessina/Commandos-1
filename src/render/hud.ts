@@ -110,7 +110,7 @@ export class Hud {
       if (fb && photo) ctx.drawImage(fb.cache.canvasFor(photo), bag.x + BAG.photoDx, bag.y + BAG.photoDy);
       for (const it of sel.items) {
         const ib = this.items.get(it.wad);
-        const art = ib?.wad.sprites.find((sp) => !/^M[_-]/i.test(sp.name));
+        const art = ib?.wad.byName.get(it.sprite);
         if (ib && art) ctx.drawImage(ib.cache.canvasFor(art), bag.x + it.x, bag.y + it.y);
       }
     }

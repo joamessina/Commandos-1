@@ -170,22 +170,51 @@ export const ITEM_WAD: Readonly<Record<string, string>> = {
 };
 
 /**
- * Posición de la esquina sup. izq. del dibujo de cada ítem (clave = archivo de `OPCIONES/`) respecto de la esquina sup. izq. de la mochila, por comando.
- * Medida por coincidencia de plantilla sobre capturas 1280×720 del original (diferencia media 2,6–10 de 255 en los aciertos, >17 en el resto); el boina verde sale de la
- * captura nativa, el resto de capturas reescaladas (±2 px). El exe trae un (x, y) por ítem (`.data` 0x822FA0, registros de 36 B que recorre `FUN_005B8C00` y guarda
- * `FUN_00512AC0` en `ClassInterfaceItem+0xD4/+0xD8`): coincide con lo medido en PISTOLA (59,46) y MANO (50,−66) pero no en los demás, y no hallé quién lo consume.
- * shortcut: solo los ítems que se vieron en las capturas (los demás no se dibujan hasta tener su posición); se dibujan todos los `.DISPONIBLE` del comando, sin la regla de contexto del exe.
+ * Posición del dibujo de cada ítem respecto de la esquina sup. izq. de la mochila (1168, 571 en 1280×720), por comando y archivo de `OPCIONES/`, con el sprite exacto
+ * (algunos WAD traen varios). Leída de la memoria de `coman_mp.exe` en marcha (solo lectura): botones `ClassBotonMochila` de la ventana de la mochila, con su offset `+0xFC/+0x100`
+ * y el flag de oculto `+0x124` (0 = se dibuja); coincide con las capturas del original. El (x, y) de la tabla estática del exe (`hud-items-tabla.md`) es solo el valor inicial:
+ * al elegir comando el exe lo cambia (p. ej. PIEDRA: tabla (−30,85), marine (81,19), boina verde (43,18), francotirador (82,75)); quién lo cambia no está leído.
+ * shortcut: solo el estado con los comandos a pie (balsa, buceo y demás contextos cambian qué ítems se ven); el zapador (ARTIFIC) sale de una captura (±2 px), sin leer la memoria.
  */
-export const BAG_POS: Readonly<Record<string, Readonly<Record<string, { readonly x: number; readonly y: number }>>>> = {
-  COMANDO: { CUCHILLO: { x: -9, y: 1 }, MANO: { x: 49, y: -67 }, PUNO: { x: 69, y: 14 }, PISTOLA: { x: 59, y: 45 }, PIEDRA: { x: 43, y: 18 }, ESPOSAS: { x: 24, y: 91 }, CONTROLA: { x: -20, y: 79 } },
-  LANCHERO: { CUCHILLO: { x: -9, y: 0 }, MANO: { x: 49, y: -68 }, PISTOLA: { x: 59, y: 46 }, PIEDRA: { x: 81, y: 19 } },
-  ARTIFIC: { MANO: { x: 49, y: -67 }, PISTOLA: { x: 59, y: 46 }, PIEDRA: { x: 55, y: 8 } },
-  FRANCOT: { MANO: { x: 49, y: -67 }, PISTOLA: { x: 59, y: 46 } },
+export const BAG_POS: Readonly<Record<string, Readonly<Record<string, { readonly sprite: string; readonly x: number; readonly y: number }>>>> = {
+  COMANDO: {
+    CUCHILLO: { sprite: 'MACHETE.RLE', x: -9, y: 1 },
+    MANO: { sprite: 'MANO.RLE', x: 49, y: -67 },
+    PUNO: { sprite: 'PUNO.RLE', x: 69, y: 14 },
+    PISTOLA: { sprite: 'PISTOLA.RLE', x: 59, y: 45 },
+    PIEDRA: { sprite: 'PIEDRA.RLE', x: 43, y: 18 },
+    SENUELO: { sprite: 'SENUEL.RLE', x: 63, y: 66 },
+    ESPOSAS: { sprite: 'ESPOSAS.RLE', x: 24, y: 91 },
+    CONTROLA: { sprite: 'CONTROLA.RLE', x: -20, y: 79 },
+  },
+  LANCHERO: {
+    CUCHILLO: { sprite: 'MACHETE.RLE', x: -9, y: 1 },
+    MANO: { sprite: 'MANO.RLE', x: 49, y: -67 },
+    PISTOLA: { sprite: 'PISTOLA.RLE', x: 59, y: 46 },
+    PIEDRA: { sprite: 'PIEDRA.RLE', x: 81, y: 19 },
+    ARPON: { sprite: 'ARPON.RLE', x: 67, y: 5 },
+    TRAJEBU: { sprite: 'BOMBONA.RLE', x: 56, y: 86 },
+    CONTROLA: { sprite: 'CONTROLA.RLE', x: -26, y: 79 },
+  },
+  FRANCOT: {
+    MANO: { sprite: 'MANO.RLE', x: 49, y: -67 },
+    PISTOLA: { sprite: 'PISTOLA.RLE', x: 59, y: 46 },
+    PIEDRA: { sprite: 'PIEDRA.RLE', x: 82, y: 75 },
+    MIRILLA: { sprite: 'MIRATELE.RLE', x: 11, y: -1 },
+    BOTIQUIN: { sprite: 'BOTIQUIN.RLE', x: 2, y: 34 },
+    CONTROLA: { sprite: 'CONTROLA.RLE', x: -26, y: 79 },
+  },
+  ARTIFIC: {
+    MANO: { sprite: 'MANO.RLE', x: 49, y: -67 },
+    PISTOLA: { sprite: 'PISTOLA.RLE', x: 59, y: 46 },
+    PIEDRA: { sprite: 'PIEDRA.RLE', x: 55, y: 8 },
+  },
 };
 
 export interface BagItem {
-  /** Archivo de `OPCIONES/` con el dibujo. */
+  /** Archivo de `OPCIONES/` y sprite con el dibujo. */
   readonly wad: string;
+  readonly sprite: string;
   readonly x: number;
   readonly y: number;
 }
@@ -198,7 +227,7 @@ export function bagItems(iface: ReadonlyMap<string, HudCommando>): Map<string, B
     out.set(token, c.items.flatMap((i) => {
       const wad = ITEM_WAD[i.token];
       const at = wad === undefined ? undefined : pos[wad];
-      return i.available && wad !== undefined && at ? [{ wad, x: at.x, y: at.y }] : [];
+      return i.available && wad !== undefined && at ? [{ wad, sprite: at.sprite, x: at.x, y: at.y }] : [];
     }));
   }
   return out;

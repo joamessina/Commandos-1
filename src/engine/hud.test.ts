@@ -88,9 +88,8 @@ describe('parseInterface', () => {
       { token: 'IT_PIEDRA', available: false },
       { token: 'IT_SEGNUELO', available: true },
     ] }], ['SIN_MEDIR', { items: [{ token: 'IT_MANO', available: true }] }]]);
-    expect(bagItems(iface).get('COMANDO')).toEqual([{ wad: 'CUCHILLO', x: -9, y: 1 }, { wad: 'MANO', x: 49, y: -67 }, { wad: 'PUNO', x: 69, y: 14 }]);
+    expect(bagItems(iface).get('COMANDO')).toEqual([{ wad: 'CUCHILLO', sprite: 'MACHETE.RLE', x: -9, y: 1 }, { wad: 'MANO', sprite: 'MANO.RLE', x: 49, y: -67 }, { wad: 'PUNO', sprite: 'PUNO.RLE', x: 69, y: 14 }, { wad: 'SENUELO', sprite: 'SENUEL.RLE', x: 63, y: 66 }]);
     expect(bagItems(iface).get('SIN_MEDIR')).toEqual([]);
-    // MANO y PISTOLA coinciden con el (x, y) del exe: (50,−66) y (59,46)
-    expect(Object.keys(BAG_POS)).toEqual(['COMANDO', 'LANCHERO', 'ARTIFIC', 'FRANCOT']);
+    expect(Object.keys(BAG_POS)).toEqual(['COMANDO', 'LANCHERO', 'FRANCOT', 'ARTIFIC']);
   });
 });
