@@ -70,7 +70,7 @@ export class Hud {
   }
 
   /** `phase(i)` = fotograma de la cara del comando i (engine/hud.ts `FaceAnim`); `left` = columna y mochila a la izquierda. */
-  draw(ctx: CanvasRenderingContext2D, width: number, height: number, units: readonly HudUnit[], selected: number, phase: (i: number) => number, left: boolean): void {
+  draw(ctx: CanvasRenderingContext2D, width: number, height: number, units: readonly HudUnit[], selected: number, phase: (i: number) => number, left: boolean, lit: ReadonlySet<string> = new Set()): void {
     const was = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = false;
     // tira superior
@@ -127,13 +127,22 @@ export class Hud {
       if (pack) ctx.drawImage(pack.c, bag.x, bag.y);
       const fb = this.faces.get(sel.token);
       const photo = fb?.wad.sprites.find((s) => /^FOTO\d+\.RLE$/i.test(s.name));
-      if (fb && photo) ctx.drawImage(fb.cache.canvasFor(photo), bag.x + BAG.photoDx, bag.y + BAG.photoDy);
+      // la foto grande solo se ve en un vehículo: a pie los `IT_CARA_*` están ocultos (flag +0x124 = 1 en la memoria del exe)
+      if (fb && photo && sel.inVehicle) ctx.drawImage(fb.cache.canvasFor(photo), bag.x + BAG.photoDx, bag.y + BAG.photoDy);
       for (const it of visibleItems(sel.items, sel.inVehicle)) {
         const art = this.items.get(it.wad)?.wad.byName.get(it.sprite);
         const ib = this.items.get(it.wad);
         if (ib && art) {
           const at = itemPos(it, art.width, bag, left);
           ctx.drawImage(ib.cache.canvasFor(art), at.x, at.y);
+          if (lit.has(it.wad)) {
+            // iluminado: suma luz sobre el propio dibujo (solo donde es opaco)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.4;
+            ctx.drawImage(ib.cache.canvasFor(art), at.x, at.y);
+            ctx.restore();
+          }
         }
       }
       const mb = this.items.get('MIRILLA');

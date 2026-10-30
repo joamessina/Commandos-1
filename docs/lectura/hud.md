@@ -72,3 +72,8 @@ Con la captura del original (1280×720, `imagenesReferncia/HUD.PNG`, no versiona
 - Implementado: `Unit.invulnerable` (frena todo `hit`), `Boat.place`, teclas en `app/main.ts`. **En desarrollo (`npm run dev`) los comandos arrancan invencibles**; Alt+I lo alterna.
 - **Puño** (`IT_GOLPEAR`, `AuCachiporra`): camina al blanco y al golpe manda `MSGA_CACHIPORRAZO`: el soldado cae con `ATONTADO` 600 ciclos, altura 5, sin ver ni oír, y se levanta volviendo al puesto. **Esposas** (`IT_ESPOSAS`, `AuEsposas`): `MSGA_HAS_SIDO_ESPOSADO`: queda con `ESPOSAS1`, altura 5, para siempre. Un solo golpe cada una; habilitadas por las acciones `AUCACHIPORRA`/`AUESPOSAS` del elemento del `.MIS` (el boina verde las trae).
 - shortcut: sin sonido `CACH`/`ESPO`, sin chirivitas, el comando no tiene animación de esposar (queda quieto), el puño usa `LANZARPIEDRA` (la que el exe elige para el arma 0), el esposado no se exige atontado, otros soldados no reaccionan al cuerpo atontado.
+
+## Cierre 9 (2026-10-30): foto solo en vehículo, ítems iluminados, piedra
+- **Foto grande**: en la memoria del exe los botones `IT_CARA_*` (FOTO02, FOTO04, … 71×91) están con el flag de oculto `+0x124 = 1` con los comandos a pie; solo se ven en un vehículo. Se dibuja y se hace clic solo en vehículo (`render/hud.ts`, `app/main.ts bagClick`).
+- **Iluminado** (`ILUMINAITEM`, `.ACTUALILUMINADO` en el guardado): el ítem del arma/acción activa y el que está bajo el cursor se dibujan con luz sumada (shortcut: el exe no se leyó en cómo ilumina; aquí 0,4 de luz aditiva sobre el propio dibujo).
+- **Piedra** (`AuDisparar` arma 7: alcance 300, daño 0, `.PIEDRAS 100` en el MIS): una pedrada atonta como el puño (shortcut: duración del aturdimiento por piedra sin leer, llega al instante, sin ruido).

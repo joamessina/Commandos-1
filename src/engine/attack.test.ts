@@ -5,7 +5,7 @@ import { Attack, type AttackWorld } from './attack.ts';
 import { Soldier } from './soldier.ts';
 import { Unit } from './unit.ts';
 
-const anm = parseAnm(bnm([{ type: 0, slots: [6] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8), ...anmSeq(2, 'APUNTAPISTOLA', 1, 0, 5, 8), ...anmSeq(2, 'DISPARAPISTOLA', 1, 0, 5, 8), ...anmSeq(1, 'ATONTADO', 1, 0, 0, 8), ...anmSeq(1, 'ESPOSAS1', 1, 0, 0, 8)]));
+const anm = parseAnm(bnm([{ type: 0, slots: [7] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8), ...anmSeq(2, 'APUNTAPISTOLA', 1, 0, 5, 8), ...anmSeq(2, 'DISPARAPISTOLA', 1, 0, 5, 8), ...anmSeq(1, 'ATONTADO', 1, 0, 0, 8), ...anmSeq(1, 'ESPOSAS1', 1, 0, 0, 8), ...anmSeq(1, 'LANZARPIEDRA', 1, 0, 0, 8)]));
 const mk = (x: number, y = 0, token = 'X'): Unit => new Unit(token, anm, x, y, 0, 0);
 
 interface Log {
@@ -124,5 +124,15 @@ describe('Attack: munición', () => {
     expect([s.dead, s.order, s.unit.energy]).toEqual([false, 4, 60]);
     s.hurt('MIRILLA', mk(0));
     expect(s.dead).toBe(true);
+  });
+
+  it('piedra: desde 250 u (alcance 300) atonta al soldado sin dañarlo, gasta una de las 100 y no hace ruido ni rastro', () => {
+    const s = new Soldier('S', mk(250, 0, 'S'), null);
+    const log = { noise: 0, shots: 0 };
+    const c = mk(0);
+    c.ammo['PIEDRA'] = 100;
+    const a = new Attack(c, s, 'PIEDRA');
+    run(a, world(log));
+    expect([a.done, s.stun > 0, s.unit.energy, c.ammo['PIEDRA'], log.shots, log.noise]).toEqual([true, true, 100, 99, 0, 0]);
   });
 });

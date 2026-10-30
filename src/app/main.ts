@@ -317,12 +317,15 @@ async function load(): Promise<void> {
       const guns = asArmas(e);
       if (guns.includes('PISTOLA')) weapons.push('PISTOLA');
       if (guns.includes('MIRILLA')) weapons.push('MIRILLA');
+      if (guns.includes('PIEDRA')) weapons.push('PIEDRA');
       if (e.actions.some((x) => x.name.toUpperCase() === 'AUACUCHILLAR')) weapons.push('CUCHILLO');
       if (e.actions.some((x) => x.name.toUpperCase() === 'AUCACHIPORRA')) weapons.push('PUNO');
       if (e.actions.some((x) => x.name.toUpperCase() === 'AUESPOSAS')) weapons.push('ESPOSAS');
       const aud = e.actions.find((x) => x.name.toUpperCase() === 'AUDISPARAR')?.params ?? [];
       const mun = asNumber(find(aud, '.MUNMIRILLA'));
       if (mun !== undefined) unit.ammo['MIRILLA'] = mun;
+      const rocks = asNumber(find(aud, '.PIEDRAS'));
+      if (rocks !== undefined) unit.ammo['PIEDRA'] = rocks;
       units.push({ unit, sprites: a.sprites, weapons, maxEnergy: unit.energy, canDive: e.actions.some((x) => x.name.toUpperCase() === 'AUBUCEAR') });
     } else if (e.bando === 'ALEMAN' && e.anim && e.actions.some((x) => /^ac(bap|banpe|metrallero)/i.test(x.name))) {
       const a = asset(e.anim);
@@ -697,7 +700,7 @@ function draw(g: Game): void {
     ctx.stroke();
   }
   ctx.restore();
-  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => hudUnit(u, g.bag)), g.selected, (i) => g.faces.of(i), g.hudLeft);
+  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => hudUnit(u, g.bag)), g.selected, (i) => g.faces.of(i), g.hudLeft, litItems(g));
   drawHud(ctx, g);
   if (t) {
     ctx.fillStyle = '#d9dde3';
@@ -910,7 +913,7 @@ function teleportAction(g: Game): void {
   say(`${v.unit.token}: teletransportado${v.unit.boat ? ' con el bote' : ''}.`);
 }
 
-const WEAPON_OF_WAD: Readonly<Record<string, Weapon>> = { PISTOLA: 'PISTOLA', MIRILLA: 'MIRILLA', CUCHILLO: 'CUCHILLO', PUNO: 'PUNO', ESPOSAS: 'ESPOSAS' };
+const WEAPON_OF_WAD: Readonly<Record<string, Weapon>> = { PISTOLA: 'PISTOLA', MIRILLA: 'MIRILLA', CUCHILLO: 'CUCHILLO', PUNO: 'PUNO', ESPOSAS: 'ESPOSAS', PIEDRA: 'PIEDRA' };
 
 /** Datos del comando para el HUD (caras, mochila, balas). */
 function hudUnit(v: UnitView, bag: ReadonlyMap<string, readonly BagItem[]>): HudUnit {
@@ -969,16 +972,31 @@ function useItem(g: Game, it: BagItem): void {
   else say(`${it.token}: todavía no está implementado.`);
 }
 
+/** Ítems iluminados (`ILUMINAITEM`): el arma o acción activa y el que está bajo el cursor. */
+function litItems(g: Game): Set<string> {
+  const lit = new Set<string>();
+  const v = g.units[g.selected];
+  if (!v || !g.hud || !stage) return lit;
+  if (g.mode) lit.add(g.mode);
+  if (g.planting) lit.add('CARTUCHO');
+  if (v.unit.diving) lit.add('TRAJEBU');
+  if (cursor.inside) {
+    const it = g.hud.itemAt(cursor.x, cursor.y, stage.width, stage.height, hudUnit(v, g.bag), g.hudLeft);
+    if (it) lit.add(it.wad);
+  }
+  return lit;
+}
+
 /** Clic en la mochila del comando elegido: la foto lo baja del bote, un ítem lo usa. Devuelve true si el clic era de la mochila. */
 function bagClick(g: Game, sx: number, sy: number): boolean {
   const v = g.units[g.selected];
   if (!g.hud || !stage || !v || v.unit.dead) return false;
   const ph = photoRect(stage.width, stage.height, g.hudLeft);
   if (sx >= ph.x && sx < ph.x + ph.w && sy >= ph.y && sy < ph.y + ph.h) {
-    if (v.unit.boat) {
-      g.battle.cancel(v.unit);
-      say(v.unit.disembark() ? `${v.unit.token} baja del bote.` : 'El bote debe estar parado y con una orilla a mano para bajar.');
-    }
+    // la foto grande solo existe en un vehículo (a pie los botones `IT_CARA_*` están ocultos, flag `+0x124` = 1)
+    if (!v.unit.boat) return false;
+    g.battle.cancel(v.unit);
+    say(v.unit.disembark() ? `${v.unit.token} baja del bote.` : 'El bote debe estar parado y con una orilla a mano para bajar.');
     return true;
   }
   const it = g.hud.itemAt(sx, sy, stage.width, stage.height, hudUnit(v, g.bag), g.hudLeft);

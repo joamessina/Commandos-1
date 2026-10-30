@@ -134,7 +134,7 @@ export class Soldier implements Target {
   /** Golpe de un comando (daño de `DAMAGE`): si sobrevive se vuelve hacia quien lo hirió. */
   hurt(weapon: Weapon, from: Unit): void {
     if (this.dead) return;
-    if (weapon === 'PUNO') {
+    if (weapon === 'PUNO' || weapon === 'PIEDRA') {
       this.knockOut();
       return;
     }
