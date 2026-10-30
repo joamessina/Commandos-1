@@ -71,3 +71,7 @@ Claves de uso frecuente sin código: `.LISTAS` (93 macros: EJEC CHOC SELE VISI T
 5. Para las misiones 1–10: las 40 macros sin uso no hacen falta; sí `AcFusilador`, `AcGeneral`, `AcGuarda`, `AcVigilante`, `AcPerro`, `AcFelino`, los vehículos `_V` y `AcPuntoEmpuje` (30 instancias, 7 misiones).
 
 Limitación: "en código" y "en docs" se miden por coincidencia de texto del nombre.
+
+## Seguimiento: punto 1 hecho (2026-10-30)
+- `AcBap1`/`AcBanpe1` = la base `AcBap` (sin lógica propia, `soldado-acbap2.md` §0): ante un estímulo (disparo, cuerpo) **miran el punto 100 ciclos y vuelven**, no caminan. Implementado en `engine/soldier.ts` (opción `walks: false`, activada en `main.ts` por la acción `AcBap1`/`AcBanpe1` del MAC): afecta a 18 soldados de la misión 0 (13 `BANPE1`, 5 `BAP1`). `BAP2`/`BANPE2` siguen caminando.
+- `AcBuscador` = el ejecutor de "ir a un punto" (`MSGA_BUSCADOR_IRA`): ya lo cubre `Unit.goTo` + `Soldier.investigate`; no tiene lógica de decisión propia.

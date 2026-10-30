@@ -267,4 +267,20 @@ describe('artillero de nido (soldado fijo)', () => {
     expect(s.reach).toBe(640); // sin elipse el alcance no baja al girar la cabeza
     expect(Math.hypot(u.body.x, u.body.y)).toBe(0);
   });
+
+  it('AcBap base (BAP1/BANPE1): ante un disparo se queda mirando el punto 100 ciclos y vuelve; AcBap2 camina hasta él', () => {
+    const w: SoldierWorld = { commandos: [], sectors: null, rng: () => 0, onShot: () => undefined };
+    const look = new Soldier('S', unit(0, 0, 90), null, { walks: false });
+    const walk = new Soldier('S', unit(0, 0, 90), null);
+    look.hear(400, 0);
+    walk.hear(400, 0);
+    for (let i = 0; i < 30; i++) {
+      look.tick(w);
+      walk.tick(w);
+    }
+    expect([look.order, Math.round(look.x), look.unit.body.ang]).toEqual([Order.Investigate, 0, 0]);
+    expect(walk.x).toBeGreaterThan(20);
+    for (let i = 0; i < 80; i++) look.tick(w);
+    expect(look.order).not.toBe(Order.Investigate);
+  });
 });

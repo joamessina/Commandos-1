@@ -28,6 +28,8 @@ const SWEEP_AMP = 50; // AcVigilar ANGBARRIDO por defecto
 const SWEEP_PERIOD = 100; // DEMORA por defecto
 const SWEEP_PHASE = [0, 4, 3, 0, 2, 1, 1, 4, 2, 0, 2, 4, 2, 0, 3, 1]; // 0x812B28
 const INVESTIGATE_WAIT = 60;
+/** `AcBap` base (BAP1, BANPE1): ante un estímulo se queda mirando el punto (orden 9) `+0x90 = 100` ciclos; AcBap2/AcBanpe2 caminan hasta él (docs/lectura/soldado-acbap2.md §0). */
+const LOOK_CYCLES = 100;
 /** Entrada 7 (atontado): `+0x34 = 600` ciclos (30 s); altura del bicho 5,0 (`0x793734`) en 6 y 7 (docs/lectura/guarda.md §4). */
 const STUN_CYCLES = 600;
 const DOWN_HEIGHT = 5;
@@ -93,6 +95,8 @@ export class Soldier implements Target {
   private readonly fixed: boolean;
   private readonly sweepAmp: number;
   private readonly elliptical: boolean;
+  /** false = soldado de la base `AcBap` (BAP1/BANPE1): mira el punto del estímulo pero no va hasta él. */
+  private readonly walks: boolean;
   /** Radio del ruido de su disparo (fusil 400 `FUSL`; el nido `NIDO` 500). */
   readonly noiseRadius: number;
 
@@ -100,11 +104,12 @@ export class Soldier implements Target {
     token: string,
     unit: Unit,
     route: Route | null,
-    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number } = {},
+    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean } = {},
   ) {
     this.fixed = opts.fixed ?? false;
     this.sweepAmp = opts.sweep ?? SWEEP_AMP;
     this.elliptical = opts.elliptical ?? true;
+    this.walks = opts.walks ?? true;
     this.noiseRadius = opts.noise ?? GUNSHOT_RADIUS;
     this.token = token;
     this.unit = unit;
@@ -209,6 +214,14 @@ export class Soldier implements Target {
     }
     this.order = Order.Investigate;
     this.spot = { x, y };
+    if (!this.walks) {
+      this.timer = LOOK_CYCLES;
+      this.moving = false;
+      this.unit.stop();
+      this.face(x, y);
+      this.idleAnim();
+      return;
+    }
     this.timer = INVESTIGATE_WAIT;
     this.unit.speed = null;
     this.unit.goTo({ x, y }, false);

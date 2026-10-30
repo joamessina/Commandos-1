@@ -356,6 +356,8 @@ async function load(): Promise<void> {
       const soldier = new Soldier(e.token, unit, route, {
         ...vistaOf(e.block),
         ...(nest ? { fixed: true, noise: 500 } : {}),
+        // AcBap1/AcBanpe1 = la base: mira el estímulo y no camina hasta él (AcBap2/AcBanpe2 sí)
+        ...(e.actions.some((x) => /^ac(bap1|banpe1)$/i.test(x.name)) ? { walks: false } : {}),
         ...(sweep === undefined ? {} : { sweep }),
         elliptical: asNumber(find(vig, '.VISTAELIPTICA')) !== 0,
       });
