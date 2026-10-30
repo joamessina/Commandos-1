@@ -1,0 +1,76 @@
+import { describe, expect, it } from 'vitest';
+import { parseAnm } from '../formats/anm.ts';
+import { anmSeq, bnm } from '../testing/builders.ts';
+import { CAPACITY, parseHouses } from './house.ts';
+import { Soldier } from './soldier.ts';
+import { Unit } from './unit.ts';
+import { flatten, loadWorld } from './world.ts';
+
+const MAC_CASA = `.CLASS BICHO .ACCIONES [ [ acCasa [ .XYZENTRADA [ 1 2 3 ] .XYZSALIDA [ 10 20 3 ] ] ] ] .BOXSELECCIONREL [ -5 -55 25 45 ]`;
+const MAC_CUARTEL = `.CLASS BICHO .ACCIONES [ [ acCasa [ .XYZENTRADA [ ] .NUMREGENSOLDIERS 8 .CARCEL 1 ] ] ]`;
+const MIS = `.MISSION [ .ELEMENTOS [
+  [ .CLASS MACRO .MACRO CASA .TOKEN H1 .XYZ [ 100 200 30 ] ]
+  [ .CLASS MACRO .MACRO CUARTEL .TOKEN Q1 .XYZ [ 50 60 0 ] ]
+  [ .CLASS BICHO .TOKEN NOCASA ]
+] ]`;
+const houses = parseHouses(flatten(loadWorld(MIS, { difficulty: 'FACIL', macro: (n) => ({ CASA: MAC_CASA, CUARTEL: MAC_CUARTEL })[n] })));
+const anm = parseAnm(bnm([{ type: 0, slots: [1] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8)]));
+const cmd = (x = 0, y = 0): Unit => new Unit('COMANDO', anm, x, y, 0, 0);
+
+describe('parseHouses', () => {
+  it('lee entrada/salida, regeneración, cárcel y la caja de selección; sin XYZ usa la posición', () => {
+    expect(houses.map((h) => h.token)).toEqual(['H1', 'Q1']);
+    expect(houses[0]).toMatchObject({ entry: { x: 1, y: 2, z: 3 }, exit: { x: 10, y: 20, z: 3 }, regen: 0, jail: false, box: { x: -5, y: -55, w: 25, h: 45 } });
+    expect(houses[1]).toMatchObject({ entry: { x: 50, y: 60, z: 0 }, regen: 8, jail: true, box: { x: -20, y: -50, w: 40, h: 50 } });
+    expect(houses[0]?.barracks).toBe(false);
+    expect(houses[1]?.barracks).toBe(true);
+  });
+});
+
+describe('House', () => {
+  it('entrar oculta al comando (los soldados no lo ven) y salir lo deja en el punto de salida', () => {
+    const [casa] = houses;
+    const u = cmd();
+    expect(casa?.enter(u)).toBe(true);
+    expect(casa?.enter(u)).toBe(false);
+    expect(u.hidden && u.inHouse === 'H1').toBe(true);
+    const s = new Soldier('S', cmd(300, 0), null);
+    s.unit.body.ang = 180;
+    s.tick({ commandos: [u], sectors: null, rng: () => 0, onShot: () => undefined });
+    expect(s.order).toBe(4);
+    for (let i = 0; i < 50; i++) casa?.tick(); // una casa normal no daña
+    expect(u.energy).toBe(100);
+    expect(casa?.leave(u)).toBe(true);
+    expect(casa?.leave(u)).toBe(false);
+    expect([u.hidden, u.inHouse, u.body.x, u.body.y]).toEqual([false, null, 10, 20]);
+  });
+
+  it('el cuartel mata: 30 de daño cada 5 ciclos a cada aliado de dentro', () => {
+    const [, cuartel] = houses;
+    const u = cmd();
+    cuartel?.enter(u);
+    cuartel?.tick();
+    expect(u.energy).toBe(70);
+    for (let i = 0; i < 4; i++) cuartel?.tick();
+    expect(u.energy).toBe(70);
+    cuartel?.tick();
+    expect(u.energy).toBe(40);
+    for (let i = 0; i < 30; i++) cuartel?.tick();
+    expect(u.dead).toBe(true);
+    expect(cuartel?.occupants).toHaveLength(0);
+    cuartel?.tick(); // vacío: no hace nada
+  });
+
+  it('capacidad 20, muerto no entra, y al destruirse la casa mueren los de dentro', () => {
+    const [casa] = houses;
+    const dentro = Array.from({ length: CAPACITY }, () => cmd());
+    for (const u of dentro) expect(casa?.enter(u)).toBe(true);
+    expect(casa?.enter(cmd())).toBe(false);
+    const muerto = cmd();
+    muerto.hit(1e9);
+    expect(casa?.enter(muerto)).toBe(false);
+    casa?.destroy();
+    expect(dentro.every((u) => u.dead)).toBe(true);
+    expect(casa?.occupants).toHaveLength(0);
+  });
+});

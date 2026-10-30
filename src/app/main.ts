@@ -18,6 +18,7 @@ import { Animator } from '../engine/anim.ts';
 import type { Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
 import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
+import { House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatSlots } from '../engine/boat.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
@@ -86,6 +87,7 @@ interface Prop {
   ang: number;
 }
 interface Game {
+  readonly houses: House[];
   /** Nido de ametralladora: su gráfico dispara cuando el artillero dispara. */
   readonly nests: { readonly soldier: Soldier; readonly prop: Prop }[];
   readonly ladders: Ladder[];
@@ -307,7 +309,7 @@ async function load(): Promise<void> {
     const prop = props.find((x) => x.elem === el);
     return prop ? [{ soldier: s, prop }] : [];
   });
-  game = { nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.`);
@@ -423,6 +425,7 @@ function setupStage(): void {
       if (!g.battle.lost && !g.won) g.battle.tick();
       g.demo.tick();
       tickWorld(g);
+      for (const h of g.houses) h.tick();
       for (const n of g.nests) {
         const want = n.soldier.dead ? 'NODISPARA' : n.soldier.order === Order.Shoot ? 'DISPARA' : 'NODISPARA';
         if (n.prop.anim.has(want)) n.prop.anim.set(want);
@@ -547,6 +550,7 @@ function draw(g: Game): void {
     add({ x: pr.x, y: pr.y, z: pr.z, r: isBoat ? 30 : pr.elem.radius || 10, h: isBoat ? 0.01 : pr.elem.height || 20 }, pr.sprites, pr.anim.frame(pr.ang), px, py);
   }
   g.units.forEach((u, i) => {
+    if (u.unit.hidden) return;
     const { px, py } = project(u.unit.body.x, u.unit.body.y, u.unit.z);
     // los que van en el bote se pintan justo encima de él (RENDERVOL del bote: H 0,01)
     add({ x: u.unit.body.x, y: u.unit.body.y, z: u.unit.z + (u.unit.boat ? 0.02 : 0), r: 10, h: 40 }, u.sprites, u.unit.anim.frame(u.unit.body.ang), px, py, () => {
@@ -687,7 +691,7 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
       ctx.strokeRect(x + 0.5, y + 0.5, 189, 29);
     }
     ctx.fillStyle = u.unit.dead ? '#e0826f' : '#d9dde3';
-    ctx.fillText(`${(i + 1).toString()} ${u.unit.token}${u.unit.dead ? ' (muerto)' : u.unit.boat ? ' (en el bote)' : u.unit.crouched ? ' (agachado)' : ''}`, x + 6, y + 13);
+    ctx.fillText(`${(i + 1).toString()} ${u.unit.token}${u.unit.dead ? ' (muerto)' : u.unit.inHouse ? ` (en ${u.unit.inHouse})` : u.unit.boat ? ' (en el bote)' : u.unit.crouched ? ' (agachado)' : ''}`, x + 6, y + 13);
     ctx.fillStyle = '#333';
     ctx.fillRect(x + 6, y + 18, 176, 6);
     ctx.fillStyle = u.unit.energy / u.maxEnergy > 0.4 ? '#6cc070' : '#e0826f';
@@ -807,6 +811,26 @@ function onMouse(e: MouseEvent): void {
     return;
   }
   const ladder = pickLadder(g.ladders, mx, my);
+  const home = g.houses.find((h) => {
+    const p = project(h.x, h.y, h.z);
+    return mx >= p.px + h.box.x && mx <= p.px + h.box.x + h.box.w && my >= p.py + h.box.y && my <= p.py + h.box.y + h.box.h;
+  });
+  if (e.button === 0 && home && !g.mode && !g.planting && sel && !sel.dead && !sel.boat && !sel.climb && !sel.hidden && hit < 0) {
+    g.battle.cancel(sel);
+    // AcUsaHabitaculo: camina a la entrada y entra (queda oculto); en un cuartel es mortal (30 cada 5 ciclos)
+    if (!sel.doAt(home.entry, () => {
+      home.enter(sel);
+      say(home.barracks ? `${sel.token} entró a un CUARTEL: ¡lo están matando!` : `${sel.token} entró a ${home.token}. Clic en el suelo para salir.`);
+    })) say('No hay camino a pie hasta esa casa.');
+    return;
+  }
+  if (e.button === 0 && sel?.hidden && sel.inHouse) {
+    // sale por el punto de salida y camina adonde se hizo clic
+    const h = g.houses.find((x) => x.token === sel.inHouse);
+    const spot = g.sectors?.pick(mx, my);
+    if (h?.leave(sel) && spot) sel.goTo(spot, false, spot.sector);
+    return;
+  }
   if (e.button === 0 && sel?.climb) {
     // trepando (pausado o no): +1 si el punto está más alto que el comando, −1 si más bajo (FUN_004F3C70)
     const spot = g.sectors?.pick(mx, my);

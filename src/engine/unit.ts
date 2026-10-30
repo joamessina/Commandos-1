@@ -64,6 +64,8 @@ export class Unit {
   readonly ammo: Record<string, number> = {};
   /** Trepada en curso (escalera); null si no trepa. */
   climb: Climb | null = null;
+  /** Casa en la que está (oculto dentro). */
+  inHouse: string | null = null;
   /** Oculto (el cuerpo `DESAPARECE` de MATABICHOSSECTOR): no se dibuja ni se ve. */
   hidden = false;
   /** Acción pendiente al llegar al destino de `doAt` (p. ej. plantar la bomba). */
