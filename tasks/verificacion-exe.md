@@ -22,3 +22,4 @@ Regla: antes de implementar algo se lee su definición en el exe (tabla, funció
 | Cepo y señuelo del inventario | reglas leídas (`obj-explosivos.md`), implementado en `engine/traps.ts` | señuelo arranca encendido y sin ítems ON/OFF aparte; un uso; sin sonidos; el boina verde no tiene `PONEBOMBA` |
 | Soldados BAP1/BANPE1 miran, BAP2/BANPE2 caminan | leído (`soldado-acbap2.md` §0) | `NERVIOSISMO`, `PERSIGUESONIDO` y demás parámetros del MAC sin aplicar |
 | Refuerzos por evento `REAC` (zona CAMPAMENTO) y patrulla libre | grupos y formación leídos (`policia.md`); zona leída del `.SEC` | `NSOLDIERS` con o sin cabo, regeneración, posiciones de ataque, sensor de sonido real |
+| Sensor de zona de sonido (`.SENSORES_SND_ZONA`) | leído y verificado (`sonido.md`, cierre 2026-10-30) | falta quién recibe el evento tipo 6 y qué ruidos cuentan como peligro |
