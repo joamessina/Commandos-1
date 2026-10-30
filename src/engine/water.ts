@@ -69,12 +69,12 @@ export function warp(src: Uint8Array, dst: Uint8Array, kind: 1 | 2, phase: numbe
     const a = fix16(offX);
     const b = fix16(offY);
     for (let i = 0; i < WATER_SIZE; i++) {
-      const rowTerm = S32[((p >> 16) + 2 * i) & 255] ?? 0;
+      const rowTerm = (S32[((p >> 16) + 2 * i) & 255] as number);
       for (let j = 0; j < WATER_SIZE; j++) {
         const y = (j << 16) + rowTerm + a;
         const k = ((p + y) >> 16) & 255;
-        const sx = (((i << 16) + (S32[k] ?? 0) + b) >> 16) & 255;
-        dst[i * WATER_STRIDE + j] = src[((y >> 16) & 255) * 256 + sx] ?? 0;
+        const sx = (((i << 16) + ((S32[k] as number)) + b) >> 16) & 255;
+        dst[i * WATER_STRIDE + j] = src[((y >> 16) & 255) * 256 + sx] as number;
       }
     }
   } else {
@@ -82,17 +82,17 @@ export function warp(src: Uint8Array, dst: Uint8Array, kind: 1 | 2, phase: numbe
     const B = Math.trunc(offY);
     const C = Math.trunc(offX);
     for (let r = 0; r < WATER_SIZE; r++) {
-      const rowTerm = S8[(A + r) & 255] ?? 0;
+      const rowTerm = (S8[(A + r) & 255] as number);
       for (let c = 0; c < WATER_SIZE; c++) {
         const u = (C + c + rowTerm) & 255;
-        const v = (B + r + (S8[(u + A) & 255] ?? 0)) & 255;
-        dst[r * WATER_STRIDE + c] = src[u * 256 + v] ?? 0;
+        const v = (B + r + ((S8[(u + A) & 255] as number))) & 255;
+        dst[r * WATER_STRIDE + c] = src[u * 256 + v] as number;
       }
     }
   }
   for (let r = 0; r < WATER_SIZE; r++) {
-    dst[r * WATER_STRIDE + 256] = dst[r * WATER_STRIDE] ?? 0;
-    dst[r * WATER_STRIDE + 257] = dst[r * WATER_STRIDE + 1] ?? 0;
+    dst[r * WATER_STRIDE + 256] = dst[r * WATER_STRIDE] as number;
+    dst[r * WATER_STRIDE + 257] = dst[r * WATER_STRIDE + 1] as number;
   }
 }
 
@@ -121,8 +121,14 @@ export class WaterFx {
     const d = this.def;
     if (d.type === 2 && cam) {
       const f = Math.fround(Math.fround(Math.fround(Math.cos(this.cosPhase)) * d.length) + d.length * 0.5);
-      this.offX = Math.fround(this.offX + Math.fround(Math.fround(cam.x - d.centerX) * f));
-      this.offY = Math.fround(this.offY + Math.fround(Math.fround(cam.y - d.centerY) * f));
+      // FUN_005CACA0 (call 0x406771 sobre el vector): lo NORMALIZA en el sitio; el desplazamiento avanza f px por ciclo hacia/contra el centro, no f·distancia
+      const dx = Math.fround(cam.x - d.centerX);
+      const dy = Math.fround(cam.y - d.centerY);
+      const len = Math.fround(Math.sqrt(Math.fround(dx * dx + dy * dy)));
+      const ux = len > 0 ? Math.fround(dx / len) : 0; // shortcut: el exe divide por 0 (NaN) si la cámara está justo en el centro
+      const uy = len > 0 ? Math.fround(dy / len) : 0;
+      this.offX = Math.fround(this.offX + Math.fround(ux * f));
+      this.offY = Math.fround(this.offY + Math.fround(uy * f));
       this.cosPhase = Math.fround(this.cosPhase + d.speed);
     } else if (d.type === 1) {
       this.offX = Math.fround(this.offX + Math.fround(Math.cos(Math.fround(d.anginc * DEG)) * d.velinc));

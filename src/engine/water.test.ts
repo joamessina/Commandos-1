@@ -57,14 +57,22 @@ describe('WaterFx', () => {
     return out;
   };
 
-  it('tipo 2: desp += f·(cámara − centro), f = L·cos + L/2; la fase usa SININC desde el primer ciclo', () => {
+  it('tipo 2: desp += f·u con u = (cámara − centro) NORMALIZADO, f = L·cos + L/2; la fase usa SININC desde el primer ciclo', () => {
     const fx = new WaterFx(def({}), idx);
+    const u = Math.fround(Math.fround(100) / Math.fround(Math.sqrt(Math.fround(100 * 100 + 100 * 100))));
     fx.step({ x: 900, y: 700 }); // cos 0 = 1 → f = 0.75
-    expect(fx.dst).toEqual(expected(fx, 2, 1.5, 75, -75));
+    const o1 = Math.fround(u * 0.75);
+    expect(fx.dst).toEqual(expected(fx, 2, 1.5, o1, -o1));
     fx.step({ x: 900, y: 700 }); // cos 0.04
     const f = Math.fround(Math.fround(Math.fround(Math.cos(Math.fround(0.04))) * 0.5) + 0.25);
-    const o = Math.fround(75 + Math.fround(100 * f));
-    expect(fx.dst).toEqual(expected(fx, 2, 3, o, Math.fround(-75 - Math.fround(100 * f))));
+    const o2 = Math.fround(o1 + Math.fround(u * f));
+    expect(fx.dst).toEqual(expected(fx, 2, 3, o2, -o2));
+  });
+
+  it('con la cámara en el centro no hay deriva (vector nulo)', () => {
+    const fx = new WaterFx(def({}), idx);
+    fx.step({ x: 800, y: 800 });
+    expect(fx.dst).toEqual(expected(fx, 2, 1.5, 0, 0));
   });
 
   it('tipo 2 sin visor no mueve el desplazamiento; sin TYPE usa el generador 1 con desplazamiento 0', () => {

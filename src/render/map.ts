@@ -18,6 +18,8 @@ export interface MapOptions {
   readonly rename?: ReadonlyMap<string, ReadonlyMap<string, string>>;
   /** Volúmenes destruidos sin lista (AUTOEXPCASAS): los tiles con guion se muestran sin él y el resto se quita. */
   readonly ruined?: ReadonlySet<string>;
+  /** Orden de dibujo de los polígonos (índices de `vol.polys`, ver engine/volorder.ts); por defecto el del archivo. */
+  readonly order?: readonly number[];
 }
 
 /** Tiles de un polígono según su estado de destrucción. */
@@ -65,11 +67,14 @@ function drawTile(img: Uint8ClampedArray, mw: number, mh: number, t: Tile, s: Sp
       if (dx < 0 || dx >= mw) continue;
       const o = (dy * mw + dx) * 4;
       if (mode === BLEND) {
-        // 50 % con el fondo, como el blitter del exe (sombras).
-        img[o] = (img[o] ?? 0) >> 1;
-        img[o + 1] = (img[o + 1] ?? 0) >> 1;
-        img[o + 2] = (img[o + 2] ?? 0) >> 1;
-      } else {
+        // 50 % con el fondo, como el blitter del exe (sombras): lo que hay debajo (esta capa + la del agua) se oscurece a la mitad. Con alfa a
+        // (0..255) la capa pasa a alfa' = (255 + a)/2 y color' = a·c/(255 + a); con a = 255 es el c/2 de siempre y sobre transparente, negro al 50 %.
+        const a = img[o + 3] ?? 0;
+        for (let ch = 0; ch < 3; ch++) img[o + ch] = ((img[o + ch] ?? 0) * a) / (255 + a);
+        img[o + 3] = (255 + a) / 2;
+        continue;
+      }
+      {
         const i = (s.index[k] ?? 0) * 2;
         const [r, g, b] = rgb565(pal[i] ?? 0, pal[i + 1] ?? 0);
         img[o] = r;
@@ -86,7 +91,8 @@ export function composeMap(vol: Vol, wad: Wad, opts: MapOptions = {}): MapImage 
   const pixels = new Uint8ClampedArray(width * height * 4);
   if (opts.layer !== 'land') for (let i = 3; i < pixels.length; i += 4) pixels[i] = 255;
   let missing = 0;
-  for (const poly of vol.polys) {
+  for (const poly of opts.order ? opts.order.map((i) => vol.polys[i]) : vol.polys) {
+    if (!poly) continue;
     if (opts.skipWater === true && poly.name === 'AGUA') continue;
     if (opts.layer !== undefined && (poly.name === 'AGUA') !== (opts.layer === 'water')) continue;
     for (const t of tilesOf(poly, opts)) {

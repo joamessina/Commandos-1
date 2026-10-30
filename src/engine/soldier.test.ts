@@ -160,3 +160,15 @@ describe('Unit.hit / place', () => {
     expect([c.body.x, c.body.y, c.body.ang]).toEqual([5, 6, 90]);
   });
 });
+
+describe('Soldier: vista propia', () => {
+  it('respeta el alcance y la apertura del MAC (.MOD / .ANG)', () => {
+    const c = unit(300, 0, 180);
+    const corto = new Soldier('S', unit(0, 0), null, { range: 200, angle: 90 });
+    run(corto, mkWorld([c]).world, 5);
+    expect(corto.order).toBe(Order.Patrol); // a 300 u, fuera de su alcance de 200
+    const ancho = new Soldier('S', unit(0, 0), null, { range: 400, angle: 90 });
+    run(ancho, mkWorld([c]).world, 5);
+    expect(ancho.order).toBe(Order.Aim);
+  });
+});

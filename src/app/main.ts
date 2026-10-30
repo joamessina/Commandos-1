@@ -23,6 +23,7 @@ import { isWater, SectorMap } from '../engine/sectors.ts';
 import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
+import { drawOrder } from '../engine/volorder.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
 import { composeMap, repaintWater, waterBounds, type MapImage, type Rect } from '../render/map.ts';
@@ -86,6 +87,7 @@ interface Game {
   readonly barrelProps: ReadonlyMap<Barrel, Prop>;
   readonly vol: Vol;
   readonly wad: Wad;
+  readonly order: readonly number[];
   /** Punto de huida del MIS (`PUNTOHUIDA`): el bote con todos a bordo debe llegar allí. */
   readonly escape: { x: number; y: number } | null;
   won: boolean;
@@ -173,7 +175,8 @@ async function load(): Promise<void> {
   const wsprite = wdef ? wad.byName.get(wdef.dst.toUpperCase()) : undefined;
   const bounds = wsprite?.width === 256 && wsprite.height === 256 ? waterBounds(vol) : null; // el generador del exe asume 256×256
   const water = wdef && wsprite && bounds ? makeWater(vol, wad, wdef, wsprite.index, bounds) : null;
-  const img = composeMap(vol, wad, water ? { layer: 'land' } : { skipWater: waterBox.checked });
+  const order = drawOrder(vol); // orden de dibujo del exe (docs/research/q1-orden-dibujo.md), una vez por mapa
+  const img = composeMap(vol, wad, { ...(water ? { layer: 'land' as const } : { skipWater: waterBox.checked }), order });
   const map = document.createElement('canvas');
   map.width = img.width;
   map.height = img.height;
@@ -253,7 +256,7 @@ async function load(): Promise<void> {
   const barrelMap = new Map<Barrel, Prop>();
   for (const e of elems) if (e.macro?.toUpperCase() === 'MINASUB') demo.addMine(e.x, e.y);
   for (const b of barrelProps) barrelMap.set(demo.addBarrel(b.elem.token, b.elem.x, b.elem.y), b.prop);
-  game = { demo, barrelProps: barrelMap, vol, wad, escape, won: false, battle, soldiers, mode: null, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { demo, barrelProps: barrelMap, vol, wad, order, escape, won: false, battle, soldiers, mode: null, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic para elegir/caminar, Mayús+clic corre.`);
@@ -274,7 +277,7 @@ const defaultSeq = (anm: Anm): string => (anm.sequences.has('REPOSO') ? 'REPOSO'
 function recompose(g: Game): void {
   g.demo.dirty = false;
   const st = g.demo.mapState();
-  const img = composeMap(g.vol, g.wad, { ...(g.water ? { layer: 'land' as const } : { skipWater: waterBox.checked }), rename: st.rename, ruined: st.ruined });
+  const img = composeMap(g.vol, g.wad, { order: g.order, ...(g.water ? { layer: 'land' as const } : { skipWater: waterBox.checked }), rename: st.rename, ruined: st.ruined });
   g.map.getContext('2d')?.putImageData(new ImageData(img.pixels, img.width, img.height), 0, 0);
 }
 
@@ -319,6 +322,15 @@ function setupStage(): void {
       e.preventDefault();
     });
     stage.addEventListener('mousedown', onMouse);
+    stage.addEventListener('mousemove', (e) => {
+      const r = stage?.getBoundingClientRect();
+      cursor.x = e.clientX - (r?.left ?? 0);
+      cursor.y = e.clientY - (r?.top ?? 0);
+      cursor.inside = true;
+    });
+    stage.addEventListener('mouseleave', () => {
+      cursor.inside = false;
+    });
   }
   view.replaceChildren(stage);
   resize();
@@ -350,15 +362,42 @@ function setupStage(): void {
       g.ticks++;
       acc -= TICK;
     }
-    const pan = (dt / 1000) * 600; // shortcut: 600 px/s (velocidad de scroll del original NO leída)
-    if (keys.has('arrowleft') || keys.has('a')) g.camX -= pan / zoom();
-    if (keys.has('arrowright') || keys.has('d')) g.camX += pan / zoom();
-    if (keys.has('arrowup') || keys.has('w')) g.camY -= pan / zoom();
-    if (keys.has('arrowdown') || keys.has('s')) g.camY += pan / zoom();
+    scrollCamera(g, dt / TICK);
     draw(g);
     loopId = requestAnimationFrame(frame);
   };
   loopId = requestAnimationFrame(frame);
+}
+
+/** Cursor sobre el lienzo (para el scroll por borde). */
+const cursor = { x: 0, y: 0, inside: false };
+const camV = { x: 0, y: 0 };
+const EDGE = 24; // shortcut: el exe pide el píxel exacto del borde (cx == 0, cx ≥ ancho−2; q1-camara.md), inviable en una ventana
+
+/**
+ * Scroll de la cámara (docs/research/q1-camara.md §Scroll): paso n = 16 (Mayús 32, Ctrl 4); con una dirección pulsada el impulso es n·0,1875 por ciclo hasta
+ * un tope n·1,5; sin impulso la velocidad decae ×0,7 por ciclo y se corta a 0 por debajo de 1. `cycles` = ciclos de 1/20 s transcurridos.
+ * shortcut: el exe corre esto 1 vez por cuadro de la interfaz; aquí se reparte por tiempo para que no dependa de los Hz del monitor; sin el cambio de paso con zoom < 1.
+ */
+function scrollCamera(g: Game, cycles: number): void {
+  const n = keys.has('shift') ? 32 : keys.has('control') ? 4 : 16;
+  let ix = (keys.has('arrowright') || keys.has('d') ? 1 : 0) - (keys.has('arrowleft') || keys.has('a') ? 1 : 0);
+  let iy = (keys.has('arrowdown') || keys.has('s') ? 1 : 0) - (keys.has('arrowup') || keys.has('w') ? 1 : 0);
+  if (ix === 0 && iy === 0 && cursor.inside && stage) {
+    ix = (cursor.x >= stage.width - EDGE ? 1 : 0) - (cursor.x <= EDGE ? 1 : 0);
+    iy = (cursor.y >= stage.height - EDGE ? 1 : 0) - (cursor.y <= EDGE ? 1 : 0);
+  }
+  const axis = (v: number, i: number): number => {
+    if (i === 0) {
+      const d = v * 0.7 ** cycles;
+      return Math.abs(d) < 1 ? 0 : d;
+    }
+    return Math.max(-n * 1.5, Math.min(n * 1.5, v + i * n * 0.1875 * cycles));
+  };
+  camV.x = axis(camV.x, ix);
+  camV.y = axis(camV.y, iy);
+  g.camX += camV.x * cycles;
+  g.camY += camV.y * cycles;
 }
 
 function resize(): void {

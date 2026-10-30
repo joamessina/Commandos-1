@@ -158,3 +158,9 @@ Otras subclases de `ClassPSystem` que no cuelgan de un hotspot: `ClassCascada` (
 
 ## Cierre 6 (2026-10-29): agua animada
 Ver **`docs/lectura/agua.md`**: el mar es el bitmap `MAR0DST` (256×256) que `FUN_006BED80` reescribe cada ciclo desde un clon intacto; el exe solo lee `BMPDST` (`.BMP`/`.BMPSRC` se ignoran). Generador tipo 1 y 2 verificados píxel a píxel contra el exe emulado. Portado en `src/engine/water.ts` + capas en `src/render/map.ts`.
+
+## Cierre 7 (2026-10-29): orden de los volúmenes del mapa, sombras en capas y scroll
+- **Orden de dibujo estático portado** (`src/engine/volorder.ts`): el mapa se compone en el orden del exe (niveles por camino más largo con las relaciones por pares de `q1-orden-dibujo.md`), no en el del archivo. Corregía los edificios "cortados" (parches de roca sobre la base del faro, cobertizos y casas recortados). El contorno en pantalla se aproxima por el casco convexo del prisma proyectado (`FUN_0062DC50` no leído); sin el bit 2 ni rampas (shortcut declarado en el módulo). Los personajes siguen ordenados por `y` (falta meterlos en el mismo grafo).
+- **Sombras**: el píxel mezclado (50 %) se compone con alfa en la capa de tierra (`alfa' = (255+a)/2`, `color' = a·c/(255+a)`) para que oscurezca el agua de debajo en vez de dejar negro opaco.
+- **Agua**: el vector cámara−centro se normaliza (`FUN_005CACA0`), ver `agua.md`.
+- **Scroll**: inercia leída (`q1-camara.md`): impulso `n·0,1875`, tope `n·1,5`, ×0,7 al soltar; n = 16 (Mayús 32, Ctrl 4); el borde de pantalla se activa a 24 px (el exe pide el píxel exacto).
