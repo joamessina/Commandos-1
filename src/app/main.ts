@@ -260,6 +260,7 @@ async function load(): Promise<void> {
       const host = e.parent ? boats.get(e.parent) : undefined;
       const unit = new Unit(e.token, a.anm, host ? host.boat.x : e.x, host ? host.boat.y : e.y, host ? host.boat.z : e.z, host ? host.boat.ang : e.angle, sectors);
       unit.energy = COMMANDO_ENERGY[e.token] ?? 100;
+      if (e.height > 0) unit.height = e.height;
       if (host) unit.board(host.boat, units.filter((u) => u.unit.boat === host.boat).length);
       const weapons: Weapon[] = [];
       const guns = asArmas(e);
@@ -274,6 +275,7 @@ async function load(): Promise<void> {
       const a = asset(e.anim);
       if (!a) continue;
       const unit = new Unit(e.token, a.anm, e.x, e.y, e.z, e.angle, sectors);
+      if (e.height > 0) unit.height = e.height;
       const pat = e.actions.find((x) => x.name.toUpperCase() === 'ACPATRULLA');
       const route = pat ? (parseRoutes(pat.params, diffSel.value as Difficulty)[0] ?? null) : null;
       const nest = e.actions.some((x) => x.name.toUpperCase() === 'ACMETRALLERO');

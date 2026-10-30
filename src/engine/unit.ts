@@ -64,6 +64,12 @@ export class Unit {
   readonly ammo: Record<string, number> = {};
   /** Trepada en curso (escalera); null si no trepa. */
   climb: Climb | null = null;
+  /** Altura del cuerpo (`.VOLCOLISION .H` = `bicho+0x58`). shortcut: 29 (la de los soldados) si el elemento no la trae. */
+  height = 29;
+  /** Altura del ojo: agachado o buceando es H×0,125 (`bicho+0x58`, AUAgacharse/AuBucear). */
+  get eye(): number {
+    return this.crouched || this.diving ? this.height * 0.125 : this.height;
+  }
   /** Buceando (AuBucear): solo se pisan sectores de agua, sin el ×0,5 del agua (MotorAliado lo omite al bucear) y los soldados no lo ven (oculto). shortcut: va en línea recta (sin rutas por el mar). */
   diving = false;
   /** Casa en la que está (oculto dentro). */

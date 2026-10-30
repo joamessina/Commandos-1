@@ -36,6 +36,24 @@ describe('vision', () => {
   for (let i = 0; i <= 3; i++) verts.push([i * 100, 0], [i * 100, 100]);
   const quad = (i: number, extra: object = {}): { verts: number[] } => ({ verts: [i * 2, i * 2 + 2, i * 2 + 3, i * 2 + 1], ...extra });
   const map = new SectorMap(parseSec(secBytes({ verts, a: [quad(0), quad(1, { flags: SectorFlag.Ocluso }), quad(2)], tw1: [[-1, 1, -1, -1], [-1, 2, -1, 0], [-1, -1, -1, 1]] })));
+  // muelle (x 0..100, suelo z=65) junto al mar (x 100..200, z=0): el borde del muelle esconde lo que queda pegado a su pie (FUN_005F9820)
+  const pv: [number, number][] = [];
+  for (let i = 0; i <= 2; i++) pv.push([i * 100, 0], [i * 100, 100]);
+  const pier = new SectorMap(parseSec(secBytes({ verts: pv, a: [quad(0, { plane: [0, 0, 65] }), quad(1, { type: 1 })], tw1: [[-1, 1, -1, -1], [-1, -1, -1, 0]] })));
+  it('desde el muelle no se ve lo que está al pie del borde, pero sí lo lejano; a su mismo nivel se ve todo', () => {
+    const viewer = { x: 80, y: 50, z: 65, eye: 29, sector: pier.at(80, 50), heading: 0 };
+    const at = (x: number, z: number, eye = 29): Parameters<typeof sees>[1] => ({ x, y: 50, z, eye, radius: 10, low: false });
+    expect(sees(viewer, at(110, 0), pier)).toBe(false); // al pie del borde
+    expect(sees(viewer, at(120, 0), pier)).toBe(false);
+    expect(sees(viewer, at(130, 0), pier)).toBe(true);
+    expect(sees(viewer, at(190, 0, 3.6), pier)).toBe(true);
+    expect(sees(viewer, at(90, 65), pier)).toBe(true); // mismo nivel
+    expect(sees({ ...viewer, z: 0, eye: 29, sector: pier.at(150, 50), x: 150, heading: 180 }, at(110, 0), pier)).toBe(true); // desde abajo ve hacia arriba hasta el borde... (sin suelo más alto entre ellos)
+    expect(sees({ ...viewer, sector: null }, at(110, 0), pier)).toBe(true); // sin sector de partida no oculta
+    expect(sees({ x: 80, y: 50, heading: 0 }, at(110, 0), pier)).toBe(true); // sin alturas, solo el viejo
+    expect(sees(viewer, { ...at(250, 0) }, pier)).toBe(false); // el rayo sale del mapa por un borde sin vecino
+  });
+
   it('un sector Ocluso entre los dos corta el rayo; el del propio observador o blanco no; sin mapa no hay oclusión', () => {
     expect(lineClear(map, 50, 50, 250, 50)).toBe(false);
     expect(lineClear(map, 150, 50, 250, 50)).toBe(true); // el observador está dentro del Ocluso

@@ -19,3 +19,9 @@ Lista enlazada de recuerdos `{sig, vida(+4), x,y,z (+0xC..+0x14), quién(+0x18)}
 
 ## Vista02 (volumen simple) y base [hecho]
 `ClassVista02` (`FUN_0061D2F0` lee la forma: `CILINDRO` con radio y alto, o `POLY` con puntos; `FUN_0061D850/D900` escanean con `FUN_0057D590` y `FUN_0061D780` añade hasta 16 vistos y manda `MSGA_VISTA_ELEMENTOVISIBLE`). Mensajes: `GETBICHOSVISTOS`, `VEO_ELE`, `VISTA_SETOFFSET` (desplazamiento del volumen), `MIRAR`. `OrganoVista` (`FUN_006B4550`): base con máscara 0xFF, 0x40 y 200 por defecto (campos de 16 bits en `+0x4C/+0x4E/+0x50`).
+
+## Cierre: oclusión por pendiente de la vista (`FUN_005F9820`, 2026-10-30)
+- `FUN_0061B580` pasa a `FUN_005F9820` el rayo de ojo a ojo: de `(x, y, z + bicho+0x58)` del dueño a `(x, y, z + E+0x58)`, empezando en el sector `+0xE4` del dueño. Agachado/buceando `+0x58 = H×0,125`; `+0x58 = .H` del `VOLCOLISION` (29 en los soldados alemanes).
+- El rayo recorre sectores arista a arista (`FUN_005F5B80`: arista de salida y t; t > 1 = termina dentro). En cada cruce: vecino nulo ⇒ oculto; vecino con flag `0x10` (Ocluso) ⇒ oculto; pendiente exigida = `(max(suelo_actual, suelo_vecino) − z_ojo_origen) / (dist_horizontal + 1e-6)`, y el rayo (`dz / dist_horizontal`) debe ser ≥ la mayor exigida (inicio −1e10). Por eso el borde de un muelle/acantilado esconde lo que queda al pie.
+- **El tope z ± ALT/2 de `FUN_0061AE90` NO se usa en el escaneo** (`+0x88/+0x8C` no se leen en `0x61A000-0x61D000`; la consulta espacial `0x594400` es una caja x/y): una regla de "otro nivel no se ve" por diferencia de z no existe.
+- Portado en `Nav.sight` + `sees` (`src/engine/path.ts`, `vision.ts`). Sin portar: flag `0x10000/2` de sector (`FUN_005F51A0`), volúmenes (`FUN_0063E200`), vecino nulo con flag 2 (`FUN_005F6C60`).

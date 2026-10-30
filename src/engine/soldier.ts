@@ -171,12 +171,12 @@ export class Soldier implements Target {
   /** El comando más cercano que ve (cono + oclusión), o null. */
   private scan(w: SoldierWorld): Unit | null {
     const b = this.unit.body;
-    const viewer = { x: b.x, y: b.y, z: this.unit.z, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle };
+    const viewer = { x: b.x, y: b.y, z: this.unit.z, eye: this.unit.eye, sector: this.unit.sector, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle };
     let best: Unit | null = null;
     let bestD = Infinity;
     for (const c of w.commandos) {
       if (c.dead || c.hidden || c.diving) continue; // dentro de una casa o buceando (oculto, 0x23C & 0x80000) no lo ven
-      if (!sees(viewer, { x: c.body.x, y: c.body.y, radius: 10, low: c.crouched }, w.sectors)) continue;
+      if (!sees(viewer, { x: c.body.x, y: c.body.y, z: c.z, eye: c.eye, radius: 10, low: c.crouched }, w.sectors)) continue;
       const d = Math.hypot(c.body.x - b.x, c.body.y - b.y);
       if (d < bestD) {
         bestD = d;
@@ -237,7 +237,7 @@ export class Soldier implements Target {
    */
   private lookForBodies(w: SoldierWorld): void {
     const b = this.unit.body;
-    const viewer = { x: b.x, y: b.y, z: this.unit.z, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle };
+    const viewer = { x: b.x, y: b.y, z: this.unit.z, eye: this.unit.eye, sector: this.unit.sector, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle };
     for (const body of w.bodies ?? []) {
       const key = `${Math.round(body.x).toString()},${Math.round(body.y).toString()}`;
       if (this.seenBodies.has(key) || (body.x === b.x && body.y === b.y)) continue;

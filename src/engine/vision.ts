@@ -6,7 +6,8 @@
  *           8 u y se corta en un sector con el flag Ocluso (0x10), sin mirar alturas ni volúmenes; sin luz/noche. Cuándo mejorar: al leer 0x5F9820.
  */
 import { asList, asNumber, find, type Node } from '../formats/clave.ts';
-import { SectorFlag } from '../formats/sec.ts';
+import { SectorFlag, type Sector } from '../formats/sec.ts';
+import { navFor } from './path.ts';
 import { groundZ, type SectorMap } from './sectors.ts';
 
 const RAD = Math.PI / 180;
@@ -19,6 +20,9 @@ export interface Viewer {
   readonly y: number;
   /** Altura del suelo del observador; sin ella (pruebas) cualquier sector Ocluso tapa. */
   readonly z?: number;
+  /** Altura del ojo sobre el suelo (`bicho+0x58`) y sector que pisa: con ellos (y los del blanco) se aplica la oclusión por pendiente de `FUN_005F9820`. */
+  readonly eye?: number;
+  readonly sector?: Sector | null;
   /** Centro del cono en grados de mundo (rumbo del cuerpo + giro de cabeza). */
   readonly heading: number;
   /** Alcance (`+0x64`). */
@@ -34,6 +38,9 @@ export interface Seen {
   readonly radius: number;
   /** Agachado o buceando: alcance a la mitad. */
   readonly low: boolean;
+  /** Altura del suelo y del ojo (`+0x58`) de E, para el rayo ojo a ojo. */
+  readonly z?: number;
+  readonly eye?: number;
 }
 
 /** `.ORGANOS [ .VISTA [ Vista01 [ .MOD n .ANG a ] ] ]` de un bloque expandido: `.MOD` guarda `2·n` en el órgano (percepcion.md §3.1); sin claves, los defectos (800, 70°). */
@@ -84,7 +91,11 @@ export function lineClear(sectors: SectorMap | null, ax: number, ay: number, bx:
 }
 
 /** Vista completa: cono y rayo despejado. */
-export const sees = (v: Viewer, e: Seen, sectors: SectorMap | null): boolean => inCone(v, e) && lineClear(sectors, v.x, v.y, e.x, e.y, v.z);
+export function sees(v: Viewer, e: Seen, sectors: SectorMap | null): boolean {
+  if (!inCone(v, e) || !lineClear(sectors, v.x, v.y, e.x, e.y, v.z)) return false;
+  if (!sectors || !v.sector || v.z === undefined || v.eye === undefined || e.z === undefined || e.eye === undefined) return true;
+  return navFor(sectors).sight(v.sector, { x: v.x, y: v.y, z: v.z + v.eye }, { x: e.x, y: e.y, z: e.z + e.eye });
+}
 
 /** Hasta dónde llega un rayo desde (x,y) con rumbo `ang` (rad) antes de entrar en un sector Ocluso o de llegar a `range` (el mismo corte que `lineClear`). */
 export function rayReach(sectors: SectorMap | null, x: number, y: number, ang: number, range: number, z?: number): number {

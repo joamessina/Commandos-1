@@ -234,6 +234,35 @@ export class Nav {
     return null;
   }
 
+  /**
+   * ¿Ve el ojo `a` (x,y,z del ojo) el ojo `b`? (FUN_005F9820): el rayo recorre los sectores arista a arista y en cada cruce debe pasar por encima del suelo más alto
+   * de los dos sectores (pendiente exigida = (suelo − z_ojo) / distancia, la mayor de todos los cruces); por eso un borde de acantilado esconde lo que queda al pie.
+   * shortcut: usa la salida de arista de FUN_00624530 (no se verificó que FUN_005F5B80 sea idéntica); no mira el flag Ocluso ni los volúmenes (`lineClear` lo hace);
+   * si el sector de partida no sirve (posición vieja) o el rayo es vertical, no oculta; un borde sin vecino sí oculta. Cuándo mejorar: al leer FUN_005F5B80 y FUN_005F6C60.
+   */
+  sight(from: Sector, a: Vec & { z: number }, b: Vec & { z: number }): boolean {
+    const d = { x: b.x - a.x, y: b.y - a.y };
+    const len = Math.hypot(d.x, d.y);
+    if (len < 1e-6) return true;
+    const slope = (b.z - a.z) / len;
+    let need = -1e10;
+    let cur = this.indexOf(from);
+    for (let guard = 0; guard <= this.list.length; guard++) {
+      const s = this.list[cur];
+      const hit = s ? this.exitEdge(s, a, d) : null;
+      if (!s || !hit || hit.t < 0) return guard === 0;
+      if (hit.t > 1) return slope >= need;
+      const n = this.list[s.neighbors[hit.edge] ?? -1];
+      if (!n) return false;
+      const x = a.x + d.x * hit.t;
+      const y = a.y + d.y * hit.t;
+      need = Math.max(need, (Math.max(groundZ(s, x, y), groundZ(n, x, y)) - a.z) / (hit.t * len + 1e-6));
+      if (slope < need) return false;
+      cur = s.neighbors[hit.edge] ?? -1;
+    }
+    return false;
+  }
+
   /** Atajo de línea recta (FUN_00624840): sigue el segmento arista a arista; null si no llega al sector del destino por un camino libre. */
   private straight(start: Vec, from: number, goal: Vec, crouched: boolean): PathStep[] | null {
     const d = { x: goal.x - start.x, y: goal.y - start.y };
