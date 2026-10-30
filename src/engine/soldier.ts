@@ -148,7 +148,7 @@ export class Soldier implements Target {
   /** El comando más cercano que ve (cono + oclusión), o null. */
   private scan(w: SoldierWorld): Unit | null {
     const b = this.unit.body;
-    const viewer = { x: b.x, y: b.y, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle };
+    const viewer = { x: b.x, y: b.y, z: this.unit.z, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle };
     let best: Unit | null = null;
     let bestD = Infinity;
     for (const c of w.commandos) {

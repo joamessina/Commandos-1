@@ -19,7 +19,7 @@ import type { Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
 import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
 import { Boat, boatSlots } from '../engine/boat.ts';
-import { groundZ, isWater, SectorMap } from '../engine/sectors.ts';
+import { isWater, SectorMap } from '../engine/sectors.ts';
 import { parseRoutes } from '../engine/patrol.ts';
 import { Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
@@ -580,21 +580,17 @@ function drawCone(ctx: CanvasRenderingContext2D, g: Game, s: Soldier): void {
   const u = s.unit;
   const head = u.body.ang + s.headAngle;
   const half = s.aperture / 2;
-  const ground = (x: number, y: number): number => {
-    const sec = g.sectors?.atZ(x, y, u.z) ?? g.sectors?.at(x, y) ?? null;
-    return sec ? groundZ(sec, x, y) : u.z;
-  };
-  // Un solo cono: las dos zonas comparten las mismas rayas (cortadas por oclusión) y las aristas siguen el relieve punto a punto, así en terreno elevado
-  // la zona larga rodea a la corta sin que se vean dos conos distintos.
+  // Un solo cono: las dos zonas comparten las mismas rayas (cortadas por oclusión) y el cono es plano, en el plano del soldado (z de sus pies), con aristas rectas, y
+  // solo se corta donde la vista se bloquea de verdad (nada de seguir el relieve de abajo, que lo deformaba).
   const rays: { k: number; a: number; d: number }[] = [];
   for (let k = -half; k <= half + 1e-9; k += 5) {
     const a = ((head + k) * Math.PI) / 180;
-    rays.push({ k, a, d: rayReach(g.sectors, u.body.x, u.body.y, a, s.reach) });
+    rays.push({ k, a, d: rayReach(g.sectors, u.body.x, u.body.y, a, s.reach, u.z) });
   }
   const at = (a: number, r: number): { px: number; py: number } => {
     const x = u.body.x + Math.cos(a) * r;
     const y = u.body.y + Math.sin(a) * r;
-    return project(x, y, r === 0 ? u.z : ground(x, y));
+    return project(x, y, u.z);
   };
   const edge = (ray: { a: number; d: number }, r0: number, r1: number): { px: number; py: number }[] => {
     const top = Math.min(r1, ray.d);

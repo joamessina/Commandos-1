@@ -45,6 +45,11 @@ describe('vision', () => {
     expect(rayReach(map, 50, 50, 0, 800)).toBe(56); // entra en el sector Ocluso a x=100 (50 + 8·7)
     expect(rayReach(map, 50, 50, Math.PI, 800)).toBe(800);
     expect(rayReach(null, 0, 0, 0, 300)).toBe(300);
+    // el suelo del sector Ocluso está en z=0: tapa a quien está a su nivel y no a quien mira desde 100 u más arriba
+    expect(rayReach(map, 50, 50, 0, 800, 0)).toBe(56);
+    expect(rayReach(map, 50, 50, 0, 800, 100)).toBe(800);
+    expect(lineClear(map, 50, 50, 250, 50, 0)).toBe(false);
+    expect(lineClear(map, 50, 50, 250, 50, 100)).toBe(true);
     expect(sees({ x: 50, y: 50, heading: 0 }, { x: 250, y: 50, radius: 10, low: false }, map)).toBe(false);
     expect(sees({ x: 50, y: 50, heading: 0 }, { x: 90, y: 50, radius: 10, low: false }, map)).toBe(true);
   });

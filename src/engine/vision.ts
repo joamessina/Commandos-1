@@ -6,13 +6,18 @@
  *           8 u y se corta en un sector con el flag Ocluso (0x10), sin mirar alturas ni volúmenes; sin luz/noche. Cuándo mejorar: al leer 0x5F9820.
  */
 import { SectorFlag } from '../formats/sec.ts';
-import type { SectorMap } from './sectors.ts';
+import { groundZ, type SectorMap } from './sectors.ts';
 
 const RAD = Math.PI / 180;
+
+/** Un sector Ocluso solo tapa la vista si su suelo no queda por debajo de los pies del observador en más de esto (la roca de abajo no tapa a quien mira desde una torre). */
+const OCCLUDER_DROP = 15;
 
 export interface Viewer {
   readonly x: number;
   readonly y: number;
+  /** Altura del suelo del observador; sin ella (pruebas) cualquier sector Ocluso tapa. */
+  readonly z?: number;
   /** Centro del cono en grados de mundo (rumbo del cuerpo + giro de cabeza). */
   readonly heading: number;
   /** Alcance (`+0x64`). */
@@ -51,29 +56,35 @@ export function inCone(v: Viewer, e: Seen): boolean {
   return n1 > -r && n2 > -r && n3 > 0;
 }
 
+const blocks = (s: Parameters<typeof groundZ>[0], x: number, y: number, z: number | undefined): boolean => z === undefined || groundZ(s, x, y) > z - OCCLUDER_DROP;
+
 /** ¿Pasa el rayo de (ax,ay) a (bx,by) sin cruzar un sector Ocluso (ignorando el del observador y el del blanco)? */
-export function lineClear(sectors: SectorMap | null, ax: number, ay: number, bx: number, by: number): boolean {
+export function lineClear(sectors: SectorMap | null, ax: number, ay: number, bx: number, by: number, z?: number): boolean {
   if (!sectors) return true;
   const own = sectors.at(ax, ay);
   const goal = sectors.at(bx, by);
   const n = Math.ceil(Math.hypot(bx - ax, by - ay) / 8);
   for (let i = 1; i < n; i++) {
     const s = sectors.at(ax + ((bx - ax) * i) / n, ay + ((by - ay) * i) / n);
-    if (s && s !== own && s !== goal && (s.flags & SectorFlag.Ocluso) !== 0) return false;
+    const x = ax + ((bx - ax) * i) / n;
+    const y = ay + ((by - ay) * i) / n;
+    if (s && s !== own && s !== goal && (s.flags & SectorFlag.Ocluso) !== 0 && blocks(s, x, y, z)) return false;
   }
   return true;
 }
 
 /** Vista completa: cono y rayo despejado. */
-export const sees = (v: Viewer, e: Seen, sectors: SectorMap | null): boolean => inCone(v, e) && lineClear(sectors, v.x, v.y, e.x, e.y);
+export const sees = (v: Viewer, e: Seen, sectors: SectorMap | null): boolean => inCone(v, e) && lineClear(sectors, v.x, v.y, e.x, e.y, v.z);
 
 /** Hasta dónde llega un rayo desde (x,y) con rumbo `ang` (rad) antes de entrar en un sector Ocluso o de llegar a `range` (el mismo corte que `lineClear`). */
-export function rayReach(sectors: SectorMap | null, x: number, y: number, ang: number, range: number): number {
+export function rayReach(sectors: SectorMap | null, x: number, y: number, ang: number, range: number, z?: number): number {
   if (!sectors) return range;
   const own = sectors.at(x, y);
   for (let d = 8; d < range; d += 8) {
-    const s = sectors.at(x + Math.cos(ang) * d, y + Math.sin(ang) * d);
-    if (s && s !== own && (s.flags & SectorFlag.Ocluso) !== 0) return d;
+    const px = x + Math.cos(ang) * d;
+    const py = y + Math.sin(ang) * d;
+    const s = sectors.at(px, py);
+    if (s && s !== own && (s.flags & SectorFlag.Ocluso) !== 0 && blocks(s, px, py, z)) return d;
   }
   return range;
 }
