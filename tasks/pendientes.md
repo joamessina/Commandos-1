@@ -54,6 +54,8 @@
 
 ## C. Lectura del exe aún pendiente
 
+- [x] Mapa general con funciones, VA y líneas de Ghidra: `docs/exe-mapa-general.md` (2026-10-30, 49 anclas verificadas; inventario `all2`: 37.026 funciones). Índice reproducible con `tools/mapa-exe.py`; no implica lectura completa del núcleo ni de las funciones sin atribuir.
+
 | ✔ | Qué | % investigado | Dificultad | Notas |
 |---|---|---|---|---|
 | [ ] | Colores y tipo de cada rebanada del cono de visión | 40 % | Media-alta | `render.md` cierre 7c; el decompilado esconde argumentos FPU. |

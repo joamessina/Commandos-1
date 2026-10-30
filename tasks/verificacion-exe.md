@@ -2,6 +2,8 @@
 
 Regla: antes de implementar algo se lee su definición en el exe (tabla, función o memoria del juego en marcha); lo que no, queda acá como atajo con su fecha de revisión.
 
+Mapa general (2026-10-30): `docs/exe-mapa-general.md` enlaza 49 funciones con VA, líneas reales y notas previas. Se verificaron cabeceras contra `ghidra/all2` (37.026 funciones; inicializador `FUN_00786e60` completo); `all` es anterior y tiene 29.304. Es navegación y atribución documentada, no lectura semántica nueva de todas esas funciones. Sin cambios de reglas ni atajos nuevos; no se verificó en ejecución.
+
 | Qué | Estado | Fuente / falta |
 |---|---|---|
 | Posiciones de ítems de la mochila (boina verde, marine, francotirador) | leído (memoria del juego) | `docs/lectura/hud.md` cierres 5-6; zapador: solo 3 de captura + 4 de otro comando; quién recalcula los offsets al elegir comando: sin leer |
