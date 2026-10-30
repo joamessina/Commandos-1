@@ -22,8 +22,8 @@ const AIM_CYCLES = 0x28; // acc+0x90 de la orden 8
 const LOSE_CYCLES = 20; // sin ver al blanco: va a investigar
 const SHOT_DAMAGE = 30;
 const RELOAD_BASE = 15; // acc+0x50 por defecto de AcDisparar
-/** SONIDO_PELIGRO (el disparo) lo oyen los soldados a menos de 200 u. */
-export const GUNSHOT_RADIUS = 200;
+/** Ruido del fusil del soldado (`FUSL` en la tabla de ruidos 0x821DE0: radio 400; la pistola enemiga sería `PIPA` 600). Se oye si dist < radio (Oido01, strict). */
+export const GUNSHOT_RADIUS = 400;
 const SWEEP_AMP = 50; // AcVigilar ANGBARRIDO por defecto
 const SWEEP_PERIOD = 100; // DEMORA por defecto
 const SWEEP_PHASE = [0, 4, 3, 0, 2, 1, 1, 4, 2, 0, 2, 4, 2, 0, 3, 1]; // 0x812B28
@@ -52,6 +52,8 @@ export interface Shot {
 export interface SoldierWorld {
   /** Comandos vivos o muertos (el soldado filtra). */
   readonly commandos: readonly Unit[];
+  /** Cuerpos tirados (soldados y comandos muertos): al verlos va a investigar (clasificador FUN_006AFC10 código 2 → FUN_004326B0). */
+  readonly bodies?: readonly { readonly x: number; readonly y: number }[];
   readonly sectors: SectorMap | null;
   readonly rng: () => number;
   /** Un disparo de un soldado: el mundo lo dibuja y avisa a los demás. */
@@ -77,6 +79,7 @@ export class Soldier implements Target {
   private cooldown = 0;
   private moving = false;
   private spot: { x: number; y: number } | null = null;
+  private readonly seenBodies = new Set<string>();
 
   constructor(token: string, unit: Unit, route: Route | null, opts: { readonly range?: number; readonly angle?: number } = {}) {
     this.token = token;
@@ -186,6 +189,7 @@ export class Soldier implements Target {
       this.spot = { x: seen.body.x, y: seen.body.y };
     } else this.lost++;
 
+    if (!seen && (this.order === Order.Patrol || this.order === Order.Return)) this.lookForBodies(w);
     switch (this.order) {
       case Order.Patrol:
       case Order.Return:
@@ -205,6 +209,23 @@ export class Soldier implements Target {
         break;
     }
     this.unit.tick();
+  }
+
+  /**
+   * Ve un cuerpo por primera vez (FUN_004326B0: anota su posición y mira hacia él) y va a verlo de cerca.
+   * shortcut: el exe además sube el nivel de alerta y puede dar la alarma por la cadena de reacciones (no portada); aquí solo investiga el sitio, una vez por cuerpo.
+   */
+  private lookForBodies(w: SoldierWorld): void {
+    const b = this.unit.body;
+    const viewer = { x: b.x, y: b.y, z: this.unit.z, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle };
+    for (const body of w.bodies ?? []) {
+      const key = `${Math.round(body.x).toString()},${Math.round(body.y).toString()}`;
+      if (this.seenBodies.has(key) || (body.x === b.x && body.y === b.y)) continue;
+      if (!sees(viewer, { x: body.x, y: body.y, radius: 10, low: false }, w.sectors)) continue;
+      this.seenBodies.add(key);
+      this.investigate(body.x, body.y);
+      return;
+    }
   }
 
   private startAim(c: Unit): void {

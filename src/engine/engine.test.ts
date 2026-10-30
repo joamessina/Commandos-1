@@ -256,3 +256,42 @@ describe('Unit: agacharse (AUAgacharse)', () => {
     expect(u.toggleCrouch()).toBe(false);
   });
 });
+
+describe('Unit: acciones con llegada y animación (ManejaBomba)', () => {
+  const anmB = parseAnm(bnm([{ type: 0, slots: [2] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(2, 'PONEBOMBA', 4, 0, 11, 8)]));
+
+  it('camina al sitio, y al llegar anima PONEBOMBA 11 ciclos y recién entonces actúa', () => {
+    const u = new Unit('ARTIFIC', anmB, 0, 0, 0, 0);
+    const log: string[] = [];
+    expect(u.doAt({ x: 40, y: 0 }, () => {
+      u.playOnce('PONEBOMBA', () => {
+        log.push('plantada');
+      });
+    })).toBe(true);
+    let ticks = 0;
+    while (!u.occupied && ticks < 200) {
+      u.tick();
+      ticks++;
+    }
+    expect(u.occupied).toBe(true);
+    expect(u.anim.name).toBe('PONEBOMBA');
+    expect(log).toEqual([]);
+    for (let i = 0; i < 10; i++) u.tick();
+    expect(log).toEqual([]);
+    u.tick();
+    expect(log).toEqual(['plantada']);
+    expect(u.occupied).toBe(false);
+  });
+
+  it('stop() cancela la acción pendiente y la animación', () => {
+    const u = new Unit('A', anmB, 0, 0, 0, 0);
+    let hecho = false;
+    u.playOnce('PONEBOMBA', () => {
+      hecho = true;
+    });
+    u.stop();
+    for (let i = 0; i < 20; i++) u.tick();
+    expect(hecho).toBe(false);
+    expect(u.anim.period('NOEXISTE')).toBe(0);
+  });
+});

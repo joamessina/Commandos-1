@@ -151,3 +151,34 @@ describe('minas', () => {
     expect(e.mines[0]?.fuse).toBeNull();
   });
 });
+
+describe('MATABICHOSSECTOR', () => {
+  const MIS2 = `.MISSION [ .INTENDENCIAINFO [ .MATABICHOSSECTOR [ [ .TOKEN ANTI01 .SECTORS [ [ .XYZ [ 1 2 3 ] .DESAPARECE 1 ] [ .XYZ [ 9 9 9 ] ] [ .XYZ [ 1 2 ] ] ] ] [ .SECTORS [ ] ] ] ] .AUTOEXPCASAS [ [ .MAP ANTI01 ] ] ]`;
+  const { sites, kills } = parseSites(MIS2, vol, []);
+
+  it('parsea las zonas por token', () => {
+    expect(kills.get('ANTI01')).toEqual([
+      { x: 1, y: 2, z: 3, vanish: true },
+      { x: 9, y: 9, z: 9, vanish: false },
+    ]);
+  });
+
+  it('al destruirse el sitio mueren los del sector (y desaparece el cuerpo si DESAPARECE); los de otro sector no', () => {
+    const sec = { id: 'a' } as never;
+    const otro = { id: 'b' } as never;
+    const dentro = new Soldier('D', unit(500, 500, 'D'), null);
+    const fuera = new Soldier('F', unit(700, 700, 'F'), null);
+    const cmd = unit(500, 500, 'COMANDO');
+    dentro.unit.sector = sec;
+    fuera.unit.sector = otro;
+    cmd.sector = sec;
+    const d = new Demolition(sites, ['ANTI01'], { soldiers: [dentro, fuera], commandos: [cmd] }, 0, { sectors: { at: () => sec, atZ: (x: number, y: number, z: number) => (z === 3 ? sec : null) }, kills });
+    d.explode(500, 500, 30);
+    expect(d.destroyed.has('ANTI01')).toBe(true);
+    expect(dentro.dead).toBe(true);
+    expect(dentro.unit.hidden).toBe(true);
+    expect(cmd.dead).toBe(true);
+    expect(cmd.hidden).toBe(true);
+    expect(fuera.dead).toBe(false);
+  });
+});

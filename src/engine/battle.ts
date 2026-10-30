@@ -1,5 +1,5 @@
 /**
- * Combate de una misión: reparte el ciclo entre soldados y ataques de los comandos, propaga el ruido de los disparos (a menos de 200 u, `SONIDO_PELIGRO`)
+ * Combate de una misión: reparte el ciclo entre soldados y ataques de los comandos, propaga el ruido de los disparos (radio de la tabla de ruidos: pistola 600, fusil 400)
  * y guarda los rastros de disparo para dibujarlos. Reglas en soldier.ts y attack.ts.
  */
 import { Attack, type Target, type Weapon } from './attack.ts';
@@ -49,8 +49,8 @@ export class Battle {
     return this.attacks.has(unit);
   }
 
-  private noise(x: number, y: number): void {
-    for (const s of this.soldiers) if (Math.hypot(s.unit.body.x - x, s.unit.body.y - y) < GUNSHOT_RADIUS) s.hear(x, y);
+  private noise(x: number, y: number, radius: number): void {
+    for (const s of this.soldiers) if (Math.hypot(s.unit.body.x - x, s.unit.body.y - y) < radius) s.hear(x, y);
   }
 
   /** Un ciclo lógico (los movimientos de los comandos los hace `Unit.tick` fuera). */
@@ -58,16 +58,18 @@ export class Battle {
     for (const [u, a] of this.attacks) {
       a.tick({
         sectors: this.sectors,
-        noise: (x, y) => {
-          this.noise(x, y);
+        noise: (x, y, r) => {
+          this.noise(x, y, r);
         },
         onShot: (fx, fy, tx, ty) => this.tracers.push({ fromX: fx, fromY: fy, toX: tx, toY: ty, hit: true, ttl: TRACER_CYCLES, enemy: false }),
       });
       if (a.done) this.attacks.delete(u);
     }
+    const bodies = [...this.soldiers.filter((s) => s.dead && !s.unit.hidden).map((s) => ({ x: s.x, y: s.y })), ...this.commandos.filter((c) => c.dead && !c.hidden).map((c) => ({ x: c.body.x, y: c.body.y }))];
     for (const s of this.soldiers) {
       s.tick({
         commandos: this.commandos,
+        bodies,
         sectors: this.sectors,
         rng: this.rng,
         onShot: (from, shot) => {

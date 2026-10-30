@@ -51,6 +51,11 @@ export class Animator {
     return this.anm.sequences.has(name);
   }
 
+  /** Duración en ticks de una secuencia no cíclica (`b`); 0 si no existe o no tiene período de tiempo. */
+  period(name: string): number {
+    return this.anm.sequences.get(name)?.b ?? 0;
+  }
+
   /** Cambia de secuencia y reinicia los acumuladores (no hace nada si ya es la actual). */
   set(name: string): void {
     if (name === this.seq.name) return;

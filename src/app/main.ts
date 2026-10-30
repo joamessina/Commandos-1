@@ -101,6 +101,8 @@ interface Game {
   readonly soldiers: SoldierView[];
   /** Arma elegida: el clic en un soldado ataca con ella (null = clic mueve). */
   mode: Weapon | null;
+  /** El zapador va a plantar la bomba donde se haga clic (B). */
+  planting: boolean;
   showCones: boolean;
   readonly props: Prop[];
   readonly boat: { readonly boat: Boat; readonly prop: Prop } | null;
@@ -276,15 +278,15 @@ async function load(): Promise<void> {
   const first = units[0]?.unit;
   const p = first ? project(first.body.x, first.body.y, first.z) : { px: img.width / 2, py: img.height / 2 };
   const battle = new Battle(soldiers.map((s) => s.soldier), units.map((u) => u.unit), sectors);
-  const { sites, objectives, escape } = parseSites(misText, vol, elems);
-  const demo = new Demolition(sites, objectives, { soldiers: battle.soldiers, commandos: battle.commandos }, bombCount);
+  const { sites, objectives, escape, kills } = parseSites(misText, vol, elems);
+  const demo = new Demolition(sites, objectives, { soldiers: battle.soldiers, commandos: battle.commandos }, bombCount, { sectors, kills });
   const barrelMap = new Map<Barrel, Prop>();
   for (const e of elems) if (e.macro?.toUpperCase() === 'MINASUB') demo.addMine(e.x, e.y);
   for (const b of barrelProps) barrelMap.set(demo.addBarrel(b.elem.token, b.elem.x, b.elem.y), b.prop);
-  game = { demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, battle, soldiers, mode: null, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
-  say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic para elegir/caminar, Mayús+clic corre.`);
+  say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.`);
 }
 
 /** `.ARMAS [ … ]` de la acción AuDisparar de un comando. */
@@ -348,6 +350,7 @@ function setupStage(): void {
       e.preventDefault();
     });
     stage.addEventListener('mousedown', onMouse);
+    stage.addEventListener('mouseup', onRightUp);
     stage.addEventListener(
       'wheel',
       (e) => {
@@ -412,10 +415,11 @@ const EDGE = 24; // shortcut: el exe pide el píxel exacto del borde (cx == 0, c
 /**
  * Scroll de la cámara (docs/research/q1-camara.md §Scroll): paso n = 16 (Mayús 32, Ctrl 4); con una dirección pulsada el impulso es n·0,1875 por ciclo hasta
  * un tope n·1,5; sin impulso la velocidad decae ×0,7 por ciclo y se corta a 0 por debajo de 1. `cycles` = ciclos de 1/20 s transcurridos.
- * shortcut: el exe corre esto 1 vez por cuadro de la interfaz; aquí se reparte por tiempo para que no dependa de los Hz del monitor; sin el cambio de paso con zoom < 1.
+ * shortcut: el exe corre esto 1 vez por cuadro de la interfaz; aquí se reparte por tiempo para que no dependa de los Hz del monitor.
  */
 function scrollCamera(g: Game, cycles: number): void {
-  const n = keys.has('shift') ? 32 : keys.has('control') ? 4 : 16;
+  const n0 = keys.has('shift') ? 32 : keys.has('control') ? 4 : 16;
+  const n = zoom() < 1 ? Math.trunc(n0 / zoom()) : n0; // con zoom < 1 el paso es ftol(n / zoom) (FUN_006B2EE0): la velocidad en pantalla no cae
   let ix = (keys.has('arrowright') || keys.has('d') ? 1 : 0) - (keys.has('arrowleft') || keys.has('a') ? 1 : 0);
   let iy = (keys.has('arrowdown') || keys.has('s') ? 1 : 0) - (keys.has('arrowup') || keys.has('w') ? 1 : 0);
   if (ix === 0 && iy === 0 && cursor.inside && stage) {
@@ -507,7 +511,7 @@ function draw(g: Game): void {
   for (const s of g.soldiers) {
     const u = s.soldier.unit;
     const { px, py } = project(u.body.x, u.body.y, u.z);
-    if (off(px, py)) continue;
+    if (off(px, py) || u.hidden) continue;
     add({ x: u.body.x, y: u.body.y, z: u.z, r: 10, h: s.soldier.dead ? 0.5 : 40 }, s.sprites, u.anim.frame(u.body.ang), px, py);
   }
   const placed = g.volOrder.place(drawables.map((d) => d.actor));
@@ -641,7 +645,7 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   });
   const sel = g.units[g.selected];
   ctx.fillStyle = '#d9dde3';
-  ctx.fillText(`Arma: ${g.mode ?? 'ninguna (clic = mover)'}  ·  F pistola · R fusil · C cuchillo · G agacharse · Esc mover · E subir al bote · V conos`, 10, 14 + g.units.length * 34);
+  ctx.fillText(`Arma: ${g.planting ? 'bomba (clic donde plantar)' : (g.mode ?? 'ninguna (clic = mover)')}  ·  F pistola · R fusil · C cuchillo · G agacharse · Esc mover · E subir al bote · V conos`, 10, 14 + g.units.length * 34);
   if (sel) ctx.fillText(`Disponibles: ${sel.weapons.join(', ') || '—'}`, 10, 30 + g.units.length * 34);
   let oy = 14;
   ctx.fillStyle = 'rgba(0,0,0,.55)';
@@ -675,7 +679,55 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   }
 }
 
-let lastRight = 0;
+/** ManejaBomba (docs/lectura/au-jugador.md): camina hasta el sitio, anima PONEBOMBA (11 ciclos) y entonces deja la bomba. */
+function plantBomb(g: Game, u: Unit, spot: { x: number; y: number; sector: Parameters<Unit['goTo']>[2] }): boolean {
+  return u.doAt(
+    spot,
+    () => {
+      u.playOnce('PONEBOMBA', () => {
+        say(g.demo.plant(u.body.x, u.body.y) ? 'Bomba plantada. X para detonar.' : 'No te quedan bombas.');
+      });
+    },
+    spot.sector,
+  );
+}
+
+/** Punto (en píxeles de la ventana) donde se apretó el botón derecho: arrastrar dibuja el rectángulo de selección (FUN_005BA260/5BA2F0/0069AAD0). */
+let rightDown: { x: number; y: number } | null = null;
+
+/**
+ * Botón derecho (docs/research/q1-controles.md): apretar anota el punto; al soltar, si el rectángulo mide < 3 px es `BOTON2VIRTUAL` = parar/cancelar la acción en curso del
+ * elegido; si no, selección por rectángulo. shortcut: la selección es de un solo comando (el primero dentro del rectángulo); el exe selecciona varios (`MULTIPLE…`).
+ */
+function onRightUp(e: MouseEvent): void {
+  const g = game;
+  const d = rightDown;
+  rightDown = null;
+  if (!g || !stage || !d || e.button !== 2) return;
+  const r = stage.getBoundingClientRect();
+  const x1 = e.clientX - r.left;
+  const y1 = e.clientY - r.top;
+  if (Math.hypot(x1 - d.x, y1 - d.y) < 3) {
+    const u = g.units[g.selected]?.unit;
+    if (!u || u.dead) return;
+    g.battle.cancel(u);
+    u.stop();
+    if (u.boat) u.boat.stop();
+    say(`${u.token}: orden cancelada.`);
+    return;
+  }
+  const z = zoom();
+  const { width, height } = stage;
+  const toMap = (sx: number, sy: number): { x: number; y: number } => ({ x: g.camX - width / z / 2 + sx / z, y: g.camY - height / z / 2 + sy / z });
+  const a = toMap(Math.min(d.x, x1), Math.min(d.y, y1));
+  const b = toMap(Math.max(d.x, x1), Math.max(d.y, y1));
+  const idx = g.units.findIndex((u) => {
+    const p = project(u.unit.body.x, u.unit.body.y, u.unit.z);
+    return !u.unit.dead && p.px >= a.x && p.px <= b.x && p.py >= a.y && p.py <= b.y + 40;
+  });
+  if (idx >= 0) g.selected = idx;
+}
+
 function onMouse(e: MouseEvent): void {
   const g = game;
   if (!g || !stage) return;
@@ -695,14 +747,22 @@ function onMouse(e: MouseEvent): void {
     return Math.abs(mx - p.px) < 14 && my > p.py - 40 && my < p.py + 8;
   });
   const barrel = [...g.barrelProps].find(([b, pr]) => !b.dead && Math.abs(mx - project(pr.x, pr.y, pr.z).px) < 14 && Math.abs(my - project(pr.x, pr.y, pr.z).py + 10) < 20)?.[0];
-  if (e.button === 0 && hit >= 0) g.selected = hit;
+  if (e.button === 2) {
+    rightDown = { x: e.clientX - r.left, y: e.clientY - r.top };
+    return;
+  }
+  if (e.button === 0 && g.planting && sel && !sel.dead && !sel.boat) {
+    g.planting = false;
+    const spot = g.sectors ? g.sectors.pick(mx, my) : { ...unproject(mx, my, sel.z), sector: null };
+    g.battle.cancel(sel);
+    if (!spot || !plantBomb(g, sel, spot)) say('No hay camino a pie hasta ese punto.');
+  } else if (e.button === 0 && hit >= 0) g.selected = hit;
   else if (e.button === 0 && (g.mode === 'PISTOLA' || g.mode === 'MIRILLA') && barrel && sel && !sel.dead && !sel.boat && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, barrel, g.mode);
   else if (e.button === 0 && g.mode && foe && sel && !sel.dead && !sel.boat && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, foe.soldier, g.mode);
-  else if (sel && !sel.dead && (e.button === 0 || e.button === 2)) {
+  else if (sel && !sel.dead && e.button === 0) {
     g.battle.cancel(sel);
-    const now = performance.now();
-    const run = e.shiftKey || (e.button === 2 && now - lastRight < 350);
-    if (e.button === 2) lastRight = now;
+    const run = e.detail >= 2 || e.shiftKey; // doble clic izquierdo = BOTON1DBLCLK: AuGoTo corre (FUN_004F68A0); Mayús queda como atajo extra
+    
     // el cursor apunta al sector más alto que cruza el rayo del píxel (FUN_005F5590), no a un plano fijo
     const hit = g.sectors ? g.sectors.pick(mx, my) : { ...unproject(mx, my, sel.z), sector: null }; // sin .SEC: plano fijo del comando
     if (!hit) say('Ese punto está fuera de los sectores del mapa.');
@@ -757,7 +817,10 @@ window.addEventListener('keydown', (e) => {
     if (u?.weapons.includes(w)) g.mode = w;
     else say(`${u?.unit.token ?? ''} no tiene ${w.toLowerCase()}.`);
   }
-  if (k === 'escape') g.mode = null;
+  if (k === 'escape') {
+    g.mode = null;
+    g.planting = false;
+  }
   if (k === 'g') {
     const cu = g.units[g.selected]?.unit;
     if (cu && !cu.dead) {
@@ -772,8 +835,12 @@ window.addEventListener('keydown', (e) => {
   const cur = g.units[g.selected]?.unit;
   if (k === 'b' && cur && !cur.dead && !cur.boat) {
     if (cur.token !== 'ARTIFIC') say(`${cur.token} no sabe manejar bombas (solo el zapador, ARTIFIC).`);
-    else if (!g.demo.plant(cur.body.x, cur.body.y)) say('No te quedan bombas.');
-    else say('Bomba plantada. X para detonar.');
+    else if (g.demo.bombs <= 0) say('No te quedan bombas.');
+    else {
+      g.planting = true;
+      g.mode = null;
+      say('Clic donde plantar la bomba (Esc cancela). X detona.');
+    }
   }
   if (k === 'x' && g.demo.detonate() === 0) say('No hay bombas plantadas.');
   if (k === 'e' && cur && !cur.dead && !cur.boat && g.boat) {

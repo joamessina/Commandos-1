@@ -55,6 +55,13 @@ export class Unit {
   crouched = false;
   /** Velocidad al andar (VEL de la ruta del soldado); null = la del jugador, 2,5. */
   speed: number | null = null;
+  /** Oculto (el cuerpo `DESAPARECE` de MATABICHOSSECTOR): no se dibuja ni se ve. */
+  hidden = false;
+  /** Acción pendiente al llegar al destino de `doAt` (p. ej. plantar la bomba). */
+  private arrive: (() => void) | null = null;
+  /** Ciclos que faltan de una animación que ocupa al personaje (`playOnce`) y qué hacer al terminar. */
+  private busy = 0;
+  private busyDone: (() => void) | null = null;
   /** Vehículo en el que va (su plaza = `seat`): el cuerpo sigue a la plaza y no camina. */
   boat: Boat | null = null;
   private seat = 0;
@@ -133,10 +140,35 @@ export class Unit {
     return this.crouched;
   }
 
-  /** Detiene la orden de caminar en curso. */
+  /** Detiene la orden de caminar en curso (y cualquier acción pendiente). */
   stop(): void {
     this.path = [];
     this.target = null;
+    this.arrive = null;
+    this.busy = 0;
+    this.busyDone = null;
+  }
+
+  /** ¿Está ocupado en una animación de acción (`playOnce`)? */
+  get occupied(): boolean {
+    return this.busy > 0;
+  }
+
+  /** Camina hasta `p` y al llegar ejecuta `then` (ManejaBomba: camina → gira → anima → actúa, docs/lectura/au-jugador.md). Devuelve false si no hay camino. */
+  doAt(p: Vec, then: () => void, sector?: Sector | null): boolean {
+    if (!this.goTo(p, false, sector)) return false;
+    this.arrive = then;
+    return true;
+  }
+
+  /** Reproduce una animación una vez, quieto, durante su período, y al terminar llama a `done`. */
+  playOnce(name: string, done: () => void): void {
+    this.path = [];
+    this.target = null;
+    this.arrive = null;
+    if (this.anim.has(name)) this.anim.set(name);
+    this.busy = Math.max(1, this.anim.period(name));
+    this.busyDone = done;
   }
 
   /** Coloca al personaje (teletransporte de JUMP, al bajar de un vehículo): posición y rumbo, y vuelve a buscar el sector. */
@@ -221,6 +253,15 @@ export class Unit {
       this.anim.advance(0, 1);
       return;
     }
+    if (this.busy > 0) {
+      this.anim.advance(0, 1);
+      if (--this.busy === 0) {
+        const d = this.busyDone;
+        this.busyDone = null;
+        d?.();
+      }
+      return;
+    }
     if (this.boat) {
       this.ride();
       return;
@@ -233,6 +274,11 @@ export class Unit {
       this.path.shift();
       if (this.path.length === 0) this.target = null;
     } else if (wp) this.watchStuck(r.dx, r.dy);
+    if (this.arrive && this.target === null && this.path.length === 0) {
+      const a = this.arrive;
+      this.arrive = null;
+      a();
+    }
     const rad = (this.body.ang * Math.PI) / 180;
     this.anim.advance(r.dx * Math.cos(rad) + r.dy * Math.sin(rad), 1); // distancia sobre el rumbo (FUN_00591DE0)
   }

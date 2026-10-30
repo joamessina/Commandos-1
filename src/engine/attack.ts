@@ -13,6 +13,9 @@ import { norm360 } from './walk.ts';
 
 export type Weapon = 'PISTOLA' | 'MIRILLA' | 'CUCHILLO';
 
+/** Radio del ruido del disparo de la pistola (`PIPA` en la tabla de ruidos 0x821DE0, docs/engine/percepcion.md §4.3). */
+export const PISTOL_NOISE = 600;
+
 export const RANGE: Readonly<Record<Weapon, number>> = { PISTOLA: 300, MIRILLA: 1000, CUCHILLO: 28 };
 export const DAMAGE: Readonly<Record<Weapon, number>> = { PISTOLA: 40, MIRILLA: 100, CUCHILLO: 120 };
 const AIM_CYCLES = 8;
@@ -33,8 +36,8 @@ const isDead = (t: Target): boolean => t.dead;
 
 export interface AttackWorld {
   readonly sectors: SectorMap | null;
-  /** Ruido de un disparo en (x,y): los soldados cercanos lo oyen. */
-  readonly noise: (x: number, y: number) => void;
+  /** Ruido de un disparo en (x,y) con su radio: los soldados a menos de ese radio lo oyen. */
+  readonly noise: (x: number, y: number, radius: number) => void;
   /** Rastro visual de un disparo. */
   readonly onShot: (fromX: number, fromY: number, toX: number, toY: number) => void;
 }
@@ -86,7 +89,7 @@ export class Attack {
       const a = this.weapon === 'MIRILLA' ? 'DISPARARIFLE' : 'DISPARAPISTOLA';
       if (u.anim.has(a)) u.anim.set(a);
       w.onShot(b.x, b.y, tg.x, tg.y);
-      if (this.weapon === 'PISTOLA') w.noise(b.x, b.y);
+      if (this.weapon === 'PISTOLA') w.noise(b.x, b.y, PISTOL_NOISE);
     }
     tg.hurt(this.weapon, u);
     if (isDead(tg)) this.done = true; // hurt() cambia `dead`

@@ -12,6 +12,7 @@ import { asList, asNumbers, asText, find, parseClave, type Node } from '../forma
 import type { Vol } from '../formats/vol.ts';
 import type { Target, Weapon } from './attack.ts';
 import type { Boat } from './boat.ts';
+import type { SectorMap } from './sectors.ts';
 import type { Soldier } from './soldier.ts';
 import type { Unit } from './unit.ts';
 import type { Elem } from './world.ts';
@@ -79,7 +80,7 @@ function polyRect(vol: Vol, name: string): Rect | null {
  * Sitios destructibles de una misión: cada `.AUTOEXPCASAS [ [ .MAP X (.TILES …) ] ]` y cada elemento con `acExplotaCasa` (su cilindro de colisión es la caja;
  * `.CAMBIATILES` dice qué volúmenes cambian). Los objetivos son los tokens de `.OBJETIVOS [ [ .OBJETIVO t ] ]`.
  */
-export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): { sites: Site[]; objectives: string[]; escape: { x: number; y: number } | null } {
+export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): { sites: Site[]; objectives: string[]; escape: { x: number; y: number } | null; kills: Map<string, KillZone[]> } {
   const mission = asList(find(parseClave(misText), '.MISSION')) ?? [];
   const sites: Site[] = [];
   for (const e of asList(find(mission, '.AUTOEXPCASAS')) ?? []) {
@@ -107,7 +108,20 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
     if (t) objectives.push(t);
   }
   const esc = asNumbers(find(info, '.PUNTOHUIDA'));
-  return { sites, objectives, escape: esc && esc.length >= 2 ? { x: esc[0] ?? 0, y: esc[1] ?? 0 } : null };
+  const kills = new Map<string, KillZone[]>();
+  for (const m of asList(find(info, '.MATABICHOSSECTOR')) ?? []) {
+    const ml = asList(m) ?? [];
+    const token = asText(find(ml, '.TOKEN'));
+    if (!token) continue;
+    const zones: KillZone[] = [];
+    for (const s of asList(find(ml, '.SECTORS')) ?? []) {
+      const sl = asList(s) ?? [];
+      const p = asNumbers(find(sl, '.XYZ'));
+      if (p?.length === 3) zones.push({ x: p[0] ?? 0, y: p[1] ?? 0, z: p[2] ?? 0, vanish: asText(find(sl, '.DESAPARECE')) === '1' });
+    }
+    kills.set(token, zones);
+  }
+  return { sites, objectives, escape: esc && esc.length >= 2 ? { x: esc[0] ?? 0, y: esc[1] ?? 0 } : null, kills };
 }
 
 /** Barril explosivo (`AcBarrilExpl`): estalla con un disparo (DISPARO está en su lista) o con otra explosión. */
@@ -143,6 +157,14 @@ const MINE_R = 17;
 const MINE_BLAST = 20; // RADIOACCIONMINA
 const MINE_FUSE = 20; // la mina disparada explota 1 s después (+0x18 > 0x13)
 
+/** Zona de `MATABICHOSSECTOR`: al morir el elemento disparador (su token) mueren los bichos del sector bajo (x,y,z) (`FUN_0059D490`, impacto 1 / 1000); con `DESAPARECE` el cuerpo desaparece. */
+export interface KillZone {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly vanish: boolean;
+}
+
 export interface People {
   readonly soldiers: readonly Soldier[];
   readonly commandos: readonly Unit[];
@@ -161,10 +183,16 @@ export class Demolition {
   bombs: number;
   /** El mapa cambió (hay que recomponerlo). */
   dirty = false;
+  /** Tokens de lo ya destruido (sitios y sus objetivos): lo consultan otras reglas (p. ej. la escalera ESCALA02 se desactiva con CASA04). */
+  readonly destroyed = new Set<string>();
   private readonly people: People;
+  private readonly sectors: Pick<SectorMap, 'atZ' | 'at'> | null;
+  private readonly kills: ReadonlyMap<string, readonly KillZone[]>;
   private readonly queue: { x: number; y: number; r: number }[] = [];
 
-  constructor(sites: Site[], objectives: readonly string[], people: People, bombs = 0) {
+  constructor(sites: Site[], objectives: readonly string[], people: People, bombs = 0, opts: { sectors?: Pick<SectorMap, 'atZ' | 'at'> | null; kills?: ReadonlyMap<string, readonly KillZone[]> } = {}) {
+    this.sectors = opts.sectors ?? null;
+    this.kills = opts.kills ?? new Map();
     this.sites = sites;
     this.objectives = new Map(objectives.map((o) => [o, false]));
     this.people = people;
@@ -254,9 +282,33 @@ export class Demolition {
       if (s.destroyed || dist2Rect(s.rect, x, y) > r * r) continue;
       s.destroyed = true;
       this.dirty = true;
-      for (const o of s.objectives) if (this.objectives.has(o)) this.objectives.set(o, true);
+      this.destroyed.add(s.name);
+      for (const o of s.objectives) {
+        this.destroyed.add(o);
+        if (this.objectives.has(o)) this.objectives.set(o, true);
+        this.fireKills(o);
+      }
+      this.fireKills(s.name);
     }
     for (const s of this.people.soldiers) if (!s.dead && Math.hypot(s.x - x, s.y - y) <= NOISE_RADIUS) s.hear(x, y);
+  }
+
+  /** MATABICHOSSECTOR (`FUN_0059D490`): al destruirse `token` mueren los de los sectores listados. */
+  private fireKills(token: string): void {
+    for (const z of this.kills.get(token) ?? []) {
+      const sec = this.sectors?.atZ(z.x, z.y, z.z) ?? this.sectors?.at(z.x, z.y) ?? null;
+      if (!sec) continue;
+      for (const s of this.people.soldiers) {
+        if (s.unit.sector !== sec) continue;
+        s.kill();
+        if (z.vanish) s.unit.hidden = true;
+      }
+      for (const c of this.people.commandos) {
+        if (c.sector !== sec || c.boat) continue;
+        c.hit(1e9);
+        if (z.vanish) c.hidden = true;
+      }
+    }
   }
 
   /** Estado del mapa para recomponerlo: renombres de tiles por volumen y volúmenes en ruinas. */

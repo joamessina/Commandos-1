@@ -193,3 +193,23 @@ describe('lookRange (alcance elíptico con la cabeza girada)', () => {
     expect(lookRange(800, 0, 0.5)).toBeCloseTo(400, 6);
   });
 });
+
+describe('Soldier: cuerpos', () => {
+  it('ve un cuerpo tirado en su cono y va a investigarlo, una sola vez por cuerpo', () => {
+    const u = unit(0, 0);
+    const s = new Soldier('S', u, null);
+    const body = { x: 150, y: 0 };
+    const w = { ...mkWorld([]).world, bodies: [body] };
+    let investigated = false;
+    for (let i = 0; i < 120 && !investigated; i++) {
+      s.tick(w);
+      investigated = s.order === Order.Investigate;
+    }
+    expect(investigated).toBe(true);
+    for (let i = 0; i < 400; i++) s.tick(w);
+    expect(s.order).toBe(Order.Patrol); // lo investigó y volvió; no lo vuelve a "descubrir"
+    const solo = new Soldier('T', unit(0, 0), null);
+    solo.tick({ ...mkWorld([]).world, bodies: [{ x: 0, y: 0 }] });
+    expect(solo.order).toBe(Order.Patrol);
+  });
+});
