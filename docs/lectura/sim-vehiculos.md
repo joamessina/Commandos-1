@@ -1,5 +1,7 @@
 # Lectura del exe — Dinámica de los `Sim*` de vehículo (`0x665030–0x66EE70`) y sus motores (`0x5EE250–0x5F3400`)
 
+**Conductores CLancha/CTanque:** [cierre-faltantes-70.md §3](cierre-faltantes-70.md#3-clancha-y-ctanque-selección-pérdida-y-reactividad-hecho) completa selección, adopción, pérdida tras cuatro ejecuciones sin aviso, estado3 de reanudación y NOVERHASTA. Distingue offsets de ambas acciones y destinatarios de disparo. Otras familias y consumidores del campo bicho+0x224 siguen pendientes.
+
 Complementa `vehiculos.md` (acción del jugador y parámetros del motor) y `parachoques.md` (colisión). **[hecho]** = leído con dirección y constantes comprobadas en el desensamblado (float vs double mirando `fld dword/qword`); **[hip]** = interpretación. 20 ciclos/s; todo en unidades de mundo por ciclo y grados (el exe pasa a radianes con `0x793910`/`0x79E810` = π/180). Recuperada la tanda `20261029-043628` (`tools/redump.py`, 255 funciones) y lo que le faltaba (`0x66C000–0x66F000`, leído con `readbatch ver`).
 
 ## 0. Marco común (el integrador de la base) [hecho]

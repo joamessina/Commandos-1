@@ -6,6 +6,8 @@
 
 **% investigado** = cuánto de la regla está leído del exe/datos (docs en `docs/lectura/`, `docs/research/`). **Dificultad**: Baja = sale rápido (menos de 1 sesión) · Media = 1 sesión · Alta = más de una sesión. Son estimaciones mías, no mediciones.
 
+**Continuación de faltantes (2026-10-30):** [`cierre-faltantes-70.md`](../docs/lectura/cierre-faltantes-70.md) documenta minimapa, PASW de agua, pérdida/selección de objetivo vehicular y22 grafos reales. Los porcentajes de las cuatro áreas se actualizan abajo; recinto final, otras familias y validación audiovisual siguen abiertos.
+
 ## A. Misión 0 (la que se juega hoy)
 
 | ✔ | Qué falta | % investigado | Dificultad | Notas |
@@ -25,7 +27,7 @@
 | [ ] | Munición y armas de los comandos | 90 % | Media | `cierre-70.md` §5: recarga pistola1/metralleta10, piedra no atonta600 como puño; granada y tabaco contrastados. Falta portar acciones restantes y corregir piedra. Reglas previas en `au-jugador.md`; límites de investigación por receptor/contexto en el cierre. |
 | [ ] | Explosiones: cráteres, partículas, temblor de cámara | 60 % | Media | `obj-explosivos.md`, `render.md` (temblor leído). |
 | [ ] | Sonido de la misión (olas, disparos, explosiones, voces) | 65 % | Media-alta | `sonido.md`; falta todo Web Audio. |
-| [ ] | HUD real (libretas, caras, mochila, tooltips) | 90 % | Alta | `cierre-70.md` §2: tabla por personaje `0x822768`, inicializador `0x78B6D0` y fórmula de offsets; incluye zapador/conductor, postura y paso de balas por ancho. Falta portar esas reglas, cerrar paletas/hover y transformaciones del minimapa; no hubo capturas nuevas. |
+| [ ] | HUD real (libretas, caras, mochila, tooltips) | 95 % | Alta | Tabla por personaje y balas en `cierre-70.md` §2; transformación, clic y marcadores del minimapa en `cierre-faltantes-70.md` §1,9 libretas reales validadas. Falta portar, paletas/hover, contextos restantes y contraste en pantalla; alias BMP/RLE del tutorial pendiente. |
 | [x] | Fin de misión: pantalla de resultados, puntuación por tiempo y energía, textos | 85 % | Media | Port de estrellas/rango/FINM/ALMU. `cierre-70.md` §8 confirma rango de campaña ya leído (score/6, tope4); falta portarlo. Restan presentación de bajas, códigos de fin y validación en pantalla. |
 | [ ] | Sombras de personajes y partículas de agua (estelas) | 50 % | Media | `render.md`. |
 | [ ] | Noche y luces (la misión 0 es de día: baja prioridad) | 85 % | Media | Curvas leídas en `render.md` cierre 2. |
@@ -35,12 +37,12 @@
 | ✔ | Qué falta | % investigado | Dificultad | Notas |
 |---|---|---|---|---|
 | [ ] | Misión 1 a 10: cargar y jugar cada una (MIS, Intendencia, objetivos, victoria) | 60 % | Alta (1 sesión por misión) | Intendencias leídas, mundo ya carga por macros. |
-| [ ] | Vehículos: tanque, camión, jeep, lancha, tren, avión | 85 % | Alta (2-3 sesiones) | `sim-vehiculos.md` + lectura nueva en `cierre-70.md` §3: Pilotaje, CLancha/CTanque y TiroAlBlanco (este último es entrenamiento, no pilotaje). Faltan completar selectores/transiciones de conductores y verificar vehículos en juego. |
-| [ ] | Animales: perro, león, avestruz, gallina, gaviota | 85 % | Media | `cierre-70.md` §6: setter/tick avestruz, grafo de vuelo de gaviota y desvío del perro leídos. Falta seguir todos los consumidores del recinto y validar vuelo/sombras y grafo con datos. |
+| [ ] | Vehículos: tanque, camión, jeep, lancha, tren, avión | 90 % | Alta (2-3 sesiones) | `sim-vehiculos.md`, `cierre-70.md` §3 y `cierre-faltantes-70.md` §3: selección/adopción/pérdida CLancha/CTanque y NOVERHASTA leídos. Faltan otras familias, consumidores de bicho+0x224 y verificación de vehículos/orilla en juego. |
+| [ ] | Animales: perro, león, avestruz, gallina, gaviota | 90 % | Media | `cierre-70.md` §6 + `cierre-faltantes-70.md` §4:22 grafos/211 bases/470 conexiones reales; conservar duplicados. Falta consumidor final del bit de recinto y validar vuelo/sombras en pantalla. No está demostrado confinamiento físico ni ataque restringido al recinto. |
 | [ ] | Presos, testigos, escoltas (`AcVigilante`), policía y sus refuerzos | 85 % | Media | `cierre-70.md` §7 corrige huida: ruta libre y ausencia de vigilantes activos, no consulta directa de alarma. Custodia, escolta y refuerzos tienen lectura previa; falta integración por misión y validación real. |
 | [ ] | Enemigos: cadena de reacciones completa de `AcBap1/2`, `AcBanpe`, Gestapo | 55 % | Alta (2-3 sesiones) | `soldado-acbap.md`, `soldado-acbap2.md`. |
 | [ ] | Estados del soldado: esposado, atontado, desnudo, fumar, charlar | 80 % | Media | `cierre-70.md` §§5/7: diferenciar pedrada, cachiporra y animación de cuerpo ya caído. Custodia y estados previos en `detenido.md`/`soldado-acbap.md`; falta port completo por familia. |
-| [ ] | Oído: pisadas, disparos por id, los 48 radios de ruido | 85 % | Baja-media | Los48 radios están leídos y vueltos a volcar del exe (`cierre-70.md` §4). Cerrados filtro XY estricto y sensor por máscaras del sector. Falta emisión de pisadas audibles y seguir todos los emisores/categorías; las huellas visuales son otro sistema. |
+| [ ] | Oído: pisadas, disparos por id, los 48 radios de ruido | 90 % | Baja-media | Los48 radios, filtro XY y sensor por sector en `cierre-70.md` §4. `cierre-faltantes-70.md` §2 cierra PASW: bucle de agua0,3, sin radio IA. Faltan otras locomociones y emisores/categorías; huellas visuales separadas. |
 | [ ] | Camuflaje, uniformes, señuelos, `TomarControlAleman` | 80 % | Media | `au-jugador.md` + `cierre-70.md` §5: condición de control y receptor por estado comprobados; falta port completo y detalle de todos los contextos de disfraz/visibilidad. |
 | [ ] | Armas y objetos del jugador: ballesta, escopeta, lanzallamas, metralleta, cloroformo, esposas, garfio, botiquín, alicate | 90 % | Media (2 sesiones) | `cierre-70.md` §5 corrige contradicciones de recarga/piedra y revisa granada/tabaco. Acciones previas en AU; falta implementación y comprobar contextos/receptores restantes. |
 | [ ] | Habilidades por comando (Boina Verde, Francotirador, Marino, Zapador, Conductor, Espía) | 60 % | Media-alta | Tabla de energía y armas leída; reglas por personaje parciales. |

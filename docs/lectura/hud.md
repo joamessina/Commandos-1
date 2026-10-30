@@ -1,5 +1,7 @@
 # HUD: inventario de recursos y lo leído hasta ahora (2026-10-30)
 
+**Minimapa:** [cierre-faltantes-70.md §1](cierre-faltantes-70.md#1-minimapa-coordenadas-clic-y-marcadores-hecho) documenta transformación XY, doble truncación, colores, recorte, rectángulo de cámara y clic inverso con VA/líneas/asm. Validadas las2.003 filas de las9 libretas del DIR raíz. Lo pendiente es contraste en pantalla, alias BMP/RLE del tutorial y paletas/hover.
+
 **Actualización (investigación ≥70 %):** [cierre-70.md §2](cierre-70.md#2-hud-la-tabla-que-faltaba-y-por-qué-no-coincidía-con-capturas) cierra quién recoloca los ítems: tabla por personaje0x822768, inicializador0x78B6D0, registro0x58 y `FUN_006F3A90`. Incluye zapador/conductor y coincide con memoria previa. También se leyeron los filtros de postura y el dibujante de balas. Las afirmaciones de cierres anteriores «quién recoloca: sin leer» quedan resueltas; minimapa/paletas/hover siguen parciales. No se cambió el port.
 
 Estado: **inventario hecho, composición (posiciones) NO leída**. Sin la posición de cada pieza no se puede dibujar el HUD sin inventar.

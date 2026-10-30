@@ -214,6 +214,8 @@ El tick `FUN_005A9A60` (**31538–31588**) los combina: si `+0x487C!=0`, **no qu
 
 ## 10. Qué queda y cómo usar esta lectura
 
+**Continuación:** [cierre-faltantes-70.md](cierre-faltantes-70.md) cierra coordenadas/clic/marcadores del minimapa, la cadena PASW de agua, selección/pérdida de blanco de CLancha/CTanque y el contraste de22 grafos de aves. Quedan los límites precisos allí indicados; este párrafo actualiza la lista histórica siguiente.
+
 Este documento cubre las **23 filas solicitadas** con revisión de sus lecturas, consultas nuevas y contraste de datos. Las conclusiones nuevas están separadas de reglas previas. Quedan los límites explícitos de cada sección: vuelo/recinto completo, todos los estados de conductores, piolet, minimapa/FPU, todos los contextos del HUD, pisadas audibles, presentación de resultados y comprobación visual. **No reemplaza esos límites por un 100 %.**
 
 Las correcciones que afectan al port (piedra, colocación de mochila, categoría/sector de sonido y selección de aliado) son tareas de implementación posteriores con pruebas. Aquí no se implementan: el pedido fue investigar. No se reescribió el registro histórico `tasks/lectura-exe.tsv`, que mezcla tandas anteriores y no distingue una consulta parcial de una lectura íntegra.

@@ -2,6 +2,8 @@
 
 Regla: antes de implementar algo se lee su definición en el exe (tabla, función o memoria del juego en marcha); lo que no, queda acá como atajo con su fecha de revisión.
 
+**Continuación 2026-10-30:** [`cierre-faltantes-70.md`](../docs/lectura/cierre-faltantes-70.md) lee minimapa, bucle PASW de agua y selección/transiciones CLancha/CTanque; valida9 libretas y22 grafos contra el DIR raíz. PASW usa volumen0,3 y carece de radio IA. No se implementó ninguna regla nueva; siguen pendientes recinto final, otras locomociones/conductores, paletas/hover y verificación audiovisual.
+
 Mapa general (2026-10-30): `docs/exe-mapa-general.md` enlaza 49 funciones con VA, líneas reales y notas previas. Se verificaron cabeceras contra `ghidra/all2` (37.026 funciones); `all` es anterior y tiene29.304. **Corrección tras cierre-70 §2:** el tamaño declarado de `FUN_00786e60` (37.808 B) no demuestra C completo: el bloque de mochila0x78B6D0…0x78BCD1 solo se recuperó del ensamblador. Es navegación y atribución documentada, no lectura semántica de todas las funciones; no se verificó en ejecución.
 
 | Qué | Estado | Fuente / falta |
