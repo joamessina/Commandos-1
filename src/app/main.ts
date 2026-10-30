@@ -27,6 +27,8 @@ import { Order, Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
 import { type BagItem, bagItems, FaceAnim, photoRect, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, parseInterface, slotAt, viewRect } from '../engine/hud.ts';
+import { cursorFor } from '../engine/cursors.ts';
+import { Cursors } from '../render/cursors.ts';
 import { Hud, type HudUnit } from '../render/hud.ts';
 import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
 import { rayReach, vistaOf } from '../engine/vision.ts';
@@ -112,6 +114,8 @@ interface Game {
   won: boolean;
   /** Truco Alt+I (`MSG_INVENCIBLE`). */
   invincible: boolean;
+  /** Cursores del mouse (`GLOBAL/CURSORES.WAD`); null si falta el archivo. */
+  readonly cursors: Cursors | null;
   readonly battle: Battle;
   readonly soldiers: SoldierView[];
   /** Arma elegida: el clic en un soldado ataca con ella (null = clic mueve). */
@@ -238,6 +242,11 @@ function loadHud(tokens: readonly string[], bag: ReadonlyMap<string, readonly Ba
     if (w) items.set(name, w);
   }
   return global && sized.size > 0 ? new Hud(global, sized, faces, items) : null;
+}
+
+function loadCursors(): Cursors | null {
+  const b = bytes('DATOS/RECURSOS/BMPS/SYSTEM/GLOBAL/CURSORES.WAD');
+  return b ? new Cursors(parseWad(b)) : null;
 }
 
 function bytes(path: string): Uint8Array | undefined {
@@ -370,7 +379,7 @@ async function load(): Promise<void> {
     const prop = props.find((x) => x.elem === el);
     return prop ? [{ soldier: s, prop }] : [];
   });
-  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
@@ -566,6 +575,34 @@ function resize(): void {
   stage.height = Math.max(240, view.clientHeight);
 }
 
+let cursorKey = '';
+
+/** ¿Hay un soldado vivo bajo el cursor? (mismo acierto que el clic de `onMouse`). */
+function overTarget(g: Game): boolean {
+  const z = zoom();
+  const v = vp(g);
+  const mx = g.camX - v.w / z / 2 + (cursor.x - v.x) / z;
+  const my = g.camY - v.h / z / 2 + (cursor.y - v.y) / z;
+  return g.soldiers.some((s) => {
+    if (s.soldier.dead) return false;
+    const u = s.soldier.unit;
+    const p = project(u.body.x, u.body.y, u.z);
+    return Math.abs(mx - p.px) < 14 && my > p.py - 40 && my < p.py + 8;
+  });
+}
+
+/** Cursor del mouse según el arma elegida (engine/cursors.ts); en el HUD vuelve a la flecha. */
+function updateCursor(g: Game): void {
+  if (!stage || !g.cursors) return;
+  const hudOver = g.hud !== null && overHud(cursor.x, cursor.y, stage.width, g.hudLeft);
+  const mode = hudOver ? null : g.mode;
+  const spec = cursorFor(mode, !hudOver && g.planting, mode !== null && cursor.inside && overTarget(g));
+  const key = `${spec.sprite}|${spec.hot}`;
+  if (key === cursorKey && stage.style.cursor) return;
+  cursorKey = key;
+  stage.style.cursor = g.cursors.cssFor(spec);
+}
+
 function draw(g: Game): void {
   const ctx = stage?.getContext('2d');
   if (!stage || !ctx) return;
@@ -701,6 +738,7 @@ function draw(g: Game): void {
   }
   ctx.restore();
   g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => hudUnit(u, g.bag)), g.selected, (i) => g.faces.of(i), g.hudLeft, litItems(g));
+  updateCursor(g);
   drawHud(ctx, g);
   if (t) {
     ctx.fillStyle = '#d9dde3';
