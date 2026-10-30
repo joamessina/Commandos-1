@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bloodHeight, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, overHud, slotAt, slotRect, viewRect } from './hud.ts';
+import { bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, overHud, slotAt, slotRect, viewRect } from './hud.ts';
 
 describe('hud', () => {
   it('elige el WAD de interfaz más grande que cabe', () => {
@@ -14,15 +14,25 @@ describe('hud', () => {
     expect(overHud(10, 10, 1280)).toBe(true);
     expect(overHud(1250, 300, 1280)).toBe(true);
     expect(overHud(600, 300, 1280)).toBe(false);
+    // con la columna a la izquierda el mundo se corre 36 y el borde derecho queda libre
+    expect(viewRect(1280, 720, true)).toEqual({ x: HUD_COLUMN, y: HUD_BAR, w: 1280 - HUD_COLUMN, h: 720 - HUD_BAR });
+    expect(overHud(10, 300, 1280, true)).toBe(true);
+    expect(overHud(1250, 300, 1280, true)).toBe(false);
+    expect([columnX(1280, false), columnX(1280, true)]).toEqual([1244, 0]);
+    expect(bagRect(1280, 720, true)).toEqual({ x: 0, y: 571, w: 112, h: 149 });
+    expect(bagRect(1280, 720, false).x).toBe(1168);
   });
 
-  it('cara por energía: 1 sano … 9 casi muerto, 10 calavera', () => {
-    expect(faceNumber(200, 200, false)).toBe(1);
-    expect(faceNumber(100, 200, false)).toBe(5);
-    expect(faceNumber(1, 200, false)).toBe(9);
-    expect(faceNumber(0, 200, false)).toBe(10);
-    expect(faceNumber(150, 200, true)).toBe(10);
-    expect(faceNumber(999, 200, false)).toBe(1);
+  it('la cara se prende (gris de perfil a naranja de frente) al seleccionar y se apaga al soltar; muerto = calavera', () => {
+    const f = new FaceAnim();
+    expect(f.of(0)).toBe(1);
+    for (let i = 0; i < 3; i++) f.tick(2, 0);
+    expect([f.of(0), f.of(1)]).toEqual([4, 1]);
+    for (let i = 0; i < 20; i++) f.tick(2, 0);
+    expect(f.of(0)).toBe(9);
+    f.tick(2, 1);
+    expect([f.of(0), f.of(1)]).toEqual([8, 2]);
+    expect([faceNumber(9, false), faceNumber(0, false), faceNumber(4.4, false), faceNumber(9, true)]).toEqual([9, 1, 4, 10]);
   });
 
   it('barra de sangre proporcional a la energía y nunca desaparece con vida', () => {
@@ -38,9 +48,6 @@ describe('hud', () => {
     expect(slotAt(70, 10, 1)).toBe(-1);
     expect(slotAt(10, 60, 4)).toBe(-1);
     expect(slotAt(63, 10, 4)).toBe(-1); // hueco entre marcos
-    // con el 1.º seleccionado (marco ancho) los siguientes se corren 24
-    expect(slotAt(70, 10, 4, 0)).toBe(0);
-    expect(slotAt(90, 10, 4, 0)).toBe(1);
-    expect(slotRect(2, 0).x).toBe(1 + 126 + 24);
+    expect(slotRect(2).x).toBe(1 + 126);
   });
 });

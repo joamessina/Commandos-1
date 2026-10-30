@@ -28,40 +28,58 @@ export function hudMode(width: number, height: number): readonly [number, number
   return HUD_MODES.find(([w, h]) => w <= width && h <= height) ?? (HUD_MODES[HUD_MODES.length - 1] as readonly [number, number]);
 }
 
-/** Zona del mundo: lo que queda bajo la tira superior y a la izquierda de la columna. */
-export const viewRect = (width: number, height: number): Rect => ({ x: 0, y: HUD_BAR, w: Math.max(1, width - HUD_COLUMN), h: Math.max(1, height - HUD_BAR) });
+/** Zona del mundo: lo que queda bajo la tira superior y al lado de la columna (que va a la derecha o, con la tecla de lado, a la izquierda). */
+export const viewRect = (width: number, height: number, left = false): Rect => ({ x: left ? HUD_COLUMN : 0, y: HUD_BAR, w: Math.max(1, width - HUD_COLUMN), h: Math.max(1, height - HUD_BAR) });
 
-/** Cara de un aliado: `COM0001` (sano) a `COM0009` según la energía perdida, `COM0010` (calavera) si murió. */
-export function faceNumber(energy: number, max: number, dead: boolean): number {
-  if (dead || energy <= 0) return 10;
-  return Math.min(9, Math.max(1, 1 + Math.floor((1 - Math.min(1, energy / max)) * 9)));
-}
+/** X de la columna según el lado. */
+export const columnX = (width: number, left: boolean): number => (left ? 0 : width - HUD_COLUMN);
 
-/** Alto en píxeles de la barra de sangre (`SANGRE`, 37 de alto) para la energía dada; 0 con energía 0. */
-export const bloodHeight = (energy: number, max: number, full = 37): number => (energy <= 0 ? 0 : Math.max(1, Math.round((full * Math.min(1, energy / max)))));
+/** Cara de un aliado: 10 = calavera (murió); si no, el fotograma de su animación de selección (1 = gris de perfil, 9 = naranja de frente). */
+export const faceNumber = (phase: number, dead: boolean): number => (dead ? 10 : Math.min(9, Math.max(1, Math.round(phase))));
 
 /**
- * Ranuras de comandos en la tira superior: marco `MARC0000` (62×44) con el hueco de la cara (38×38 en +6,+2) y el pozo de la barra de sangre (`SANGRE` 9×37 en +47,+4);
- * el seleccionado usa `MARCA000` (86×44, con una ventana más) y empuja a los siguientes. Paso medido sobre la captura: 63.
- * shortcut: lo que muestra la ventana extra del seleccionado (¿el ítem activo?) no se leyó: queda vacía.
+ * Animación de la cara de cada comando: sin selección está en gris y de perfil (fotograma 1) y al seleccionarlo "se prende" en naranja (fotograma 9).
+ * shortcut: la transición pasa por los fotogramas intermedios a 1 por ciclo (el exe no se leyó: solo se vieron los dos extremos en la captura).
  */
-export const SLOT = { x: 1, y: 0, pitch: 63, frameW: 62, selW: 86, faceDx: 6, faceDy: 2, bloodDx: 47, bloodDy: 4 } as const;
+export class FaceAnim {
+  private readonly phase: number[] = [];
 
-export const slotRect = (i: number, selected = -1): Rect => ({
-  x: SLOT.x + i * SLOT.pitch + (selected >= 0 && i > selected ? SLOT.selW - SLOT.frameW : 0),
-  y: SLOT.y,
-  w: i === selected ? SLOT.selW : SLOT.frameW,
-  h: HUD_BAR - SLOT.y,
-});
+  /** Un ciclo: acerca cada cara a su extremo según esté seleccionada o no. */
+  tick(count: number, selected: number): void {
+    for (let i = 0; i < count; i++) {
+      const p = this.phase[i] ?? 1;
+      this.phase[i] = i === selected ? Math.min(9, p + 1) : Math.max(1, p - 1);
+    }
+  }
+
+  of(i: number): number {
+    return this.phase[i] ?? 1;
+  }
+}
+
+/** Alto en píxeles de la barra de sangre (`SANGRE`, 37 de alto) para la vida dada (el HP del comando); 0 sin vida. */
+export const bloodHeight = (energy: number, max: number, full = 37): number => (energy <= 0 ? 0 : Math.max(1, Math.round((full * Math.min(1, energy / max)))));
+
+/** Ranuras de comandos en la tira superior: marco `MARC0000` (62×44) con el hueco de la cara (38×38 en +6,+2) y el pozo de la barra de sangre (`SANGRE` 9×37 en +47,+4). Paso medido sobre la captura (63). */
+export const SLOT = { x: 1, y: 0, pitch: 63, frameW: 62, faceDx: 6, faceDy: 2, bloodDx: 47, bloodDy: 4 } as const;
+
+export const slotRect = (i: number): Rect => ({ x: SLOT.x + i * SLOT.pitch, y: SLOT.y, w: SLOT.frameW, h: HUD_BAR - SLOT.y });
 
 /** Índice de la ranura bajo (x, y) o -1; solo cuenta hasta `count` ranuras. */
-export function slotAt(x: number, y: number, count: number, selected = -1): number {
+export function slotAt(x: number, y: number, count: number): number {
   for (let i = 0; i < count; i++) {
-    const r = slotRect(i, selected);
+    const r = slotRect(i);
     if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return i;
   }
   return -1;
 }
 
 /** ¿El punto (x, y) del lienzo cae sobre el HUD (tira o columna) y no sobre el mundo? */
-export const overHud = (x: number, y: number, width: number): boolean => y < HUD_BAR || x >= width - HUD_COLUMN;
+export const overHud = (x: number, y: number, width: number, left = false): boolean => y < HUD_BAR || (left ? x < HUD_COLUMN : x >= width - HUD_COLUMN);
+
+/**
+ * Mochila del comando seleccionado: 112×149 pegada al borde inferior del lado de la columna, con la foto grande (71×91) clavada arriba.
+ * shortcut: el lado de la mochila (siempre el de la columna) y los desplazamientos salen de una sola captura (columna a la izquierda); los ítems aún no se dibujan.
+ */
+export const BAG = { w: 112, h: 149, photoDx: 42, photoDy: -2 } as const;
+export const bagRect = (width: number, height: number, left: boolean): Rect => ({ x: left ? 0 : width - BAG.w, y: height - BAG.h, w: BAG.w, h: BAG.h });

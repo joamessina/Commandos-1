@@ -26,7 +26,7 @@ import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
-import { HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, slotAt, viewRect } from '../engine/hud.ts';
+import { FaceAnim, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, slotAt, viewRect } from '../engine/hud.ts';
 import { Hud } from '../render/hud.ts';
 import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
 import { rayReach, vistaOf } from '../engine/vision.ts';
@@ -130,6 +130,9 @@ interface Game {
   ticks: number;
   /** HUD de misión (null si faltan sus WAD). */
   readonly hud: Hud | null;
+  /** Columna (y mochila) a la izquierda: la tecla º/| la cambia de lado. */
+  hudLeft: boolean;
+  readonly faces: FaceAnim;
   /** Ticks de par por dificultad (`PUNTUACIONES`) y el resultado fijado al terminar la misión. */
   readonly par: { easy: number; hard: number };
   result: { score: Score; text: string; victory: boolean; kills: number } | null;
@@ -156,7 +159,7 @@ const ZOOM_MAX = 3.4; // docs/research/q1-camara.md §Cierre
 function vp(g: Game | null): Rect {
   const w = stage?.width ?? 0;
   const h = stage?.height ?? 0;
-  return g?.hud ? viewRect(w, h) : { x: 0, y: 0, w, h };
+  return g?.hud ? viewRect(w, h, g.hudLeft) : { x: 0, y: 0, w, h };
 }
 
 function setZoom(next: number): void {
@@ -352,7 +355,7 @@ async function load(): Promise<void> {
     const prop = props.find((x) => x.elem === el);
     return prop ? [{ soldier: s, prop }] : [];
   });
-  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, hud: loadHud(units.map((u) => u.unit.token)), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, hud: loadHud(units.map((u) => u.unit.token)), hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.`);
@@ -497,6 +500,7 @@ function setupStage(): void {
       }
       for (const p of g.props) if (p.anim.cyclic) p.anim.advance(0, 1); // BANDERA, BOYA: secuencias cíclicas por tiempo (shortcut: `.STARTFRAME` sin leer su efecto, todas en la misma fase)
       if (g.water?.drawn) stepWater(g, g.water);
+      g.faces.tick(g.units.length, g.selected);
       g.ticks++;
       acc -= TICK;
     }
@@ -679,7 +683,7 @@ function draw(g: Game): void {
     ctx.stroke();
   }
   ctx.restore();
-  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => ({ token: u.unit.token, energy: u.unit.energy, max: u.maxEnergy, dead: u.unit.dead })), g.selected);
+  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => ({ token: u.unit.token, energy: u.unit.energy, max: u.maxEnergy, dead: u.unit.dead })), g.selected, (i) => g.faces.of(i), g.hudLeft);
   drawHud(ctx, g);
   if (t) {
     ctx.fillStyle = '#d9dde3';
@@ -764,7 +768,7 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   ctx.fillStyle = '#d9dde3';
   ctx.fillText(`Arma: ${g.planting ? 'bomba (clic donde plantar)' : (g.mode ?? 'ninguna (clic = mover)')}  ·  F pistola · R fusil · C cuchillo · G agacharse · N bucear · Esc mover · E subir al bote · V conos`, 10, top + 14 + rows * 34);
   if (sel) ctx.fillText(`Disponibles: ${sel.weapons.map((w) => (sel.unit.ammo[w] === undefined ? w : `${w} (${Math.max(0, sel.unit.ammo[w] ?? 0).toString()})`)).join(', ') || '—'}`, 10, top + 30 + rows * 34);
-  const right = ctx.canvas.width - (g.hud ? HUD_COLUMN : 0);
+  const right = ctx.canvas.width - (g.hud && !g.hudLeft ? HUD_COLUMN : 0);
   let oy = top + 14;
   ctx.fillStyle = 'rgba(0,0,0,.55)';
   ctx.fillRect(right - 210, top + 8, 200, 20 + g.demo.objectives.size * 15 + 18);
@@ -873,9 +877,9 @@ function onMouse(e: MouseEvent): void {
   const v = vp(g);
   const sx = e.clientX - r.left;
   const sy = e.clientY - r.top;
-  if (g.hud && overHud(sx, sy, stage.width)) {
+  if (g.hud && overHud(sx, sy, stage.width, g.hudLeft)) {
     // clic sobre el HUD: la cara de un comando lo selecciona; el resto del HUD aún no hace nada
-    const slot = e.button === 0 ? slotAt(sx, sy, g.units.length, g.selected) : -1;
+    const slot = e.button === 0 ? slotAt(sx, sy, g.units.length) : -1;
     if (slot >= 0) g.selected = slot;
     return;
   }
@@ -985,6 +989,11 @@ window.addEventListener('keydown', (e) => {
   const g = game;
   if (!g) return;
   if (k >= '1' && k <= '9' && g.units[Number(k) - 1]) g.selected = Number(k) - 1;
+  if (e.code === 'Backquote' && g.hud) {
+    // la tecla a la izquierda del 1 (º/|) pasa la columna, la libreta y la mochila al otro lado
+    e.preventDefault();
+    g.hudLeft = !g.hudLeft;
+  }
   if (k === 'f' || k === 'r' || k === 'c') {
     const w: Weapon = k === 'f' ? 'PISTOLA' : k === 'r' ? 'MIRILLA' : 'CUCHILLO';
     const u = g.units[g.selected];

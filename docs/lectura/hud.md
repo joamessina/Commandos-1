@@ -25,3 +25,10 @@ Con la captura del original (1280×720, `imagenesReferncia/HUD.PNG`, no versiona
 - **Caras**: cada WAD de `CARAS/` trae 10 BMP en orden (COM, FRA, LAN, BOM, MEC, ESP + 0001..0010): 1 sano … 9 muy herido, 10 calavera.
 - Sin leer: regla exacta cara↔energía, contenido de la ventana extra del seleccionado, libreta/minimapa de la columna (`LIBRnnnn.RLE`, archivo suelto con otro formato), significado de `CIRC0000..6`, botones de postura (`AGACHAR`/`DEPIE`/`DOBLEZ`), mochila/bolso (ítems), `ALMR`, interruptores `ON`/`OFF`.
 - Código: `engine/hud.ts` (medidas y reglas, con pruebas), `render/hud.ts` (dibujo), integrado en `app/main.ts` (zona del mundo, clic en caras).
+
+## Cierre 2 (2026-10-30): selección, lado y mochila (capturas + lo que dijo el usuario)
+- La **barra roja es la vida (HP) del comando** (lo que el exe llama "energía"); el HUD no tiene otra barra.
+- **Cara**: sin selección, gris y de perfil (fotograma 1); el seleccionado "se prende" naranja y de frente (fotograma 9); calavera (10) si muere. La cara **no** sigue la vida. Transición intermedia sin leer (1 fotograma por ciclo es mío).
+- **Tecla `º`/`|` (la de la izquierda del 1, `Backquote`)**: pasa la columna (espejada) y la mochila al lado izquierdo y el mundo se corre 36 px; el ojo, la cámara y las caras no se mueven.
+- **Mochila** (`MOCHILA` 112×149) pegada al borde inferior, con la foto grande (`FOTOnn`, 71×91) clavada en (+42, −2); aparece con un comando seleccionado. Con el marine en la balsa solo muestra el traje de buzo (el tanque amarillo): qué ítems se ven según el contexto no se leyó.
+- Escala de las capturas: ≈2,04 px por píxel de juego (paso de ranura 63).
