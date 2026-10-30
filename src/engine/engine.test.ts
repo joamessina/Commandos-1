@@ -230,3 +230,29 @@ describe('loadAllies', () => {
     expect(loadAllies('')).toEqual([]);
   });
 });
+
+describe('Unit: agacharse (AUAgacharse)', () => {
+  const anmC = parseAnm(bnm([{ type: 0, slots: [4] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'CORRE', 2, 30, 0, 8), ...anmSeq(1, 'ARRASTRARSE', 2, 30, 0, 8), ...anmSeq(2, 'AGACHARSE', 2, 0, 10, 8)]));
+
+  it('agachado no corre (anima ARRASTRARSE a la velocidad de andar) y se levanta al repetir', () => {
+    const u = new Unit('COMANDO', anmC, 0, 0, 0, 0);
+    expect(u.toggleCrouch()).toBe(true);
+    expect(u.anim.name).toBe('AGACHARSE');
+    u.goTo({ x: 300, y: 0 }, true);
+    expect(u.running).toBe(false);
+    expect(u.anim.name).toBe('ARRASTRARSE');
+    u.toggleCrouch(); // en marcha: vuelve a andar
+    expect(u.crouched).toBe(false);
+    expect(u.anim.name).toBe('ANDAR');
+    u.stop();
+    u.toggleCrouch();
+    u.toggleCrouch();
+    expect(u.crouched).toBe(false);
+  });
+
+  it('no se agacha el muerto ni el que va en un bote', () => {
+    const u = new Unit('X', anmC, 0, 0, 0, 0);
+    u.hit(1e9);
+    expect(u.toggleCrouch()).toBe(false);
+  });
+});

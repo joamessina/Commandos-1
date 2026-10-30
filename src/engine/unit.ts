@@ -93,9 +93,10 @@ export class Unit {
     this.path = path;
     this.stuck = 0;
     this.target = { ...p, z: goalZ };
-    this.running = run;
+    // agachado (0x23C & 0x40) el flag de correr se fuerza a 0 y solo cambia la animación (ARRASTRARSE); la velocidad es la de andar (FUN_004BC460, q1-movimiento.md)
+    this.running = run && !this.crouched;
     const run1 = ['CORRE', 'CORRER'].find((n) => this.anim.has(n));
-    this.anim.set(run && run1 ? run1 : 'ANDAR');
+    this.anim.set(this.crouched && this.anim.has('ARRASTRARSE') ? 'ARRASTRARSE' : this.running && run1 ? run1 : 'ANDAR');
     return true;
   }
 
@@ -120,6 +121,17 @@ export class Unit {
     const s = this.sectorAt(x, y);
     return !s || simBlocked(s) || (s !== this.sector && !stepOk(groundZ(s, x, y) - this.z));
   };
+
+  /** AUAgacharse (`AGAC`, 0x4E5E00): alterna agachado/de pie (en bote no); agachado los enemigos lo ven a la mitad de alcance. Devuelve el nuevo estado. */
+  toggleCrouch(): boolean {
+    if (this.dead || this.boat) return this.crouched;
+    this.crouched = !this.crouched;
+    this.running = false;
+    const idle = this.crouched ? 'AGACHARSE' : 'REPOSO';
+    if (this.target === null && this.anim.has(idle)) this.anim.set(idle);
+    else if (this.target !== null) this.anim.set(this.crouched && this.anim.has('ARRASTRARSE') ? 'ARRASTRARSE' : 'ANDAR');
+    return this.crouched;
+  }
 
   /** Detiene la orden de caminar en curso. */
   stop(): void {

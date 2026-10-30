@@ -21,10 +21,10 @@ import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
 import { Boat, boatSlots } from '../engine/boat.ts';
 import { groundZ, isWater, SectorMap } from '../engine/sectors.ts';
 import { parseRoutes } from '../engine/patrol.ts';
-import { Order, Soldier } from '../engine/soldier.ts';
+import { Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
-import { rayReach } from '../engine/vision.ts';
+import { DEFAULT_ANGLE, DEFAULT_RANGE, rayReach } from '../engine/vision.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
 import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
@@ -572,42 +572,43 @@ function draw(g: Game): void {
 const COS_VIEW = Math.cos((50 * Math.PI) / 180);
 
 /**
- * Cono de visión del soldado sobre el SUELO: cada punto se proyecta con la altura del terreno bajo él (antes se dibujaba a la altura del soldado y, desde una torre,
- * quedaba desplazado en pantalla respecto de donde de verdad ve) y se corta en el primer sector Ocluso, o sea lo mismo que decide `sees`.
+ * Cono de visión del soldado sobre el SUELO (cada punto con la altura del terreno bajo él) y cortado en el primer sector Ocluso, igual que `sees`. Dos zonas como en
+ * `Vista01` (percepcion.md §3.2-3.3): la larga, hasta el alcance completo (800), donde lo ven a uno de pie; y la corta, a la MITAD (`AC = A4·0,5`), donde lo ven
+ * también agachado o arrastrándose. Fuera de la corta, quien esté agachado no es visto. Verdes (la zona corta, más oscura).
  */
 function drawCone(ctx: CanvasRenderingContext2D, g: Game, s: Soldier): void {
   const u = s.unit;
   const head = u.body.ang + s.headAngle;
-  const half = 35;
-  const range = 800;
+  const half = DEFAULT_ANGLE / 2;
   const ground = (x: number, y: number): number => {
     const sec = g.sectors?.atZ(x, y, u.z) ?? g.sectors?.at(x, y) ?? null;
     return sec ? groundZ(sec, x, y) : u.z;
   };
-  const pts: { px: number; py: number }[] = [];
-  const o = project(u.body.x, u.body.y, u.z);
-  pts.push(o);
-  for (let k = -half; k <= half; k += 5) {
-    const a = ((head + k) * Math.PI) / 180;
-    const d = rayReach(g.sectors, u.body.x, u.body.y, a, range);
-    const x = u.body.x + Math.cos(a) * d;
-    const y = u.body.y + Math.sin(a) * d;
-    pts.push(project(x, y, ground(x, y)));
-  }
-  ctx.fillStyle = s.order === Order.Patrol ? 'rgba(255,255,100,.16)' : 'rgba(255,60,60,.24)';
-  ctx.strokeStyle = s.order === Order.Patrol ? 'rgba(255,255,100,.5)' : 'rgba(255,60,60,.7)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  pts.forEach((p, i) => {
-    if (i === 0) ctx.moveTo(p.px, p.py);
-    else ctx.lineTo(p.px, p.py);
-  });
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
+  const zone = (range: number, fill: string, edge: string): void => {
+    const pts: { px: number; py: number }[] = [project(u.body.x, u.body.y, u.z)];
+    for (let k = -half; k <= half; k += 5) {
+      const a = ((head + k) * Math.PI) / 180;
+      const d = rayReach(g.sectors, u.body.x, u.body.y, a, range);
+      const x = u.body.x + Math.cos(a) * d;
+      const y = u.body.y + Math.sin(a) * d;
+      pts.push(project(x, y, ground(x, y)));
+    }
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    pts.forEach((p, i) => {
+      if (i === 0) ctx.moveTo(p.px, p.py);
+      else ctx.lineTo(p.px, p.py);
+    });
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  };
+  zone(DEFAULT_RANGE, 'rgba(110,200,80,.20)', 'rgba(110,200,80,.55)');
+  zone(DEFAULT_RANGE * 0.5, 'rgba(30,140,50,.32)', 'rgba(30,140,50,.8)');
 }
 
-/** HUD mínimo: comandos con su energía, arma elegida y fin de partida (shortcut: el HUD real —libretas, mochila, caras— no se leyó). */
 function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   ctx.font = '12px system-ui';
   g.units.forEach((u, i) => {
@@ -620,7 +621,7 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
       ctx.strokeRect(x + 0.5, y + 0.5, 189, 29);
     }
     ctx.fillStyle = u.unit.dead ? '#e0826f' : '#d9dde3';
-    ctx.fillText(`${(i + 1).toString()} ${u.unit.token}${u.unit.dead ? ' (muerto)' : u.unit.boat ? ' (en el bote)' : ''}`, x + 6, y + 13);
+    ctx.fillText(`${(i + 1).toString()} ${u.unit.token}${u.unit.dead ? ' (muerto)' : u.unit.boat ? ' (en el bote)' : u.unit.crouched ? ' (agachado)' : ''}`, x + 6, y + 13);
     ctx.fillStyle = '#333';
     ctx.fillRect(x + 6, y + 18, 176, 6);
     ctx.fillStyle = u.unit.energy / u.maxEnergy > 0.4 ? '#6cc070' : '#e0826f';
@@ -628,7 +629,7 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   });
   const sel = g.units[g.selected];
   ctx.fillStyle = '#d9dde3';
-  ctx.fillText(`Arma: ${g.mode ?? 'ninguna (clic = mover)'}  ·  F pistola · R fusil · C cuchillo · Esc mover · E subir al bote · V conos`, 10, 14 + g.units.length * 34);
+  ctx.fillText(`Arma: ${g.mode ?? 'ninguna (clic = mover)'}  ·  F pistola · R fusil · C cuchillo · G agacharse · Esc mover · E subir al bote · V conos`, 10, 14 + g.units.length * 34);
   if (sel) ctx.fillText(`Disponibles: ${sel.weapons.join(', ') || '—'}`, 10, 30 + g.units.length * 34);
   let oy = 14;
   ctx.fillStyle = 'rgba(0,0,0,.55)';
@@ -745,6 +746,17 @@ window.addEventListener('keydown', (e) => {
     else say(`${u?.unit.token ?? ''} no tiene ${w.toLowerCase()}.`);
   }
   if (k === 'escape') g.mode = null;
+  if (k === 'g') {
+    const cu = g.units[g.selected]?.unit;
+    if (cu && !cu.dead) {
+      if (cu.boat) say('En el bote no se puede uno agachar.');
+      else {
+        g.battle.cancel(cu);
+        cu.stop();
+        say(`${cu.token}: ${cu.toggleCrouch() ? 'agachado (los enemigos te ven solo de cerca)' : 'de pie'}.`);
+      }
+    }
+  }
   const cur = g.units[g.selected]?.unit;
   if (k === 'b' && cur && !cur.dead && !cur.boat) {
     if (cur.token !== 'ARTIFIC') say(`${cur.token} no sabe manejar bombas (solo el zapador, ARTIFIC).`);
