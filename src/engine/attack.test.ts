@@ -5,7 +5,7 @@ import { Attack, type AttackWorld } from './attack.ts';
 import { Soldier } from './soldier.ts';
 import { Unit } from './unit.ts';
 
-const anm = parseAnm(bnm([{ type: 0, slots: [4] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8), ...anmSeq(2, 'APUNTAPISTOLA', 1, 0, 5, 8), ...anmSeq(2, 'DISPARAPISTOLA', 1, 0, 5, 8)]));
+const anm = parseAnm(bnm([{ type: 0, slots: [6] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8), ...anmSeq(2, 'APUNTAPISTOLA', 1, 0, 5, 8), ...anmSeq(2, 'DISPARAPISTOLA', 1, 0, 5, 8), ...anmSeq(1, 'ATONTADO', 1, 0, 0, 8), ...anmSeq(1, 'ESPOSAS1', 1, 0, 0, 8)]));
 const mk = (x: number, y = 0, token = 'X'): Unit => new Unit(token, anm, x, y, 0, 0);
 
 interface Log {
@@ -88,5 +88,41 @@ describe('Attack: munición', () => {
     expect(log.shots).toBe(2);
     expect(u.ammo['MIRILLA']).toBe(0);
     expect(a.done).toBe(true);
+  });
+
+  it('puño: un solo golpe atonta 600 ciclos (altura 5, anim ATONTADO, sin daño) y se levanta; en ese tiempo no ve ni oye', () => {
+    const s = new Soldier('S', mk(40, 0, 'S'), null);
+    const log = { noise: 0, shots: 0 };
+    const a = new Attack(mk(0), s, 'PUNO');
+    run(a, world(log));
+    expect(a.done).toBe(true);
+    expect([s.dead, s.stun > 0, s.unit.energy, s.unit.height, log.shots, log.noise]).toEqual([false, true, 100, 5, 0, 0]);
+    s.hear(0, 0);
+    expect(s.order).toBe(4);
+    const w = { commandos: [], sectors: null, rng: () => 0, onShot: () => undefined };
+    for (let i = 0; i < 599; i++) s.tick(w);
+    expect(s.stun).toBeGreaterThan(0);
+    s.tick(w);
+    expect([s.stun, s.down, s.unit.height]).toEqual([0, false, 29]);
+  });
+
+  it('esposas: el soldado queda esposado para siempre (altura 5, ESPOSAS1) y un puño posterior no lo levanta', () => {
+    const s = new Soldier('S', mk(40, 0, 'S'), null);
+    const a = new Attack(mk(0), s, 'ESPOSAS');
+    run(a, world({ noise: 0, shots: 0 }));
+    expect([a.done, s.cuffed, s.down, s.unit.height]).toEqual([true, true, true, 5]);
+    s.hurt('PUNO', mk(0));
+    const w = { commandos: [], sectors: null, rng: () => 0, onShot: () => undefined };
+    for (let i = 0; i < 700; i++) s.tick(w);
+    expect([s.cuffed, s.stun, s.unit.height]).toEqual([true, 0, 5]);
+  });
+
+  it('un soldado atontado que recibe un tiro de pistola sigue atontado (no apunta) y puede morir', () => {
+    const s = new Soldier('S', mk(40, 0, 'S'), null);
+    s.hurt('PUNO', mk(0));
+    s.hurt('PISTOLA', mk(0));
+    expect([s.dead, s.order, s.unit.energy]).toEqual([false, 4, 60]);
+    s.hurt('MIRILLA', mk(0));
+    expect(s.dead).toBe(true);
   });
 });

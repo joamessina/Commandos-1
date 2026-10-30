@@ -318,6 +318,8 @@ async function load(): Promise<void> {
       if (guns.includes('PISTOLA')) weapons.push('PISTOLA');
       if (guns.includes('MIRILLA')) weapons.push('MIRILLA');
       if (e.actions.some((x) => x.name.toUpperCase() === 'AUACUCHILLAR')) weapons.push('CUCHILLO');
+      if (e.actions.some((x) => x.name.toUpperCase() === 'AUCACHIPORRA')) weapons.push('PUNO');
+      if (e.actions.some((x) => x.name.toUpperCase() === 'AUESPOSAS')) weapons.push('ESPOSAS');
       const aud = e.actions.find((x) => x.name.toUpperCase() === 'AUDISPARAR')?.params ?? [];
       const mun = asNumber(find(aud, '.MUNMIRILLA'));
       if (mun !== undefined) unit.ammo['MIRILLA'] = mun;
@@ -908,7 +910,7 @@ function teleportAction(g: Game): void {
   say(`${v.unit.token}: teletransportado${v.unit.boat ? ' con el bote' : ''}.`);
 }
 
-const WEAPON_OF_WAD: Readonly<Record<string, Weapon>> = { PISTOLA: 'PISTOLA', MIRILLA: 'MIRILLA', CUCHILLO: 'CUCHILLO' };
+const WEAPON_OF_WAD: Readonly<Record<string, Weapon>> = { PISTOLA: 'PISTOLA', MIRILLA: 'MIRILLA', CUCHILLO: 'CUCHILLO', PUNO: 'PUNO', ESPOSAS: 'ESPOSAS' };
 
 /** Datos del comando para el HUD (caras, mochila, balas). */
 function hudUnit(v: UnitView, bag: ReadonlyMap<string, readonly BagItem[]>): HudUnit {
@@ -918,8 +920,10 @@ function hudUnit(v: UnitView, bag: ReadonlyMap<string, readonly BagItem[]>): Hud
 
 function armWeapon(g: Game, w: Weapon): void {
   const u = g.units[g.selected];
-  if (u?.weapons.includes(w)) g.mode = w;
-  else say(`${u?.unit.token ?? ''} no tiene ${w.toLowerCase()}.`);
+  if (u?.weapons.includes(w)) {
+    g.mode = w;
+    if (w === 'PUNO' || w === 'ESPOSAS') say(`${u.unit.token}: ${w === 'PUNO' ? 'puño' : 'esposas'} listo, clic en un soldado (Esc cancela).`);
+  } else say(`${u?.unit.token ?? ''} no tiene ${w.toLowerCase()}.`);
 }
 
 function bombAction(g: Game): void {

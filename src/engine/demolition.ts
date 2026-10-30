@@ -140,7 +140,7 @@ export class Barrel implements Target {
   }
 
   hurt(weapon: Weapon): void {
-    if (weapon !== 'CUCHILLO') this.owner.blowBarrel(this);
+    if (weapon === 'PISTOLA' || weapon === 'MIRILLA') this.owner.blowBarrel(this);
   }
 }
 

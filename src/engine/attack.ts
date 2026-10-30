@@ -11,13 +11,16 @@ import type { SectorMap } from './sectors.ts';
 import type { Unit } from './unit.ts';
 import { norm360 } from './walk.ts';
 
-export type Weapon = 'PISTOLA' | 'MIRILLA' | 'CUCHILLO';
+export type Weapon = 'PISTOLA' | 'MIRILLA' | 'CUCHILLO' | 'PUNO' | 'ESPOSAS';
+
+/** Armas de contacto: caminan hasta el blanco (sin línea de tiro) y golpean a `KNIFE_CYCLES`. PUNO = `AuCachiporra` (`MSGA_CACHIPORRAZO` al cuadro 6), ESPOSAS = `AuEsposas` (`MSGA_HAS_SIDO_ESPOSADO`). */
+const MELEE: ReadonlySet<Weapon> = new Set<Weapon>(['CUCHILLO', 'PUNO', 'ESPOSAS']);
 
 /** Radio del ruido del disparo de la pistola (`PIPA` en la tabla de ruidos 0x821DE0, docs/engine/percepcion.md §4.3). */
 export const PISTOL_NOISE = 600;
 
-export const RANGE: Readonly<Record<Weapon, number>> = { PISTOLA: 300, MIRILLA: 1000, CUCHILLO: 28 };
-export const DAMAGE: Readonly<Record<Weapon, number>> = { PISTOLA: 40, MIRILLA: 100, CUCHILLO: 120 };
+export const RANGE: Readonly<Record<Weapon, number>> = { PISTOLA: 300, MIRILLA: 1000, CUCHILLO: 28, PUNO: 28, ESPOSAS: 28 };
+export const DAMAGE: Readonly<Record<Weapon, number>> = { PISTOLA: 40, MIRILLA: 100, CUCHILLO: 120, PUNO: 0, ESPOSAS: 0 };
 const AIM_CYCLES = 8;
 const SHOT_GAP = 6;
 const KNIFE_CYCLES = 12;
@@ -71,11 +74,11 @@ export class Attack {
       return;
     }
     const reach = RANGE[this.weapon];
-    const clear = this.weapon === 'CUCHILLO' || lineClear(w.sectors, b.x, b.y, tg.x, tg.y);
+    const clear = MELEE.has(this.weapon) || lineClear(w.sectors, b.x, b.y, tg.x, tg.y);
     if (d > reach || !clear) {
       this.aim = 0;
       if (this.t++ % REPATH_EVERY === 0) {
-        const near = this.weapon === 'CUCHILLO' ? 0 : 0.8;
+        const near = MELEE.has(this.weapon) ? 0 : 0.8;
         const k = Math.max(0, d - reach * near) / d;
         u.goTo({ x: b.x + (tg.x - b.x) * k, y: b.y + (tg.y - b.y) * k }, false);
       }
@@ -83,13 +86,14 @@ export class Attack {
     }
     u.stop();
     b.ang = norm360((Math.atan2(tg.y - b.y, tg.x - b.x) * 180) / Math.PI);
-    const need = this.weapon === 'CUCHILLO' ? KNIFE_CYCLES : AIM_CYCLES;
+    const need = MELEE.has(this.weapon) ? KNIFE_CYCLES : AIM_CYCLES;
     if (this.aim === 0) {
-      const a = this.weapon === 'CUCHILLO' ? 'SACACUCHILLO' : this.weapon === 'MIRILLA' ? 'APUNTARIFLE' : 'APUNTAPISTOLA';
+      // PUNO: LANZARPIEDRA (AuCachiporra con el arma 0 del comando, docs/lectura/au-jugador.md §4); ESPOSAS: el comando no trae animación de esposar (shortcut: se queda quieto)
+      const a = this.weapon === 'CUCHILLO' ? 'SACACUCHILLO' : this.weapon === 'PUNO' ? 'LANZARPIEDRA' : this.weapon === 'ESPOSAS' ? '' : this.weapon === 'MIRILLA' ? 'APUNTARIFLE' : 'APUNTAPISTOLA';
       if (u.anim.has(a)) u.anim.set(a);
     }
     if (++this.aim < need) return;
-    if (this.weapon !== 'CUCHILLO') {
+    if (!MELEE.has(this.weapon)) {
       const a = this.weapon === 'MIRILLA' ? 'DISPARARIFLE' : 'DISPARAPISTOLA';
       if (u.anim.has(a)) u.anim.set(a);
       w.onShot(b.x, b.y, tg.x, tg.y);
@@ -97,7 +101,7 @@ export class Attack {
     }
     if (u.ammo[this.weapon] !== undefined) u.ammo[this.weapon] = (u.ammo[this.weapon] ?? 0) - 1; // gasta 1 por disparo (tabla +0x78)
     tg.hurt(this.weapon, u);
-    if (isDead(tg)) this.done = true; // hurt() cambia `dead`
+    if (isDead(tg) || this.weapon === 'PUNO' || this.weapon === 'ESPOSAS') this.done = true; // hurt() cambia `dead`; el puño y las esposas son de un solo golpe
     else this.aim = need - SHOT_GAP;
   }
 }

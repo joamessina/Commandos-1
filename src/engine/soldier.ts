@@ -4,7 +4,7 @@
  * de acierto: daña siempre que el blanco esté en la lista de vistos; recarga = TIEMPORECARGA (15 por defecto, ctor 0x45AE70) + rand%6).
  * Órdenes de `AcBap` portadas: 4 patrulla/puesto · 8 apuntar al visto (0x28 ciclos) · 0x11 disparar · 9 ir a investigar · 0x14 volver al puesto · 0x15 muerto.
  * shortcut: sin la cadena de reacciones por sonidos/cuerpos/compañeros (alarma, voces, refuerzos), sin fumar/charlar/mirar alrededor (órdenes 5/0xD/0xE),
- *           sin esposado/atontado/desnudo ni Gestapo; el disparo de otro soldado a <200 u (SONIDO_PELIGRO) los manda a investigar; giro del cuerpo instantáneo
+ *           sin desnudo ni Gestapo (el atontado y el esposado solo ponen la animación, la altura 5 y dejan de actuar: sin chirivitas ni la cadena de avisos); el disparo de otro soldado a <200 u (SONIDO_PELIGRO) los manda a investigar; giro del cuerpo instantáneo
  *           al apuntar; los golpes del jugador usan la energía por defecto 100 (armas-danio.md §5: pistola 3 tiros, fusil de mira 1, cuchillo 1) y un soldado herido
  *           que sobrevive apunta al agresor. Cuándo mejorar: al portar AcBap2 completo (0x43A0E0…).
  */
@@ -28,6 +28,9 @@ const SWEEP_AMP = 50; // AcVigilar ANGBARRIDO por defecto
 const SWEEP_PERIOD = 100; // DEMORA por defecto
 const SWEEP_PHASE = [0, 4, 3, 0, 2, 1, 1, 4, 2, 0, 2, 4, 2, 0, 3, 1]; // 0x812B28
 const INVESTIGATE_WAIT = 60;
+/** Entrada 7 (atontado): `+0x34 = 600` ciclos (30 s); altura del bicho 5,0 (`0x793734`) en 6 y 7 (docs/lectura/guarda.md §4). */
+const STUN_CYCLES = 600;
+const DOWN_HEIGHT = 5;
 
 /**
  * Alcance real de la vista con la cabeza girada `headDeg` (AcVigilar `FUN_004C0E60` con VISTAELIPTICA=1, por defecto): el alcance base `a` se mide sobre un óvalo
@@ -80,6 +83,11 @@ export class Soldier implements Target {
   private moving = false;
   private spot: { x: number; y: number } | null = null;
   private readonly seenBodies = new Set<string>();
+  /** Ciclos de atontado que faltan (cachiporrazo = puño); 0 = no está atontado. */
+  stun = 0;
+  /** Esposado (entrada 6 de AcGuarda): fuera de combate. */
+  cuffed = false;
+  private standHeight = 0;
 
   /** Artillero de un nido: no se mueve (investiga girando, no caminando). */
   private readonly fixed: boolean;
@@ -126,10 +134,54 @@ export class Soldier implements Target {
   /** Golpe de un comando (daño de `DAMAGE`): si sobrevive se vuelve hacia quien lo hirió. */
   hurt(weapon: Weapon, from: Unit): void {
     if (this.dead) return;
+    if (weapon === 'PUNO') {
+      this.knockOut();
+      return;
+    }
+    if (weapon === 'ESPOSAS') {
+      this.handcuff();
+      return;
+    }
     if (this.unit.hit(DAMAGE[weapon])) {
       this.order = Order.Dead;
       this.target = null;
-    } else if (this.order === Order.Patrol || this.order === Order.Return || this.order === Order.Investigate) this.startAim(from);
+    } else if (!this.down && (this.order === Order.Patrol || this.order === Order.Return || this.order === Order.Investigate)) this.startAim(from);
+  }
+
+  /** Atontado o esposado: no ve ni actúa. */
+  get down(): boolean {
+    return this.stun > 0 || this.cuffed;
+  }
+
+  private lieDown(anim: string): void {
+    if (this.standHeight === 0) this.standHeight = this.unit.height;
+    this.unit.height = DOWN_HEIGHT;
+    this.unit.stop();
+    this.moving = false;
+    this.target = null;
+    if (this.unit.anim.has(anim)) this.unit.anim.set(anim);
+  }
+
+  /** `MSGA_CACHIPORRAZO` (entrada 7 de AcGuarda): cae con la animación ATONTADO durante 600 ciclos y se levanta. */
+  private knockOut(): void {
+    if (this.cuffed) return;
+    this.stun = STUN_CYCLES;
+    this.lieDown('ATONTADO');
+  }
+
+  /** `MSGA_HAS_SIDO_ESPOSADO` (entrada 6): queda esposado con la animación ESPOSAS1 y no se levanta. */
+  private handcuff(): void {
+    this.stun = 0;
+    this.cuffed = true;
+    this.lieDown('ESPOSAS1');
+  }
+
+  private getUp(): void {
+    this.stun = 0;
+    this.unit.height = this.standHeight || this.unit.height;
+    this.standHeight = 0;
+    this.order = Order.Return;
+    this.returnToPost();
   }
 
   /** Muerte directa (explosión). */
@@ -142,7 +194,7 @@ export class Soldier implements Target {
 
   /** Oye un disparo en (x,y): si está tranquilo va a investigar. */
   hear(x: number, y: number): void {
-    if (this.dead) return;
+    if (this.dead || this.down) return;
     if (this.order === Order.Patrol || this.order === Order.Return) this.investigate(x, y);
   }
 
@@ -196,6 +248,11 @@ export class Soldier implements Target {
     if (this.unit.dead) {
       this.order = Order.Dead;
       this.unit.tick();
+      return;
+    }
+    if (this.down) {
+      this.unit.tick();
+      if (!this.cuffed && --this.stun <= 0) this.getUp();
       return;
     }
     const aiming = this.order === Order.Aim || this.order === Order.Shoot;
