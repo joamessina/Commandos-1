@@ -24,7 +24,7 @@ import { parseRoutes } from '../engine/patrol.ts';
 import { Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
-import { DEFAULT_ANGLE, DEFAULT_RANGE, rayReach } from '../engine/vision.ts';
+import { rayReach } from '../engine/vision.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
 import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
@@ -579,7 +579,7 @@ const COS_VIEW = Math.cos((50 * Math.PI) / 180);
 function drawCone(ctx: CanvasRenderingContext2D, g: Game, s: Soldier): void {
   const u = s.unit;
   const head = u.body.ang + s.headAngle;
-  const half = DEFAULT_ANGLE / 2;
+  const half = s.aperture / 2;
   const ground = (x: number, y: number): number => {
     const sec = g.sectors?.atZ(x, y, u.z) ?? g.sectors?.at(x, y) ?? null;
     return sec ? groundZ(sec, x, y) : u.z;
@@ -605,8 +605,8 @@ function drawCone(ctx: CanvasRenderingContext2D, g: Game, s: Soldier): void {
     ctx.fill();
     ctx.stroke();
   };
-  zone(DEFAULT_RANGE, 'rgba(110,200,80,.20)', 'rgba(110,200,80,.55)');
-  zone(DEFAULT_RANGE * 0.5, 'rgba(30,140,50,.32)', 'rgba(30,140,50,.8)');
+  zone(s.reach, 'rgba(110,200,80,.20)', 'rgba(110,200,80,.55)');
+  zone(s.reach * 0.5, 'rgba(30,140,50,.32)', 'rgba(30,140,50,.8)');
 }
 
 function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {

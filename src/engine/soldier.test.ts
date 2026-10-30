@@ -4,7 +4,7 @@ import { parseSec, SectorFlag } from '../formats/sec.ts';
 import { anmSeq, bnm, secBytes } from '../testing/builders.ts';
 import { RouteType, type Route } from './patrol.ts';
 import { SectorMap } from './sectors.ts';
-import { Order, Soldier, type Shot, type SoldierWorld } from './soldier.ts';
+import { lookRange, Order, Soldier, type Shot, type SoldierWorld } from './soldier.ts';
 import { COMMANDO_ENERGY, Unit } from './unit.ts';
 import { inCone, lineClear, rayReach, sees } from './vision.ts';
 
@@ -138,11 +138,15 @@ describe('Soldier', () => {
     c.crouched = true;
     const s = new Soldier('S', unit(0, 0), null);
     const { world } = mkWorld([c]);
-    run(s, world, 10);
+    run(s, world, 200); // todo un barrido de cabeza: agachado, a 600 u no entra en la zona corta (≤ 400) en ningún momento
     expect(s.order).toBe(Order.Patrol);
     c.crouched = false;
-    run(s, world, 3);
-    expect(s.order).toBe(Order.Aim);
+    let aimed = false;
+    for (let i = 0; i < 100; i++) {
+      s.tick(world);
+      aimed ||= s.order === Order.Aim; // de pie lo ve cuando la cabeza pasa cerca del frente (alcance 800)
+    }
+    expect(aimed).toBe(true);
     const d = unit(100, 0);
     d.hit(1e9);
     const t = new Soldier('T', unit(0, 0), null);
@@ -173,5 +177,14 @@ describe('Soldier: vista propia', () => {
     const ancho = new Soldier('S', unit(0, 0), null, { range: 400, angle: 90 });
     run(ancho, mkWorld([c]).world, 5);
     expect(ancho.order).toBe(Order.Aim);
+  });
+});
+
+describe('lookRange (alcance elíptico con la cabeza girada)', () => {
+  it('de frente vale el alcance base; de costado cae (≈42 % a 50°, ≈64 % a 25°); LOOKSCAN lo escala', () => {
+    expect(lookRange(800, 0)).toBeCloseTo(800, 6);
+    expect(lookRange(800, 50)).toBeCloseTo(335, 0);
+    expect(lookRange(800, -25)).toBeCloseTo(513, 0);
+    expect(lookRange(800, 0, 0.5)).toBeCloseTo(400, 6);
   });
 });

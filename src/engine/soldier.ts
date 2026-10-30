@@ -29,6 +29,17 @@ const SWEEP_PERIOD = 100; // DEMORA por defecto
 const SWEEP_PHASE = [0, 4, 3, 0, 2, 1, 1, 4, 2, 0, 2, 4, 2, 0, 3, 1]; // 0x812B28
 const INVESTIGATE_WAIT = 60;
 
+/**
+ * Alcance real de la vista con la cabeza girada `headDeg` (AcVigilar `FUN_004C0E60` con VISTAELIPTICA=1, por defecto): el alcance base `a` se mide sobre un óvalo
+ * de semiejes a y b = a/3, `r = LOOKSCAN·a·b/√((b·cosθ)² + (a·senθ)²)`; mirando de frente vale `a` y mirando de costado cae a ~42 % con θ = 50°. El órgano lo recibe
+ * como `MSGO_VISTA_SETANGCABEZA_CHANGEMOD(ángulo, alcance·1000)` y pasa a ser su `+0x64` (el radio de los dos conos).
+ */
+export function lookRange(base: number, headDeg: number, lookScan = 1): number {
+  const b = base * (1 / 3); // 0x799668
+  const th = (headDeg * Math.PI) / 180;
+  return (lookScan * base * b) / Math.hypot(b * Math.cos(th), base * Math.sin(th));
+}
+
 export interface Shot {
   readonly fromX: number;
   readonly fromY: number;
@@ -53,6 +64,8 @@ export class Soldier implements Target {
   order: Order = Order.Patrol;
   /** Rumbo de la cabeza respecto del cuerpo (barrido). */
   headAngle = 0;
+  /** Alcance actual de la vista (cambia con el giro de la cabeza, ver `lookRange`). */
+  reach: number;
   target: Unit | null = null;
   private readonly patrol: Patrol | null;
   private readonly post: { x: number; y: number; ang: number };
@@ -71,6 +84,7 @@ export class Soldier implements Target {
     this.patrol = route && route.points.length > 0 ? new Patrol(route) : null;
     this.post = { x: unit.body.x, y: unit.body.y, ang: unit.body.ang };
     this.range = opts.range ?? DEFAULT_RANGE;
+    this.reach = this.range;
     this.angle = opts.angle ?? DEFAULT_ANGLE;
     let h = 0;
     for (const ch of token) h += ch.charCodeAt(0);
@@ -134,7 +148,7 @@ export class Soldier implements Target {
   /** El comando más cercano que ve (cono + oclusión), o null. */
   private scan(w: SoldierWorld): Unit | null {
     const b = this.unit.body;
-    const viewer = { x: b.x, y: b.y, heading: b.ang + this.headAngle, range: this.range, angle: this.angle };
+    const viewer = { x: b.x, y: b.y, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle };
     let best: Unit | null = null;
     let bestD = Infinity;
     for (const c of w.commandos) {
@@ -149,6 +163,11 @@ export class Soldier implements Target {
     return best;
   }
 
+  /** Ángulo de apertura del cono (`.ANG`). */
+  get aperture(): number {
+    return this.angle;
+  }
+
   /** Un ciclo de lógica. */
   tick(w: SoldierWorld): void {
     if (this.unit.dead) {
@@ -160,6 +179,7 @@ export class Soldier implements Target {
     // AcVigilar: la cabeza barre ±ANGBARRIDO; apuntando, mira al frente (el cuerpo ya se giró hacia el blanco)
     this.phase++;
     this.headAngle = aiming ? 0 : Math.sin((2 * Math.PI * (this.phase % SWEEP_PERIOD)) / SWEEP_PERIOD) * SWEEP_AMP;
+    this.reach = lookRange(this.range, this.headAngle);
     const seen = this.scan(w);
     if (seen) {
       this.lost = 0;
