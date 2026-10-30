@@ -174,7 +174,7 @@ export const ITEM_WAD: Readonly<Record<string, string>> = {
  * (algunos WAD traen varios). Leída de la memoria de `coman_mp.exe` en marcha (solo lectura): botones `ClassBotonMochila` de la ventana de la mochila, con su offset `+0xFC/+0x100`
  * y el flag de oculto `+0x124` (0 = se dibuja); coincide con las capturas del original. El (x, y) de la tabla estática del exe (`hud-items-tabla.md`) es solo el valor inicial:
  * al elegir comando el exe lo cambia (p. ej. PIEDRA: tabla (−30,85), marine (81,19), boina verde (43,18), francotirador (82,75)); quién lo cambia no está leído.
- * shortcut: solo el estado con los comandos a pie (balsa, buceo y demás contextos cambian qué ítems se ven); el zapador (ARTIFIC) sale de una captura (±2 px), sin leer la memoria.
+ * shortcut: solo el estado con los comandos a pie (balsa, buceo y demás contextos cambian qué ítems se ven); del zapador (ARTIFIC) solo MANO, PISTOLA y PIEDRA salen de una captura (±2 px); CEPO, CARTUCHO, ACTIVADOR y CONTROLA son los offsets de memoria de otro comando y su flag de oculto no se leyó con el zapador.
  */
 export const BAG_POS: Readonly<Record<string, Readonly<Record<string, { readonly sprite: string; readonly x: number; readonly y: number }>>>> = {
   COMANDO: {
@@ -208,6 +208,10 @@ export const BAG_POS: Readonly<Record<string, Readonly<Record<string, { readonly
     MANO: { sprite: 'MANO.RLE', x: 49, y: -67 },
     PISTOLA: { sprite: 'PISTOLA.RLE', x: 59, y: 46 },
     PIEDRA: { sprite: 'PIEDRA.RLE', x: 55, y: 8 },
+    CEPO: { sprite: 'CEPO.RLE', x: -16, y: -14 },
+    CARTUCHO: { sprite: 'CARTUCH2.RLE', x: -15, y: 32 },
+    ACTIVADO: { sprite: 'DETONADO.RLE', x: -8, y: 79 },
+    CONTROLA: { sprite: 'CONTROLA.RLE', x: -26, y: 79 },
   },
 };
 
