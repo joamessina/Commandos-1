@@ -141,6 +141,12 @@ describe('Unit: buceo (AuBucear)', () => {
     expect(u.anim.name).toBe('BUCEAR');
     expect(u.goTo({ x: 150, y: 50 }, false)).toBe(false); // tierra
     expect(u.goTo({ x: 250, y: 50 }, false)).toBe(true); // agua profunda
+    // bajo el agua no rige el ×0,5: caminar 2,5 por ciclo y correr (doble clic) 5 o 6
+    const x0 = u.body.x;
+    u.goTo({ x: 90, y: 50 }, true);
+    u.tick();
+    expect(u.running).toBe(true);
+    expect(u.body.x - x0).toBeGreaterThan(2.5);
     u.stop();
     expect(u.toggleDive()).toBe(false);
     expect(u.diving).toBe(false);

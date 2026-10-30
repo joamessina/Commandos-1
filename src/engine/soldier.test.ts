@@ -69,6 +69,20 @@ const run = (s: Soldier, w: SoldierWorld, n: number): void => {
 };
 
 describe('Soldier', () => {
+  it('no ve al buzo ni al que está dentro de una casa, aunque esté pegado y de frente', () => {
+    const c = unit(100, 0);
+    const s = new Soldier('S', unit(0, 0), null);
+    s.unit.body.ang = 0;
+    const { world } = mkWorld([c]);
+    s.tick(world);
+    expect(s.order).not.toBe(Order.Patrol); // lo ve
+    const t = new Soldier('T', unit(0, 0), null);
+    t.unit.body.ang = 0;
+    c.diving = true;
+    run(t, world, 5);
+    expect(t.order).toBe(Order.Patrol);
+  });
+
   it('patrulla su ruta a la VEL de la ruta y llega al segundo punto', () => {
     const u = unit(0, 0);
     const s = new Soldier('S', u, route(0, 100));

@@ -175,8 +175,8 @@ export class Soldier implements Target {
     let best: Unit | null = null;
     let bestD = Infinity;
     for (const c of w.commandos) {
-      if (c.dead || c.hidden) continue; // dentro de una casa no lo ven
-      if (!sees(viewer, { x: c.body.x, y: c.body.y, radius: 10, low: c.crouched || c.diving }, w.sectors)) continue;
+      if (c.dead || c.hidden || c.diving) continue; // dentro de una casa o buceando (oculto, 0x23C & 0x80000) no lo ven
+      if (!sees(viewer, { x: c.body.x, y: c.body.y, radius: 10, low: c.crouched }, w.sectors)) continue;
       const d = Math.hypot(c.body.x - b.x, c.body.y - b.y);
       if (d < bestD) {
         bestD = d;

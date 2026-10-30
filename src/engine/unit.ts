@@ -64,7 +64,7 @@ export class Unit {
   readonly ammo: Record<string, number> = {};
   /** Trepada en curso (escalera); null si no trepa. */
   climb: Climb | null = null;
-  /** Buceando (AuBucear): solo se pisan sectores de agua y los enemigos lo ven a la mitad de alcance. shortcut: va en línea recta (sin rutas por el mar). */
+  /** Buceando (AuBucear): solo se pisan sectores de agua, sin el ×0,5 del agua (MotorAliado lo omite al bucear) y los soldados no lo ven (oculto). shortcut: va en línea recta (sin rutas por el mar). */
   diving = false;
   /** Casa en la que está (oculto dentro). */
   inHouse: string | null = null;
@@ -396,7 +396,7 @@ export class Unit {
     }
     const v = this.running ? runSpeed(this.token) : (this.speed ?? WALK_SPEED);
     const wp = this.path[0] ?? null;
-    const r = stepBody(this.body, wp, v, isWater(this.sector) ? 0.5 : 1, this.blocked);
+    const r = stepBody(this.body, wp, v, isWater(this.sector) && !this.diving ? 0.5 : 1, this.blocked);
     this.land();
     if (wp && r.arrived) {
       this.path.shift();
