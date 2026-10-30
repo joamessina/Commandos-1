@@ -1,0 +1,19 @@
+# HUD: inventario de recursos y lo leído hasta ahora (2026-10-30)
+
+Estado: **inventario hecho, composición (posiciones) NO leída**. Sin la posición de cada pieza no se puede dibujar el HUD sin inventar.
+
+## Recursos (todos dentro de `WAR_MP.DIR`, `DATOS/RECURSOS/BMPS/SYSTEM/`)
+- `GLOBAL/<ancho>X<alto>.WAD` (512X384, 640X480, 800X600, 1024X768; el exe arma el nombre con `sprintf("%s%ldX%ld.WAD")` en `FUN_005BA6E0`): 4 sprites cada uno: `BARRA01.BMP` y `BARRA02.BMP` (tiras de lona horizontales, 45 de alto) y `BARS0000.RLE`/`BARS0001.RLE` (tiras verticales, 36 de ancho). En 1024X768: 337+633 de ancho de barras horizontales; 337+386 de alto de verticales (+45 = 768); en 800X600: 389+359 y 280+275 (+45 = 600). Falta 16-18 px de ancho en ambos: ¿ventana del minimapa o esquina?
+- `GLOBAL/GLOBAL.WAD` (47 sprites, independiente de la resolución): `AGACHAR/DEPIE/DOBLEZ` (postura), `M_*` = máscara verde de cada icono (zona de clic), `CAMARA`/`CAMAESQU`/`M_OJOALE`/`P_OJOAL0/1` (ojo de alerta), `BOLSOPUTA`/`M_BOLSO`, `MOCHILA`/`MOCHILAA`, `CANT0000`, `CHAT0000`, `CIRC0000..0006` (7 estados, ¿carga o energía?), `ESTRELLA1/2`, `MARC0000`/`MARCA000`, `OFF`/`ON` (interruptor), `REDLENTA`, `SANGRE`, `INPUTCHA`, `ALMR0000..0003`, `INTERROG`, `CUR20000`, `CURS0000`, `BARS0000` (36x442).
+- `CARAS/<PERSONAJE>.WAD` (COMANDO, FRANCOT, LANCHERO, ARTIFIC, CONDUC, ESPIA, ALEMAN, CHICA, FUSILADO, INGERIE, PILOTO, PRESO): `COM0001..COM0009` = cara por nivel de energía (9 grados), `COM0010` = calavera (muerto), `FOTITO02` (foto chica), `FOTO02`, `RFOT0002` (foto de preso); `COMUN.WAD`: `M_FOTITO`, `M_FOTO`, `M_RFOTO` (máscaras).
+- `OPCIONES/<ITEM>.WAD` (PISTOLA, MIRILLA, GRANADA, …, 47 ítems): `<ITEM>.RLE` = dibujo del ítem y `M_<ITEM>.RLE` = máscara verde.
+- `LIBRETAS/LIBR0000..0008.RLE`: minimapa/libreta por misión.
+- Los `BARS000x` que carga `FUN_00608460` (`ClassLineaNumerosBarra`) y `FUN_006F6270`/`FUN_006F6590` (`ClassVentanaMenuDerecha`) son de **ventanas de menú**, no necesariamente del HUD de misión.
+
+## Datos de la misión ya conocidos
+`.INTERFACE [ .SUBINTERFACES [ [ SUBINTERFACEALIADO [ .TOKEN COMANDO .CARETO CARA0001.RLE .ITEMS [ [ .TOKEN IT_PISTOLA ] … ] ] ] … ] ]` (docs/engine/ui-misiones-guardado.md §5.2) y la tabla de 47 ítems (id, código STR del tooltip, par de frames).
+
+## Falta leer (en este orden)
+1. Quién arma el HUD de misión y dónde pone cada pieza (`ClassVisorMundo`, `ClassVisorComandos`, `ClassButtonBar`, `ClassBoton*`, `FUN_006EEEB0`/`FUN_0069D600` que `FUN_005BA6E0` llama tras cargar el WAD).
+2. Qué muestran `CIRC0000..6`, `MARC0000`, `MARCA000`, `REDLENTA`.
+3. Mensajes del HUD (`699AE0`) y la tabla cursor→acción.
