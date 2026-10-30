@@ -13,9 +13,10 @@ import type { Anm } from '../formats/anm.ts';
 import type { Sector } from '../formats/sec.ts';
 import { Animator } from './anim.ts';
 import type { Boat } from './boat.ts';
+import { CLIMB_DOWN_MIN, CLIMB_UP_MIN, newClimb, reverse, stepClimb, wallXY, type Climb, type Ladder } from './ladder.ts';
 import { navFor, type Nav } from './path.ts';
 import { COS50, groundZ, isWater, SIN50, simBlocked, stepOk, validTarget, type SectorMap } from './sectors.ts';
-import { newBody, runSpeed, stepBody, WALK_SPEED, type Body, type Vec } from './walk.ts';
+import { newBody, norm360, runSpeed, stepBody, WALK_SPEED, type Body, type Vec } from './walk.ts';
 
 export { COS50, SIN50 };
 
@@ -55,6 +56,8 @@ export class Unit {
   crouched = false;
   /** Velocidad al andar (VEL de la ruta del soldado); null = la del jugador, 2,5. */
   speed: number | null = null;
+  /** Trepada en curso (escalera); null si no trepa. */
+  climb: Climb | null = null;
   /** Oculto (el cuerpo `DESAPARECE` de MATABICHOSSECTOR): no se dibuja ni se ve. */
   hidden = false;
   /** Acción pendiente al llegar al destino de `doAt` (p. ej. plantar la bomba). */
@@ -128,6 +131,78 @@ export class Unit {
     const s = this.sectorAt(x, y);
     return !s || simBlocked(s) || (s !== this.sector && !stepOk(groundZ(s, x, y) - this.z));
   };
+
+  /**
+   * AUEscalar: va al pie de la escalera (el extremo más cercano en z) y trepa; devuelve false si está desactivada, si el desnivel no pasa el umbral del motor
+   * (subir > 15, bajar > 20) o no hay camino.
+   */
+  useLadder(l: Ladder): boolean {
+    if (this.dead || this.boat || l.disabled) return false;
+    const up = this.z <= (l.low.z + l.high.z) / 2;
+    if (Math.abs(l.high.z - l.low.z) <= (up ? CLIMB_UP_MIN : CLIMB_DOWN_MIN)) return false;
+    const from = up ? l.low : l.high;
+    const sec = this.sectors?.atZ(from.x, from.y, from.z) ?? null;
+    return this.doAt(
+      from,
+      () => {
+        this.beginClimb(l, up ? 1 : -1);
+      },
+      sec,
+    );
+  }
+
+  private beginClimb(l: Ladder, dir: 1 | -1): void {
+    this.climb = newClimb(l, dir);
+    const s = dir > 0 ? l.low : l.high;
+    const e = dir > 0 ? l.high : l.low;
+    this.body.x = s.x;
+    this.body.y = s.y;
+    this.z = s.z;
+    this.body.ang = norm360((Math.atan2(e.y - s.y, e.x - s.x) * 180) / Math.PI);
+    this.anim.set(dir > 0 && this.anim.has('ESCALAR_EMPIEZA') ? 'ESCALAR_EMPIEZA' : this.anim.has('ESCALAR_CICLICO') ? 'ESCALAR_CICLICO' : this.anim.name);
+  }
+
+  /** Lo lleva un montacargas: desplaza el cuerpo y su altura. */
+  carryBy(dx: number, dy: number, dz: number): void {
+    this.body.x += dx;
+    this.body.y += dy;
+    this.z += dz;
+  }
+
+  /** Al parar el montacargas: vuelve a buscar el sector bajo los pies. */
+  settle(): void {
+    this.land();
+  }
+
+  /** Botón derecho (MSG_BOTON2VIRTUAL) trepando: pausa, queda congelado a esa altura. */
+  pauseClimb(): void {
+    if (this.climb) this.climb.paused = true;
+  }
+
+  /** Clic izquierdo con la trepada pausada: +1 si el punto está más alto que el comando, −1 si más bajo (FUN_004F3C70); sigue o da vuelta. */
+  resumeClimb(targetZ: number): void {
+    if (this.climb) reverse(this.climb, targetZ >= this.z ? 1 : -1);
+  }
+
+  private climbTick(): void {
+    const c = this.climb;
+    if (!c) return;
+    const r = stepClimb(c, this.z);
+    if (!c.paused) this.anim.advance(0, 1);
+    if (c.phase === 'top' && c.dir > 0 && this.anim.has('ESCALAR_FIN')) this.anim.set('ESCALAR_FIN');
+    this.z = r.z;
+    const w = wallXY(c.ladder, r.z);
+    this.body.x = w.x;
+    this.body.y = w.y;
+    if (!r.done) return;
+    const end = c.dir > 0 ? c.ladder.high : c.ladder.low;
+    this.body.x = end.x;
+    this.body.y = end.y;
+    this.z = end.z + (c.dir > 0 ? 2 : 0);
+    this.climb = null;
+    this.land();
+    this.anim.set(this.anim.has('REPOSO') ? 'REPOSO' : 'ANDAR');
+  }
 
   /** AUAgacharse (`AGAC`, 0x4E5E00): alterna agachado/de pie (en bote no); agachado los enemigos lo ven a la mitad de alcance. Devuelve el nuevo estado. */
   toggleCrouch(): boolean {
@@ -251,6 +326,10 @@ export class Unit {
   tick(): void {
     if (this.dead) {
       this.anim.advance(0, 1);
+      return;
+    }
+    if (this.climb) {
+      this.climbTick();
       return;
     }
     if (this.busy > 0) {

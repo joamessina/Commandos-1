@@ -18,6 +18,7 @@ import { Animator } from '../engine/anim.ts';
 import type { Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
 import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
+import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatSlots } from '../engine/boat.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
 import { parseRoutes } from '../engine/patrol.ts';
@@ -84,6 +85,8 @@ interface Prop {
   ang: number;
 }
 interface Game {
+  readonly ladders: Ladder[];
+  readonly lift: Lift | null;
   readonly demo: Demolition;
   /** Barril del juego -> su gráfico (se oculta al explotar). */
   readonly barrelProps: ReadonlyMap<Barrel, Prop>;
@@ -283,7 +286,7 @@ async function load(): Promise<void> {
   const barrelMap = new Map<Barrel, Prop>();
   for (const e of elems) if (e.macro?.toUpperCase() === 'MINASUB') demo.addMine(e.x, e.y);
   for (const b of barrelProps) barrelMap.set(demo.addBarrel(b.elem.token, b.elem.x, b.elem.y), b.prop);
-  game = { demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.`);
@@ -315,6 +318,19 @@ function checkWin(g: Game): void {
   if (g.won || !b || !g.escape || !g.demo.objectivesDone) return;
   const alive = g.units.filter((u) => !u.unit.dead);
   if (alive.length > 0 && alive.every((u) => u.unit.boat === b) && Math.hypot(b.x - g.escape.x, b.y - g.escape.y) < 250) g.won = true;
+}
+
+/** Escaleras y montacargas por ciclo: ESCALA02 se desactiva al caer CASA04 (Intend00) y el montacargas lleva a quien está encima. */
+function tickWorld(g: Game): void {
+  for (const l of g.ladders) if (l.token === 'ESCALA02') l.disabled = g.demo.destroyed.has('CASA04');
+  const lift = g.lift;
+  if (!lift?.moving) return;
+  const p = lift.pos;
+  const riders = g.units.filter((u) => !u.unit.dead && !u.unit.climb && Math.hypot(u.unit.body.x - p.x, u.unit.body.y - p.y) < 40 && Math.abs(u.unit.z - p.z) < 25);
+  const d = lift.tick();
+  for (const u of riders) u.unit.carryBy(d.x, d.y, d.z);
+  const stillMoving = (): boolean => lift.moving; // tick() puede haberlo detenido
+  if (!stillMoving()) for (const u of riders) u.unit.settle();
 }
 
 function makeWater(vol: Vol, wad: Wad, def: NonNullable<ReturnType<typeof parseWater>>, index: Uint8Array, bounds: Rect): WaterView {
@@ -385,6 +401,7 @@ function setupStage(): void {
     while (acc >= TICK) {
       if (!g.battle.lost && !g.won) g.battle.tick();
       g.demo.tick();
+      tickWorld(g);
       g.demo.tickMines(g.boat?.boat ?? null, g.units.map((u) => u.unit));
       if (g.demo.boatSunk && g.boat?.prop.anim.has('PINCHAR')) g.boat.prop.anim.set('PINCHAR');
       if (g.demo.dirty) recompose(g);
@@ -467,6 +484,14 @@ function draw(g: Game): void {
     ctx.drawImage(g.water.canvas, 0, 0);
   }
   ctx.drawImage(g.map, 0, 0);
+  if (g.lift) {
+    // montacargas (sin sprite en los datos: una plataforma) en su posición actual
+    const q = project(g.lift.pos.x, g.lift.pos.y, g.lift.pos.z);
+    ctx.fillStyle = '#3b3f46';
+    ctx.fillRect(q.px - 22, q.py - 10, 44, 20);
+    ctx.strokeStyle = g.lift.moving ? '#c9a24a' : '#888';
+    ctx.strokeRect(q.px - 22 + 0.5, q.py - 10 + 0.5, 43, 19);
+  }
   if (g.showCones) for (const s of g.soldiers) if (!s.soldier.dead) drawCone(ctx, g, s.soldier);
   // Personajes y objetos entre los volúmenes del mapa (FUN_005D1C40): se ordenan juntos y, si un edificio va después, se repinta encima.
   interface Drawable {
@@ -711,6 +736,11 @@ function onRightUp(e: MouseEvent): void {
     const u = g.units[g.selected]?.unit;
     if (!u || u.dead) return;
     g.battle.cancel(u);
+    if (u.climb) {
+      u.pauseClimb(); // MSG_BOTON2VIRTUAL trepando: queda congelado a esa altura
+      say(`${u.token}: pausado en la escalera (clic más alto sube, más bajo baja).`);
+      return;
+    }
     u.stop();
     if (u.boat) u.boat.stop();
     say(`${u.token}: orden cancelada.`);
@@ -751,7 +781,15 @@ function onMouse(e: MouseEvent): void {
     rightDown = { x: e.clientX - r.left, y: e.clientY - r.top };
     return;
   }
-  if (e.button === 0 && g.planting && sel && !sel.dead && !sel.boat) {
+  const ladder = pickLadder(g.ladders, mx, my);
+  if (e.button === 0 && sel?.climb) {
+    // trepando (pausado o no): +1 si el punto está más alto que el comando, −1 si más bajo (FUN_004F3C70)
+    const spot = g.sectors?.pick(mx, my);
+    sel.resumeClimb(spot ? spot.z : sel.z + (ladder && ladder.high.z > sel.z ? 1 : -1));
+  } else if (e.button === 0 && ladder && !g.mode && !g.planting && sel && !sel.dead && !sel.boat && hit < 0) {
+    g.battle.cancel(sel);
+    if (!sel.useLadder(ladder)) say(ladder.disabled ? 'Esa escalera quedó inutilizable.' : `${sel.token}: no puede usar esa escalera desde acá.`);
+  } else if (e.button === 0 && g.planting && sel && !sel.dead && !sel.boat) {
     g.planting = false;
     const spot = g.sectors ? g.sectors.pick(mx, my) : { ...unproject(mx, my, sel.z), sector: null };
     g.battle.cancel(sel);
@@ -843,6 +881,11 @@ window.addEventListener('keydown', (e) => {
     }
   }
   if (k === 'x' && g.demo.detonate() === 0) say('No hay bombas plantadas.');
+  if (k === 'l' && g.lift && cur) {
+    const p = g.lift.pos;
+    if (Math.hypot(cur.body.x - p.x, cur.body.y - p.y) < 40 && Math.abs(cur.z - p.z) < 25) g.lift.activate();
+    else say('Ponete sobre el montacargas para activarlo.');
+  }
   if (k === 'e' && cur && !cur.dead && !cur.boat && g.boat) {
     const bt = g.boat.boat;
     const seat = g.units.filter((u) => u.unit.boat === bt).length;
