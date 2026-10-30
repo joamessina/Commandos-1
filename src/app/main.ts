@@ -20,7 +20,7 @@ import { Battle } from '../engine/battle.ts';
 import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
 import { House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
-import { Boat, boatSlots } from '../engine/boat.ts';
+import { Boat, boatSlots, freeSeat } from '../engine/boat.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
 import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
@@ -322,7 +322,13 @@ async function load(): Promise<void> {
       const unit = new Unit(e.token, a.anm, host ? host.boat.x : e.x, host ? host.boat.y : e.y, host ? host.boat.z : e.z, host ? host.boat.ang : e.angle, sectors);
       unit.energy = COMMANDO_ENERGY[e.token] ?? 100;
       if (e.height > 0) unit.height = e.height;
-      if (host) unit.board(host.boat, units.filter((u) => u.unit.boat === host.boat).length);
+      // `AcUsaHab .HABILIDAD BALSA` (solo el marino): piloto de la balsa, plaza 0
+      const hab = e.actions.find((x) => x.name.toUpperCase() === 'ACUSAHAB')?.params ?? [];
+      unit.pilot = JSON.stringify(find(hab, '.HABILIDAD') ?? '').toUpperCase().includes('BALSA');
+      if (host) {
+        const seat = freeSeat(host.boat.slots.length, new Set(units.filter((u) => u.unit.boat === host.boat).map((u) => u.unit.seatIndex)), unit.pilot);
+        if (seat !== null) unit.board(host.boat, seat);
+      }
       const weapons: Weapon[] = [];
       const guns = asArmas(e);
       if (guns.includes('PISTOLA')) weapons.push('PISTOLA');
@@ -909,7 +915,7 @@ function onRightUp(e: MouseEvent): void {
       return;
     }
     u.stop();
-    if (u.boat) u.boat.stop();
+    if (u.boat && u.pilot) u.boat.stop(); // MSG_BOTON2VIRTUAL solo lo atiende quien tiene `bicho+0x138` (el piloto)
     say(`${u.token}: orden cancelada.`);
     return;
   }
@@ -1122,7 +1128,10 @@ function onMouse(e: MouseEvent): void {
     if (!hit) say('Ese punto está fuera de los sectores del mapa.');
     else if (sel.boat) {
       // En el bote: clic en agua = el bote va ahí; clic en tierra con el bote parado = el comando baja y camina.
-      if (isWater(hit.sector)) sel.boat.goTo(hit);
+      if (isWater(hit.sector)) {
+        if (sel.pilot) sel.boat.goTo(hit);
+        else say(`${sel.token} va de pasajero: la balsa solo la maneja el marino (LANCHERO).`);
+      }
       else if (!sel.disembark()) say(`${sel.token}: el bote debe estar parado y con una orilla a mano para bajar.`);
       else if (!sel.goTo(hit, run, hit.sector)) say(`${sel.token}: bajó, pero no hay camino a pie hasta ese punto.`);
     } else if (!sel.goTo(hit, run, hit.sector)) say(`${sel.token}: no hay camino a pie hasta ese punto.`);
@@ -1210,9 +1219,9 @@ window.addEventListener('keydown', (e) => {
   if (k === 'l') liftAction(g);
   if (k === 'e' && cur && !cur.dead && !cur.boat && g.boat) {
     const bt = g.boat.boat;
-    const seat = g.units.filter((u) => u.unit.boat === bt).length;
+    const seat = freeSeat(bt.slots.length, new Set(g.units.filter((u) => u.unit.boat === bt).map((u) => u.unit.seatIndex)), cur.pilot);
     if (Math.hypot(bt.x - cur.body.x, bt.y - cur.body.y) > 120 || bt.speed >= 0.01) say('Acercate al bote (a menos de 120) y con el bote parado.');
-    else if (seat >= bt.slots.length) say('El bote está lleno.');
+    else if (seat === null) say(cur.pilot ? 'La plaza del piloto está ocupada.' : 'No hay plaza de pasajero libre.');
     else {
       g.battle.cancel(cur);
       cur.board(bt, seat);

@@ -22,6 +22,17 @@ export interface BoatSlot {
   readonly angle: number;
 }
 
+/**
+ * Plaza que ocupa quien sube (`FUN_004B74D0`): si su habilidad coincide con la del vehículo (`AcUsaHab .HABILIDAD BALSA`, solo el marino) toma la plaza 0 = la del piloto
+ * (`bicho+0x138 = 1`, el único que le da órdenes al vehículo); si no, va de pasajero en una plaza ≥ 1. null = no hay plaza libre.
+ * shortcut: el exe, con la plaza 0 ocupada por otro, la intercambia (`MSGA_INTERCAMBIA_POS`); aquí el piloto solo entra si esa plaza está libre.
+ */
+export function freeSeat(slots: number, taken: ReadonlySet<number>, pilot: boolean): number | null {
+  if (pilot) return taken.has(0) || slots < 1 ? null : 0;
+  for (let i = 1; i < slots; i++) if (!taken.has(i)) return i;
+  return null;
+}
+
 export class Boat {
   /** Ángulo en grados (0 = +x). */
   ang: number;

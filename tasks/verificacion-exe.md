@@ -17,3 +17,5 @@ Regla: antes de implementar algo se lee su definición en el exe (tabla, funció
 | Esposas: ESPOSAS1 | leído | animación del comando al esposar: no hay |
 | Trucos Ctrl+X / Alt+I / Ctrl+Alt+N | leídos (tabla de atajos) | consumidor del flag de invencibilidad sin leer |
 | Ítems sin implementar | mano, señuelo, control alemán, arpón, cepo, botiquín, tabaco, granada | leer cada acción `Au*` antes |
+| Balsa: solo el marino la maneja, el resto va de pasajero | leído (`FUN_004B74D0`, `FUN_005034A0`) | intercambio de plazas con `MSGA_INTERCAMBIA_POS` sin implementar |
+| Habilidades por comando (matriz de `docs/engine/acciones-jugador.md` §3) | en el doc, **no aplicada entera**: bomba (zapador) está por token y no por la acción del MIS; escalar, agacharse y otros no se filtran por comando | revisar cada fila de la matriz contra el código |

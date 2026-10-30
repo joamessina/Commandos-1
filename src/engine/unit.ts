@@ -86,6 +86,13 @@ export class Unit {
   /** Vehículo en el que va (su plaza = `seat`): el cuerpo sigue a la plaza y no camina. */
   boat: Boat | null = null;
   private seat = 0;
+  /** Piloto de vehículos de agua (`AcUsaHab .HABILIDAD BALSA`; en el vehículo ocupa la plaza 0 y `bicho+0x138 = 1`): solo él maneja la balsa. */
+  pilot = false;
+
+  /** Plaza que ocupa en el bote. */
+  get seatIndex(): number {
+    return this.seat;
+  }
 
   constructor(
     readonly token: string,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Sector } from '../formats/sec.ts';
-import { Boat } from './boat.ts';
+import { Boat, freeSeat } from './boat.ts';
 
 const water = { type: 1 } as Sector;
 const land = { type: 0 } as Sector;
@@ -87,5 +87,14 @@ describe('Boat: límites del Sim', () => {
     for (let i = 0; i < 5; i++) b.tick();
     b.place(300, 40, 7);
     expect([b.x, b.y, b.z, b.speed, b.dest]).toEqual([300, 40, 7, 0, null]);
+  });
+
+  it('plazas: el piloto (habilidad BALSA) toma la 0 y los pasajeros las siguientes, nunca la 0', () => {
+    expect(freeSeat(4, new Set(), true)).toBe(0);
+    expect(freeSeat(4, new Set([0]), true)).toBeNull();
+    expect(freeSeat(4, new Set(), false)).toBe(1);
+    expect(freeSeat(4, new Set([1, 2]), false)).toBe(3);
+    expect(freeSeat(3, new Set([1, 2]), false)).toBeNull();
+    expect(freeSeat(0, new Set(), true)).toBeNull();
   });
 });
