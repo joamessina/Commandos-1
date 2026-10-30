@@ -251,6 +251,7 @@ async function load(): Promise<void> {
   const { sites, objectives, escape } = parseSites(misText, vol, elems);
   const demo = new Demolition(sites, objectives, { soldiers: battle.soldiers, commandos: battle.commandos }, bombCount);
   const barrelMap = new Map<Barrel, Prop>();
+  for (const e of elems) if (e.macro?.toUpperCase() === 'MINASUB') demo.addMine(e.x, e.y);
   for (const b of barrelProps) barrelMap.set(demo.addBarrel(b.elem.token, b.elem.x, b.elem.y), b.prop);
   game = { demo, barrelProps: barrelMap, vol, wad, escape, won: false, battle, soldiers, mode: null, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
@@ -334,6 +335,8 @@ function setupStage(): void {
     while (acc >= TICK) {
       if (!g.battle.lost && !g.won) g.battle.tick();
       g.demo.tick();
+      g.demo.tickMines(g.boat?.boat ?? null, g.units.map((u) => u.unit));
+      if (g.demo.boatSunk && g.boat?.prop.anim.has('PINCHAR')) g.boat.prop.anim.set('PINCHAR');
       if (g.demo.dirty) recompose(g);
       checkWin(g);
       g.boat?.boat.tick();
@@ -525,6 +528,10 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   }
   ctx.fillStyle = '#d9dde3';
   ctx.fillText(`Bombas: ${g.demo.bombs.toString()} (B planta, X detona) · plantadas ${g.demo.planted.length.toString()}`, ctx.canvas.width - 202, oy + 24);
+  if (g.demo.boatSunk) {
+    ctx.fillStyle = '#e0826f';
+    ctx.fillText('¡El Zodiac tocó una mina y se hundió!', 10, 46 + g.units.length * 34);
+  }
   if (g.won) {
     ctx.fillStyle = 'rgba(0,0,0,.7)';
     ctx.fillRect(0, ctx.canvas.height / 2 - 30, ctx.canvas.width, 60);

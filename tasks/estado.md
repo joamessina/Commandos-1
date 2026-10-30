@@ -30,4 +30,5 @@ Portado: `world.ts` (macros `.MAC` + `$Var` + `.NIVEL`), `boat.ts` (Zodiac: Moto
 
 ### Actualización (explosivos y victoria)
 Portado `demolition.ts`: barril (radio 100; estalla con pistola/fusil y en cadena), bomba del ARTIFIC con detonador (4 bombas = inventario del zapador; **B** planta, **X** detona, radio 250 mata a todo el que esté dentro, incluido el zapador), sitios destructibles (`.AUTOEXPCASAS` y `acExplotaCasa`+`CAMBIATILES` = pares de sprites; sin lista = ruinas) con recomposición del mapa, objetivos del MIS y victoria (todos los objetivos + todos los vivos en el bote con **E** + bote a <250 de `PUNTOHUIDA`). Daños de armas del jugador: pistola 40, fusil de mira 100, cuchillo 120 contra 100 de energía del alemán (herido que sobrevive apunta al agresor).
-Falta: minas, escaleras/ascensor, buceo, nidos de ametralladora, casas/cuarteles, alarma completa, sonido, z-order real, caminar hasta plantar la bomba (PONEBOMBA), matabichos de sector al caer CASA04.
+Minas submarinas portadas (el Zodiac que las roce explota 1 s después y se hunde con los ocupantes).
+Falta: escaleras/ascensor, buceo, nidos de ametralladora, casas/cuarteles, alarma completa, sonido, z-order real, caminar hasta plantar la bomba (PONEBOMBA), matabichos de sector al caer CASA04.

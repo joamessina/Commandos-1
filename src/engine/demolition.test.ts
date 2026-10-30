@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseAnm } from '../formats/anm.ts';
 import type { Vol } from '../formats/vol.ts';
 import { anmSeq, bnm } from '../testing/builders.ts';
+import { Boat } from './boat.ts';
 import { BARREL_RADIUS, BOMB_RADIUS, Demolition, parseSites } from './demolition.ts';
 import { Soldier } from './soldier.ts';
 import { Unit } from './unit.ts';
@@ -107,5 +108,46 @@ describe('Demolition', () => {
     d.explode(100, 100, 10);
     expect(d.dirty).toBe(false);
     expect(d.objectivesDone).toBe(false);
+  });
+});
+
+describe('minas', () => {
+  const mkMine = () => {
+    const d = new Demolition([], [], { soldiers: [], commandos: [] });
+    d.addMine(200, 0);
+    const boat = new Boat(0, 0, 0, 0, [{ entry: [0, 0], exit: [0, 0], angle: 0 }], null);
+    const u = unit(0, 0, 'COMANDO');
+    u.board(boat, 0);
+    return { d, boat, u };
+  };
+
+  it('el bote que roza la mina la dispara y 20 ciclos después explota: el bote se hunde y mueren los que van a bordo', () => {
+    const { d, boat, u } = mkMine();
+    d.tickMines(boat, [u]);
+    expect(d.mines[0]?.fuse).toBeNull(); // lejos
+    boat.x = 160; // 40 < 17 + 30
+    for (let i = 0; i < 20; i++) d.tickMines(boat, [u]); // el 1.º arma la mecha (20) y los 19 siguientes la gastan
+    expect(d.boatSunk).toBe(false);
+    d.tickMines(boat, [u]);
+    expect(d.boatSunk).toBe(true);
+    expect(u.dead).toBe(true);
+    expect(d.mines[0]?.done).toBe(true);
+    expect(d.blasts).toHaveLength(1);
+    d.tickMines(boat, [u]); // ya explotó: no repite
+    expect(d.blasts).toHaveLength(1);
+  });
+
+  it('si el bote ya se alejó cuando explota solo hay explosión; sin bote no pasa nada', () => {
+    const { d, boat, u } = mkMine();
+    boat.x = 160;
+    d.tickMines(boat, [u]);
+    boat.x = -500;
+    for (let i = 0; i < 25; i++) d.tickMines(boat, [u]);
+    expect(d.boatSunk).toBe(false);
+    expect(u.dead).toBe(false);
+    const e = new Demolition([], [], { soldiers: [], commandos: [] });
+    e.addMine(0, 0);
+    e.tickMines(null, []);
+    expect(e.mines[0]?.fuse).toBeNull();
   });
 });

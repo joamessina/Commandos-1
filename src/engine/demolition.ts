@@ -11,6 +11,7 @@
 import { asList, asNumbers, asText, find, parseClave, type Node } from '../formats/clave.ts';
 import type { Vol } from '../formats/vol.ts';
 import type { Target, Weapon } from './attack.ts';
+import type { Boat } from './boat.ts';
 import type { Soldier } from './soldier.ts';
 import type { Unit } from './unit.ts';
 import type { Elem } from './world.ts';
@@ -129,6 +130,19 @@ export class Barrel implements Target {
   }
 }
 
+/** Mina submarina (`MINASUB`: cilindro R 17, POTENCIAMINA 10000, RADIOACCIONMINA 20; `AcMina`, docs/lectura/obj-explosivos.md §1). */
+export interface Mine {
+  readonly x: number;
+  readonly y: number;
+  /** Ciclos que faltan para explotar tras ser pisada (null = armada sin pisar). */
+  fuse: number | null;
+  done: boolean;
+}
+
+const MINE_R = 17;
+const MINE_BLAST = 20; // RADIOACCIONMINA
+const MINE_FUSE = 20; // la mina disparada explota 1 s después (+0x18 > 0x13)
+
 export interface People {
   readonly soldiers: readonly Soldier[];
   readonly commandos: readonly Unit[];
@@ -138,6 +152,9 @@ export class Demolition {
   readonly sites: Site[];
   readonly barrels: Barrel[] = [];
   readonly planted: { x: number; y: number }[] = [];
+  readonly mines: Mine[] = [];
+  /** El Zodiac se hundió con una mina: sus ocupantes murieron. */
+  boatSunk = false;
   readonly blasts: Blast[] = [];
   readonly objectives: Map<string, boolean>;
   /** Bombas que le quedan al zapador. */
@@ -152,6 +169,33 @@ export class Demolition {
     this.objectives = new Map(objectives.map((o) => [o, false]));
     this.people = people;
     this.bombs = bombs;
+  }
+
+  addMine(x: number, y: number): void {
+    this.mines.push({ x, y, fuse: null, done: false });
+  }
+
+  /**
+   * Minas: un cuerpo con masa > PESOACT (60; el Zodiac pesa 400) que toque el cilindro (R 17 + el del bote) la dispara y explota 20 ciclos después con
+   * potencia 10000: lo que esté dentro del radio de la mina o a bordo del bote muere y el bote se hunde.
+   * shortcut: solo el bote pisa minas (los comandos a pie no tienen masa suficiente; el buceo no está portado); la mina no se activa por impactos.
+   */
+  tickMines(boat: Boat | null, riders: readonly Unit[]): void {
+    for (const m of this.mines) {
+      if (m.done) continue;
+      if (m.fuse === null) {
+        if (boat && !this.boatSunk && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_R + boat.radius) m.fuse = MINE_FUSE;
+        continue;
+      }
+      if (--m.fuse > 0) continue;
+      m.done = true;
+      this.explode(m.x, m.y, MINE_BLAST);
+      if (boat && !this.boatSunk && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_BLAST + boat.radius + 20) {
+        this.boatSunk = true;
+        boat.stop();
+        for (const u of riders) if (u.boat === boat) u.hit(1e9);
+      }
+    }
   }
 
   addBarrel(token: string, x: number, y: number): Barrel {
