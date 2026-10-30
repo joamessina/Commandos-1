@@ -1,9 +1,11 @@
 /**
  * Disposición del HUD de misión (docs/lectura/hud.md). Las medidas salen de los WAD `GLOBAL/<ancho>X<alto>.WAD` (tira superior de 45, columna derecha de 36) y de una captura
  * del juego original a 1280×720 (imagenesReferncia/HUD.PNG): caras con su barra de sangre a la izquierda de la tira, ojo en la esquina derecha.
- * shortcut: las posiciones de las ranuras y de los iconos se midieron sobre la captura (±2 px), no se leyeron del exe; la cara por energía (9 grados + calavera) y la altura de la
- *           barra de sangre son lineales. Cuándo mejorar: al leer `ClassVisorComandos`/`ClassSubInterfaceAliado`.
+ * shortcut: las posiciones de las ranuras y de los iconos se midieron sobre la captura (±2 px), no se leyeron del exe; la transición de la cara y la altura de la barra de sangre
+ *           (la vida) son lineales. Cuándo mejorar: al leer `ClassVisorComandos`/`ClassSubInterfaceAliado`.
  */
+import { asList, asText, find, parseClave } from '../formats/clave.ts';
+
 export interface Rect {
   readonly x: number;
   readonly y: number;
@@ -83,3 +85,85 @@ export const overHud = (x: number, y: number, width: number, left = false): bool
  */
 export const BAG = { w: 112, h: 149, photoDx: 42, photoDy: -2 } as const;
 export const bagRect = (width: number, height: number, left: boolean): Rect => ({ x: left ? 0 : width - BAG.w, y: height - BAG.h, w: BAG.w, h: BAG.h });
+
+export interface HudItem {
+  /** Token del catálogo (`IT_PISTOLA`, …). */
+  readonly token: string;
+  /** `.DISPONIBLE NO` = oculto hasta que se consigue. */
+  readonly available: boolean;
+}
+
+export interface HudCommando {
+  readonly items: readonly HudItem[];
+}
+
+/** `.INTERFACE [ .SUBINTERFACES [ [ SUBINTERFACEALIADO [ .TOKEN COMANDO .ITEMS [ [ .TOKEN IT_X .DISPONIBLE NO ] … ] ] ] … ] ]`: los ítems de cada comando, en el orden del `.MIS`. */
+export function parseInterface(misText: string): Map<string, HudCommando> {
+  const out = new Map<string, HudCommando>();
+  const info = asList(find(asList(find(parseClave(misText), '.MISSION')) ?? [], '.INTERFACE')) ?? [];
+  for (const sub of asList(find(info, '.SUBINTERFACES')) ?? []) {
+    const pair = asList(sub) ?? [];
+    if (asText(pair[0])?.toUpperCase() !== 'SUBINTERFACEALIADO') continue;
+    const body = asList(pair[1]) ?? [];
+    const token = asText(find(body, '.TOKEN'));
+    if (!token) continue;
+    const items: HudItem[] = [];
+    for (const it of asList(find(body, '.ITEMS')) ?? []) {
+      const l = asList(it) ?? [];
+      const t = asText(find(l, '.TOKEN'));
+      if (t) items.push({ token: t, available: asText(find(l, '.DISPONIBLE'))?.toUpperCase() !== 'NO' });
+    }
+    out.set(token, { items });
+  }
+  return out;
+}
+
+/**
+ * Archivo de `OPCIONES/` con el dibujo de cada ítem del catálogo (el exe arma el nombre con `"%s%s%s.WAD"` y `OPCIONES\`; la tabla ítem→archivo no se leyó, se emparejó por nombre).
+ * Sin entrada = el ítem no tiene dibujo propio hallado (GOLPEAR, ACTSENUELOON/OFF, LEVANTARSE, AGACHARSE, MANOCHICA, PUTADISTRAE, BOMBATIEMPO…).
+ */
+export const ITEM_WAD: Readonly<Record<string, string>> = {
+  IT_PISTOLA: 'PISTOLA',
+  IT_LUGER: 'LUGER',
+  IT_PIPAPUTA: 'PIPAPUTA',
+  IT_MIRILLA: 'MIRILLA',
+  IT_ARPON: 'ARPON',
+  IT_GRANADA: 'GRANADA',
+  IT_ESCOPETA: 'ESCOPETA',
+  IT_MAUSER: 'MAUSER',
+  IT_BALLESTA: 'BALLESTA',
+  IT_METRALLETA: 'METRALLE',
+  IT_MP38: 'MP38',
+  IT_PIEDRA: 'PIEDRA',
+  IT_TABACO: 'TABACO',
+  IT_CUCHILLO: 'CUCHILLO',
+  IT_QUITAUNIFORME: 'QUITAUNI',
+  IT_CACHIPORRA: 'CACHIP',
+  IT_CLOROFORMO: 'CLOROF',
+  IT_ESPOSAS: 'ESPOSAS',
+  IT_PIOLET: 'PIOLET',
+  IT_MANO: 'PUNO',
+  IT_BALSA: 'BALSA',
+  IT_TRAJEBUZO: 'TRAJEBU',
+  IT_CARTUCHO: 'CARTUCHO',
+  IT_ACTIVADOR: 'ACTIVADO',
+  IT_LANZALLAMAS: 'LANZALLA',
+  IT_SEGNUELO: 'SENUELO',
+  IT_ALICATE: 'ALICATE',
+  IT_INSIGNIA: 'INSIGNIA',
+  IT_UNIFORME: 'UNIFORME',
+  IT_CAMUFLARSE: 'CAMUFLAR',
+  IT_JERINGUILLALETAL: 'JERIN',
+  IT_BOTIQUIN: 'BOTIQUIN',
+  IT_CEPO: 'CEPO',
+  IT_CONTROLALEMAN: 'CONTROLA',
+  IT_MALETIN: 'MALETIN',
+  IT_INTERRUPTOR_ASCENSOR: 'PALANCA',
+  IT_ESPIAA: 'ESPIAA',
+  IT_ESPIAA2: 'ESPIAA2',
+  IT_ESPIAA3: 'ESPIAA3',
+  IT_ESPIAA4: 'ESPIAA4',
+  IT_ESPIAA5: 'ESPIAA5',
+  IT_ESPIAA6: 'ESPIAA6',
+  IT_ESPIAA7: 'ESPIAA7',
+};

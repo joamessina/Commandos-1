@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, overHud, slotAt, slotRect, viewRect } from './hud.ts';
+import { bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, ITEM_WAD, overHud, parseInterface, slotAt, slotRect, viewRect } from './hud.ts';
 
 describe('hud', () => {
   it('elige el WAD de interfaz más grande que cabe', () => {
@@ -51,3 +51,31 @@ describe('hud', () => {
     expect(slotRect(2).x).toBe(1 + 126);
   });
 });
+
+describe('parseInterface', () => {
+  const MIS = `.MISSION [ .INTERFACE [ .SUBINTERFACES [
+    [ SUBINTERFACEMULTIPLE [ .TOKEN MULTIPLE .ELEMUSABLES [ ZODIAC5 ] ] ]
+    [ SUBINTERFACEALIADO [ .TOKEN COMANDO .CARETO CARA0001.RLE .ITEMS [ [ .TOKEN IT_PISTOLA ] [ .TOKEN IT_TABACO .DISPONIBLE NO ] [ .TOKEN IT_MANO ] ] ] ]
+    [ SUBINTERFACEALIADO [ .ITEMS [ [ .TOKEN IT_X ] ] ] ]
+    [ SUBINTERFACEALIADO [ .TOKEN LANCHERO .ITEMS [ [ .X 1 ] [ .TOKEN IT_TRAJEBUZO ] ] ] ]
+  ] ] ]`;
+
+  it('lee los ítems de cada comando en orden, con .DISPONIBLE NO como oculto; ignora MULTIPLE y subinterfaces sin token', () => {
+    const m = parseInterface(MIS);
+    expect([...m.keys()]).toEqual(['COMANDO', 'LANCHERO']);
+    expect(m.get('COMANDO')?.items).toEqual([
+      { token: 'IT_PISTOLA', available: true },
+      { token: 'IT_TABACO', available: false },
+      { token: 'IT_MANO', available: true },
+    ]);
+    expect(m.get('LANCHERO')?.items).toEqual([{ token: 'IT_TRAJEBUZO', available: true }]);
+    expect(parseInterface('.MISSION [ ]').size).toBe(0);
+  });
+
+  it('cada ítem de la misión 0 con dibujo propio tiene archivo en OPCIONES', () => {
+    expect(ITEM_WAD['IT_TRAJEBUZO']).toBe('TRAJEBU');
+    expect(ITEM_WAD['IT_MANO']).toBe('PUNO');
+    expect(ITEM_WAD['IT_GOLPEAR']).toBeUndefined();
+  });
+});
+

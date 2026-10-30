@@ -32,3 +32,9 @@ Con la captura del original (1280×720, `imagenesReferncia/HUD.PNG`, no versiona
 - **Tecla `º`/`|` (la de la izquierda del 1, `Backquote`)**: pasa la columna (espejada) y la mochila al lado izquierdo y el mundo se corre 36 px; el ojo, la cámara y las caras no se mueven.
 - **Mochila** (`MOCHILA` 112×149) pegada al borde inferior, con la foto grande (`FOTOnn`, 71×91) clavada en (+42, −2); aparece con un comando seleccionado. Con el marine en la balsa solo muestra el traje de buzo (el tanque amarillo): qué ítems se ven según el contexto no se leyó.
 - Escala de las capturas: ≈2,04 px por píxel de juego (paso de ranura 63).
+
+## Cierre 3 (2026-10-30): ítems de la mochila (lo que se sabe y lo que falta)
+- **Qué ítems tiene cada comando**: `.INTERFACE .SUBINTERFACES [ SUBINTERFACEALIADO [ .TOKEN … .ITEMS [ [ .TOKEN IT_X (.DISPONIBLE NO) ] … ] ] ]` del `.MIS` (`engine/hud.ts parseInterface`, con prueba). Misión 0: COMANDO 12 ítems, LANCHERO 10, FRANCOT 8, ARTIFIC 9; `.DISPONIBLE NO` = oculto.
+- **Dibujo de cada ítem**: `OPCIONES/<NOMBRE>.WAD` (`FUN_00697170`: `"%s%s%s.WAD"` con `OPCIONES\`), con el dibujo y su máscara `M_*` (zona de clic). Tabla ítem→archivo (`ITEM_WAD`) emparejada por nombre; sin archivo hallado: GOLPEAR, ACTSENUELOON/OFF, LEVANTARSE, AGACHARSE, MANOCHICA, PUTADISTRAE, BOMBATIEMPO.
+- **Posición de cada ítem en la mochila: NO está en el `.MIS` ni en la cabecera de los sprites (campos sin uso = basura) ni en la tabla de 47 registros (`FUN_00786E60`: nombre, id, código STR, grupo y par de frames de *cursor*)**. Las crea `FUN_0051EEF0(sprite, máscara, paleta, …)` desde `FUN_00697DD0`; las coordenadas no aparecen ahí. Plan: ubicarlas por coincidencia de plantilla de cada dibujo sobre capturas del original (comando a pie con la mochila abierta).
+- **Qué ítems se ven según el contexto** (el marine en la balsa solo muestra el traje de buzo): sin leer.
