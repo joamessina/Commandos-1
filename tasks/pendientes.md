@@ -8,6 +8,8 @@
 
 **Continuación de faltantes (2026-10-30):** [`cierre-faltantes-70.md`](../docs/lectura/cierre-faltantes-70.md) documenta minimapa, PASW de agua, pérdida/selección de objetivo vehicular y22 grafos reales. Los porcentajes de las cuatro áreas se actualizan abajo; recinto final, otras familias y validación audiovisual siguen abiertos.
 
+**Barrido ≥80 % (2026-10-30):** [`cierre-80.md`](../docs/lectura/cierre-80.md) revisa las22 filas A/B que cumplían el umbral al comenzar, con funciones, VA y líneas. Incluye consumidores del recinto y NOVERHASTA, paletas/hover, compuerta/puente/Testigo, acciones y resultados. Contraste directo:115 scripts y166 ANM/1.321 secuencias. Los porcentajes previos se conservan: revisión no significa cierre total ni implementación. Este informe prevalece sobre pendientes históricos contradictorios.
+
 ## A. Misión 0 (la que se juega hoy)
 
 | ✔ | Qué falta | % investigado | Dificultad | Notas |
@@ -21,13 +23,13 @@
 | [ ] | Casas y cuarteles (`AcCasa`, `AcUsaHab`, refuerzos con alarma) | 95 % | Media-alta | Entrar/salir y grupos de M0 implementados. Regeneración individual/de grupo ya leída; `cierre-70.md` §4 cierra sensor → slot7 de intendencia → difusión. Falta implementación completa y validación en juego. |
 | [ ] | Alarma y voces de los soldados (grito, cadáver avisa a los demás) | 65 % | Alta | **Hecho:** BAP1/BANPE1 miran el estímulo y BAP2/BANPE2 caminan (`soldado-acbap2.md` §0). Falta la cadena de reacciones de `AcBap2`, alarma por voces y qué sonidos son de peligro (`sonido.md` cierre 3). |
 | [x] | Reacción a cadáveres vistos | 80 % | Baja-media | `FUN_006AFC10` releído (`cierre-70.md` §7): muerto/esposado/atontado son categorías distintas. Port parcial (investigan una vez); falta reacción específica completa por cerebro. |
-| [ ] | Objetos del mapa: BOYA, BANDERA, SEGNUELO, TESTIGO, CEPO, puertas, focos | 80 % | Media | **Hecho:** BOYA/BANDERA animadas; **CEPO y SEGNUELO** colocables desde la mochila (`engine/traps.ts`: el cepo mata, el señuelo hace ruido de radio 300). Falta `AcTestigo` (activar/desactivar y objetivos), focos, puertas. |
+| [ ] | Objetos del mapa: BOYA, BANDERA, SEGNUELO, TESTIGO, CEPO, puertas, focos | 80 % | Media | **Hecho:** BOYA/BANDERA animadas; **CEPO y SEGNUELO** colocables desde la mochila (`engine/traps.ts`: el cepo mata, el señuelo hace ruido de radio 300). `cierre-80.md` §4 lee Testigo, compuerta, puente y control; falta portarlos, focos y contraste visual. |
 | [ ] | Eventos de misión y patrullas (`EVENTO`, `ENLAZAR`, `ESPERAEVENTO`, cambio de ruta) | 95 % | Media | `cierre-70.md` §4: tipo6 → `FUN_0059CEA0` → `FUN_0059A060`, máscaras del sector. Rutas/esperas/cambio por evento ya leídos en `patrulla.md`; falta portarlos para otras misiones. M0 tiene REAC y patrulla libre. |
 | [x] | Energía real de los alemanes (hoy 100 por defecto, sin leer) | 30 % | Baja | Hay que leer `ENEGIA` por defecto del cargador del bicho. Hecho: 100 confirmado en `ClassBicho`. |
 | [ ] | Munición y armas de los comandos | 90 % | Media | `cierre-70.md` §5: recarga pistola1/metralleta10, piedra no atonta600 como puño; granada y tabaco contrastados. Falta portar acciones restantes y corregir piedra. Reglas previas en `au-jugador.md`; límites de investigación por receptor/contexto en el cierre. |
 | [ ] | Explosiones: cráteres, partículas, temblor de cámara | 60 % | Media | `obj-explosivos.md`, `render.md` (temblor leído). |
 | [ ] | Sonido de la misión (olas, disparos, explosiones, voces) | 65 % | Media-alta | `sonido.md`; falta todo Web Audio. |
-| [ ] | HUD real (libretas, caras, mochila, tooltips) | 95 % | Alta | Tabla por personaje y balas en `cierre-70.md` §2; transformación, clic y marcadores del minimapa en `cierre-faltantes-70.md` §1,9 libretas reales validadas. Falta portar, paletas/hover, contextos restantes y contraste en pantalla; alias BMP/RLE del tutorial pendiente. |
+| [ ] | HUD real (libretas, caras, mochila, tooltips) | 95 % | Alta | Tabla por personaje y balas en `cierre-70.md` §2; transformación, clic y marcadores del minimapa en `cierre-faltantes-70.md` §1,9 libretas reales validadas. Hover/pulsación y paletas nominales leídos en `cierre-80.md` §2. Falta portar, colores concretos de bancos, contextos restantes y contraste en pantalla; alias BMP/RLE pendiente. |
 | [x] | Fin de misión: pantalla de resultados, puntuación por tiempo y energía, textos | 85 % | Media | Port de estrellas/rango/FINM/ALMU. `cierre-70.md` §8 confirma rango de campaña ya leído (score/6, tope4); falta portarlo. Restan presentación de bajas, códigos de fin y validación en pantalla. |
 | [ ] | Sombras de personajes y partículas de agua (estelas) | 50 % | Media | `render.md`. |
 | [ ] | Noche y luces (la misión 0 es de día: baja prioridad) | 85 % | Media | Curvas leídas en `render.md` cierre 2. |
@@ -37,8 +39,8 @@
 | ✔ | Qué falta | % investigado | Dificultad | Notas |
 |---|---|---|---|---|
 | [ ] | Misión 1 a 10: cargar y jugar cada una (MIS, Intendencia, objetivos, victoria) | 60 % | Alta (1 sesión por misión) | Intendencias leídas, mundo ya carga por macros. |
-| [ ] | Vehículos: tanque, camión, jeep, lancha, tren, avión | 90 % | Alta (2-3 sesiones) | `sim-vehiculos.md`, `cierre-70.md` §3 y `cierre-faltantes-70.md` §3: selección/adopción/pérdida CLancha/CTanque y NOVERHASTA leídos. Faltan otras familias, consumidores de bicho+0x224 y verificación de vehículos/orilla en juego. |
-| [ ] | Animales: perro, león, avestruz, gallina, gaviota | 90 % | Media | `cierre-70.md` §6 + `cierre-faltantes-70.md` §4:22 grafos/211 bases/470 conexiones reales; conservar duplicados. Falta consumidor final del bit de recinto y validar vuelo/sombras en pantalla. No está demostrado confinamiento físico ni ataque restringido al recinto. |
+| [ ] | Vehículos: tanque, camión, jeep, lancha, tren, avión | 90 % | Alta (2-3 sesiones) | `cierre-80.md` §3 cierra consumidor de+0x224 (tick de vista) y umbral de lancha; selección/adopción/pérdida CLancha/CTanque en cierres previos. Faltan otras familias/contextos y verificación de vehículos/orilla en juego. |
+| [ ] | Animales: perro, león, avestruz, gallina, gaviota | 90 % | Media | `cierre-70.md` §6 + `cierre-faltantes-70.md` §4:22 grafos/211 bases/470 conexiones reales; conservar duplicados. `cierre-80.md` §1b encuentra consumidores de recinto en máscaras0x07000000 de reacción enemiga. Falta validar navegación, vuelo/sombras en pantalla. No está demostrado confinamiento físico ni ataque restringido al recinto. |
 | [ ] | Presos, testigos, escoltas (`AcVigilante`), policía y sus refuerzos | 85 % | Media | `cierre-70.md` §7 corrige huida: ruta libre y ausencia de vigilantes activos, no consulta directa de alarma. Custodia, escolta y refuerzos tienen lectura previa; falta integración por misión y validación real. |
 | [ ] | Enemigos: cadena de reacciones completa de `AcBap1/2`, `AcBanpe`, Gestapo | 55 % | Alta (2-3 sesiones) | `soldado-acbap.md`, `soldado-acbap2.md`. |
 | [ ] | Estados del soldado: esposado, atontado, desnudo, fumar, charlar | 80 % | Media | `cierre-70.md` §§5/7: diferenciar pedrada, cachiporra y animación de cuerpo ya caído. Custodia y estados previos en `detenido.md`/`soldado-acbap.md`; falta port completo por familia. |
@@ -67,7 +69,7 @@
 | [ ] | Oclusión real de la vista: volúmenes `FUN_0063E200`, `FUN_005F51A0`, `FUN_005F5B80` | 65 % | Media-alta | `FUN_005F9820` ya portada (`Nav.sight`: pendiente sobre bordes de sector, alturas de ojo). Falta lo demás. |
 | [ ] | Núcleo del motor (bucle, mensajes, listas) | 10 % | Alta | |
 | [ ] | `AcBap2` (`0x43A0E0…0x43C7F0`) | 0 % | Alta | |
-| [ ] | `FUN_006BB320` (zona permitida del vehículo del jugador) | 0 % | Baja-media | |
+| [ ] | `FUN_006BB320` (prueba de objetivo/zona) | 80 % | Baja-media | `cierre-80.md` §3: identidad, radio estricto, prueba elevada29Z y caché006B7380 leídos con asm. Falta atribuir todos los contextos de llamada; no es permiso vehicular universal. |
 | [x] | Fase inicial del barrido de cabeza (hoy casi sincronizada) | 70 % | Baja | `vigilar-vigilante.md`; revisar si el original se ve desfasado. Hecho: confirmada (suma de chars del nombre &15). |
 
 ## D. Cosas mías (opcionales, no cambian el juego)
