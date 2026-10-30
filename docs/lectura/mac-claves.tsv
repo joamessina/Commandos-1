@@ -1,0 +1,234 @@
+clave	archivos	apariciones	tipo	padres_principales	ejemplo	en_codigo	en_docs
+.CARISMA	83	360	num	ACPISAR(46) ACPILOTAJE(31) $ACPATRULLA(30)	700	si	si
+.H	95	205	num	CILINDRO(120) POLY(85)	400	si	si
+.ENTRADA	31	142	lista	.INFO(142)	[5 0 0]	si	nombre
+.SALIDA	29	136	lista	.INFO(136)	[55 0 0]	si	nombre
+.POS	29	122	lista	.VEHICLE(106) .MANGUERAS(16)	[-30 15]	si	si
+.R	68	120	num	CILINDRO(120)	10	si	si
+.BANDO	96	113	texto/lista	RAIZ(97) .ELEMENTOS(10) ACTORRETA(6)	NEUTRAL	si	si
+.ANIM	87	103	texto	.GRAPH(92) .TORRETA(11)	ASPAS	si	si
+.LISTAS	93	103	lista/texto	RAIZ(93) .ELEMENTOS(10)	[EJEC]	no	si
+.VOLCOLISION	91	101	lista	RAIZ(91) .ELEMENTOS(10)	[]	si	si
+.ANGULO	92	99	num/texto	RAIZ(92) .INFO(4) .ELEMENTOS(3)	120	si	si
+.ACCIONES	87	97	lista	RAIZ(87) .ELEMENTOS(10)	[[…] […] […] […] […]]	si	si
+.VARIABLES	95	95	lista	RAIZ(95)	[CStartFrame]	si	si
+.GRAPH	87	92	lista	RAIZ(87) .ELEMENTOS(5)	[.ANIM ASPAS .STARTFRAME $StartFrame .RENDERVOL […]]	si	si
+.RENDERVOL	87	92	lista	.GRAPH(92)	[POLY […]]	si	si
+.MASA	86	92	num	RAIZ(84) .ELEMENTOS(8)	0	no	si
+.VERT	40	87	lista	POLY(85) CILINDRO(2)	[[…] […] […] […]]	si	nombre
+.ORGANOS	68	79	lista	RAIZ(68) .ELEMENTOS(10) .ORGANOS(1)	[.VISTA […] .MOTOR […] .OIDO […]]	si	si
+.CLASS	69	77	texto	RAIZ(67) .ELEMENTOS(10)	BICHO	si	si
+.MOTOR	63	68	lista	.ORGANOS(68)	[MotorAndante […]]	no	si
+.TIP	51	53	texto	RAIZ(51) .ELEMENTOS(2)	AVES	si	si
+.OCLU	45	45	num	RAIZ(45)	0	si	si
+.VISTA	37	42	lista	.ORGANOS(42)	[Vista01 […]]	si	si
+.CONTENEDOR	42	42	num	RAIZ(42)	1	no	si
+.SEHUNDE	38	41	num	RAIZ(36) .ELEMENTOS(5)	1	no	si
+.BOXSELECCIONREL	38	39	lista	RAIZ(38) .ELEMENTOS(1)	[-20 -40 40 40]	si	nombre
+.RADIO	36	36	num/texto	ACEXPLOTAVEH(28) ACCASA(4) ACFOCO(3)	200	si	si
+.ENEGIA	34	34	num	RAIZ(34)	40	no	si
+.REACTIVIDADES	30	33	texto	RAIZ(26) .ELEMENTOS(7)	$Reactividades	no	si
+.TIPOVEH	31	31	texto	ACPILOTAJE(31)	BALSA	no	si
+.CHIVABANDO	31	31	num	ACPILOTAJE(31)	1	no	si
+.INFO	31	31	lista	ACPILOTAJE(31)	[[…] […] […] […] […]]	si	si
+.TIEMPO	31	31	num	ACEXPLOTAVEH(29) ACEXPLOTACASA(2)	50	no	si
+.IMPACTOS	31	31	lista	ACEXPLOTAVEH(29) ACEXPLOTACASA(2)	[.BOMBA 1 .PEPINAZOTANQUE 1 .GRANADA $DestruyeGranada]	si	si
+.WAV	31	31	texto/lista	MOTORAUTO(16) ACPILOTAJE(6) MOTORTANQUE(5)	CAMN	no	si
+.PEPINAZOTANQUE	30	30	num	.IMPACTOS(30)	1	no	si
+.BOMBA	29	29	num	.IMPACTOS(29)	1	no	si
+.ANG	16	28	num	.MANGUERAS(16) VISTA01(12)	90	si	si
+.PINTABLE	7	28	num	.INFO(28)	1	no	si
+.DANO	28	28	num	ACEXPLOTAVEH(28)	180	no	si
+.DISPARO	28	28	num/texto	.IMPACTOS(28)	30	no	si
+.SONFIS	28	28	texto	ACEXPLOTAVEH(28)	XPLO	no	si
+.FUERZA	28	28	num	ACPILOTAJE(27) ACLAPA(1)	150	no	si
+.EXPLOSIONMENOR	27	27	num	.IMPACTOS(27)	1	no	si
+.ANGREV	26	26	texto	MOTORAUTO(20) MOTORTANQUE(6)	$AngMarchaAtras	no	si
+.VEHICLE	25	25	lista	ACPISAR(25)	[[…] […] […] […]]	no	si
+.ANGBARRIDO	24	24	num/texto	ACVIGILAR(24)	40	si	si
+.ANGULOSALIDA	6	24	num	.INFO(24)	270	no	nombre
+.DETECTAEXPLOSION	23	23	num	RAIZ(23)	0	no	si
+.OIDO	23	23	lista	.ORGANOS(23)	[Oido01 […]]	no	si
+.NOSOLIDO	18	19	num	RAIZ(17) .ELEMENTOS(2)	1	no	si
+.ANIMACION	4	16	texto	.INFO(16)	EMBARCADO	no	nombre
+.WIDTH	4	16	num	.MANGUERAS(16)	3	si	no
+.HEIGHT	4	16	num	.MANGUERAS(16)	3	si	no
+.FORCEMOD	4	16	num	.MANGUERAS(16)	1.0	no	si
+.FORCEANG	4	16	num	.MANGUERAS(16)	135.0	no	si
+.COLOR	4	16	texto	.MANGUERAS(16)	$ColorBurbujas	no	nombre
+.VELMAX	16	16	num	MOTORAUTO(10) MOTORBALSA(4) MOTORTANQUE(2)	4	no	si
+.VOL	15	15	lista	VISTA02(15)	[POLY […]]	si	si
+.ACBASE	14	14	num	MOTORAUTO(10) MOTORBALSA(4)	1	no	si
+.ATROPELLO	14	14	num	.IMPACTOS(14)	1	no	si
+.TOKEN	13	13	texto	.ELEMENTOS(10) RAIZ(3)	$PILOTO	si	si
+.DISPARA	12	12	num	ACPILOTAJE(12)	1	no	si
+.BUILDING	11	11	num	RAIZ(11)	0	no	nombre
+.ESCONDUCTOR	11	11	num	.ELEMENTOS(7) RAIZ(4)	0	no	nombre
+.HABILIDAD	11	11	texto	ACUSAHAB(11)	TIERRA	si	si
+.ALCANCEMINIMO	11	11	num	ACTORRETA(11)	50	no	si
+.TORRETA	11	11	lista	ACTORRETA(11)	[.ANIM PNZ2DIS .HOTSPOTSEQUENCES […] .POSICION […]]	no	nombre
+.POSICION	11	11	lista	.TORRETA(11)	[0 0 20]	no	nombre
+.NERVIOSISMO	10	10	texto	ACBAP2(6) ACBANPE1(1) ACBANPE2(1)	$UmbralNerviosismo	no	nombre
+.TENGOTABACO	10	10	texto	ACBAP2(5) ACBANPE1(1) ACBANPE2(1)	$TENGOTABACO	no	si
+.FIJO	9	10	num	MOTOROBJETO(10)	1	no	si
+.ELEMENTOS	10	10	lista	RAIZ(10)	[[…]]	si	si
+.HOTSPOTSEQUENCES	10	10	lista	.TORRETA(10)	[DISPAROPNZ2 DISPAROPNZ2]	no	nombre
+.TIPODISPARO	9	9	texto	ACTORRETA(9)	CANON	no	nombre
+.MOD	8	8	texto/num	VISTA01(8)	$Vision	si	si
+.NORMALVEL	8	8	num	ACPILOTAJE(8)	5	no	nombre
+.RECARGA	8	8	num/lista	ACTORRETA(8)	5	no	si
+.NOSIGUECHIVANDO	7	7	num/texto	ACPILOTAJE(7)	1	no	nombre
+.ALCANCE	7	7	num	ACTORRETA(7)	1000	no	si
+.SONIDOMETRALLETA	7	7	texto	ACTORRETA(7)	TANQUE	no	si
+.MINVEL	7	7	num	ACPILOTAJE(7)	5	no	nombre
+.MAXVEL	7	7	num	ACPILOTAJE(7)	10	no	nombre
+.ATROPELLA	6	6	num/texto	ACPILOTAJE(6)	0	no	si
+.NPARTICLES	6	6	num	ACPSTAIL(4) ACEXPLOTATILESBARRERA(2)	800	no	nombre
+.EXPLOTA	6	6	num	MOTOROBJETO(6)	1	no	si
+.NOCAE	5	6	num	MOTOROBJETO(6)	1	no	si
+.SONIDOAVANCE	6	6	texto	.WAV(6)	CAMI	no	si
+.ALT	6	6	num	VISTA01(6)	150	si	si
+.CABEZA	6	6	num	VISTA01(6)	0	no	si
+.PASO	6	6	num	VISTA01(6)	90	si	si
+.TIPOARMA	5	5	texto	ACDISPARAR(5)	METRALLETA	no	si
+.REPARTEIMPACTO	5	5	num	ACPILOTAJE(5)	1	no	si
+.TILES	5	5	texto/num	.GRAPH(3) .CAMBIATILES(2)	$CambiaTiles	si	si
+.SONIDOARRANQUE	5	5	texto	.WAV(5)	CAMA	no	si
+.SONIDORALENTI	5	5	texto	.WAV(5)	CAMR	no	si
+.SONIDOPARAR	5	5	texto	.WAV(5)	CAMP	no	si
+.CARCEL	5	5	num/texto	ACCASA(4) ACVIGILANTE(1)	1	si	nombre
+.RUTA	5	5	texto	ACFOCO(3) ACBAP2(2)	$Ruta	si	si
+.NOVERHASTA	5	5	texto/num	ACCTANQUE(5)	$NOVERHASTA	no	no
+.PARAYDISPARA	5	5	num	ACPILOTAJE(5)	1	no	nombre
+.STARTFRAME	4	4	texto	.GRAPH(4)	$StartFrame	si	si
+.FTCANSHOOT	4	4	num	ACPILOTAJE(4)	1	no	nombre
+.NAMEVOL	4	4	texto	ACPSTAIL(4)	$VolumenAgua	no	si
+.MANGUERAS	4	4	lista	ACPSTAIL(4)	[[…] […] […] […]]	no	si
+.GIROMAX	4	4	num	MOTORBALSA(4)	3	no	si
+.SOBREAGUA	4	4	num	MOTORBALSA(4)	1	no	si
+.GRANADA	4	4	texto/num	.IMPACTOS(4)	$DestruyeGranada	no	si
+.VISTAELIPTICA	4	4	num	ACVIGILAR(4)	0	si	si
+.TOLTIP_LLENO	4	4	texto	ACRECOGEARMA(2) ACRECARGA(1) ACCOGEBOMBAS(1)	BULL	no	nombre
+.TOLTIP_VACIO	4	4	texto	ACRECOGEARMA(2) ACRECARGA(1) ACCOGEBOMBAS(1)	EMPT	no	nombre
+.XYZ	4	4	texto/lista	.ELEMENTOS(3) RAIZ(1)	$XYZ	si	si
+.XYZENTRADA	4	4	texto	ACCASA(4)	$PUNTOSALIDA	si	si
+.XYZSALIDA	4	4	texto	ACCASA(4)	$PUNTOSALIDA	si	si
+.DOOR	4	4	num	ACCASA(4)	10	no	nombre
+.RAFAGA	4	4	num/lista	ACTORRETA(4)	10	no	si
+.IMPACTO	4	4	num/lista	ACTORRETA(4)	110	si	si
+.ARCO	4	4	num/lista	ACTORRETA(4)	10	no	si
+.BARRERA	3	3	texto	ACBARRERA(2) ACCONTRBARRERATREN(1)	BARRERA	no	nombre
+.TOKENARMA	3	3	texto	ACRECOGEARMA(2) ACRECARGA(1)	MIRILLA	no	nombre
+.FLAGSRECOGER	3	3	texto	ACRECOGEARMA(2) ACRECARGA(1)	FL_BALASFRANCOT	no	si
+.STDVEL	3	3	num	MOTORANDANTE(3)	1.5	no	si
+.ALIADOMUERTO	3	3	num	VISTA01(3)	0	no	si
+.ALEMANMUERTO	3	3	num	VISTA01(3)	0	no	si
+.ANGULOABIERTA	3	3	texto/num	ACCASA(3)	$ANGULOABIERTA	no	nombre
+.ANGULOCERRADA	3	3	texto/num	ACCASA(3)	$ANGULOCERRADA	no	nombre
+.NUMREGENSOLDIERS	3	3	num/texto	ACCASA(3)	0	si	nombre
+.POS_CONO	3	3	texto	ACFOCO(3)	$PosCono	no	nombre
+.LONGITUD	3	3	texto	ACFOCO(3)	$Longitud	no	nombre
+.APERTURA	3	3	texto	ACFOCO(3)	$Apertura	no	nombre
+.HORAENCENDIDO	3	3	texto	ACFOCO(3)	$Horaencendido	no	nombre
+.REAC_ALARMA	3	3	texto	ACFUSILADOR(1) ACGUARDA(1) ACVIGILANTE(1)	$ReacAlarma	no	si
+.SONIDOHERIDO	2	2	texto	ACMUERTEANIMAL(2)	AVHE	no	si
+.ZONARECINTO	2	2	texto	ACAVESTRUZ(1) ACFELINO(1)	$ZonaRecinto	no	nombre
+.VOLMAPA	2	2	texto	ACEXPLOTATILESBARRERA(2)	$VOLMAPA	no	nombre
+.EXPLOSIONPOINT	2	2	texto	ACEXPLOTATILESBARRERA(2)	$EXPLOSIONPOINT	no	nombre
+.TILELIST	2	2	lista	ACEXPLOTATILESBARRERA(2)	[BARR0007.RLE BARR0009.RLE]	no	nombre
+.XYZCONTROL	2	2	texto	ACBARRERA(2)	$XYZCONTROL	no	nombre
+.DIMSELECCION	2	2	lista	ACBARRERA(2)	[20 20]	no	nombre
+.VOLCOLISIONSUBIDA	2	2	lista	ACBARRERA(2)	[8 8]	no	si
+.DISTANCIA	2	2	lista	ACBARRERA(2)	[60 110]	no	si
+.AUTOMATICA	2	2	num	ACBARRERA(2)	1	no	nombre
+.XYSECTOR	2	2	texto	ACBARRERA(2)	$XYSECTOR	no	nombre
+.BARRERAGEMELA	2	2	texto	ACBARRERA(2)	$BARRERAGEMELA	no	nombre
+.RETARDO	2	2	num/texto	ACBOMBA(2)	0	no	si
+.CAMBIATILES	2	2	lista	ACEXPLOTACASA(2)	[[…]]	si	si
+.MAPA	2	2	texto	.CAMBIATILES(2)	$Volumen	si	si
+.VOLTOKENLLAMAS	2	2	texto	ACEXPLOTACASA(2)	$VolumenFuego	no	si
+.NUMARMAS	2	2	num	ACRECOGEARMA(2)	1	no	nombre
+.BALASINICIALES	2	2	texto/num	ACRECOGEARMA(2)	$GRANADAS	no	si
+.GIRO	2	2	num/texto	ACCANON(1) ACNIDOMETRALLETA(1)	180	no	si
+.SONIDOCERRAR	2	2	texto	.WAV(2)	PCRC	no	si
+.TIPOIMPACTO	2	2	texto	ACEXPLOTAVEH(2)	BOMBA	no	si
+.EXPLOTAVEH	2	2	num	.IMPACTOS(2)	1	no	si
+.RAIL	2	2	lista	MOTORRAIL(2)	[.P0 $P0 .P1 $P1]	si	si
+.P0	2	2	texto	.RAIL(2)	$P0	no	nombre
+.P1	2	2	texto	.RAIL(2)	$P1	no	nombre
+.CLASE	2	2	texto	MOTORRAIL(2)	CONSTRUCCION	no	si
+.PRESO	2	2	texto	ACFUSILADOR(1) ACVIGILANTE(1)	$Preso	no	si
+.GESTAPO	2	2	num	ACBAP2(2)	1	no	nombre
+.NOPILOTABLEALIADO	2	2	texto	ACPILOTAJE(2)	$NoPilotableAliado	no	nombre
+.ACTIVA	2	2	num	ACMINA(2)	1	si	si
+.POSCOMEDERO1	1	1	texto	ACAVESTRUZ(1)	$PosComedero1	no	nombre
+.POSCOMEDERO2	1	1	texto	ACAVESTRUZ(1)	$PosComedero2	no	si
+.POSCOMEDERO3	1	1	texto	ACAVESTRUZ(1)	$PosComedero3	no	no
+.POSCOMEDERO4	1	1	texto	ACAVESTRUZ(1)	$PosComedero4	no	no
+.POSCOMEDERO5	1	1	texto	ACAVESTRUZ(1)	$PosComedero5	no	no
+.COMPANERO	1	1	texto	ACBANPE1(1)	$Companero	no	nombre
+.TIEMPOMIRANDOCOMPA	1	1	texto	ACBANPE1(1)	$TiempoMirandoCompa	no	nombre
+.TIEMPOENTREMIRADAS	1	1	texto	ACBANPE1(1)	$TiempoEntreMiradas	no	nombre
+.TIEMPO_RECARGA	1	1	num	ACDISPARAR(1)	5	no	nombre
+.POSBLANCO	1	1	texto	ACTIROALBLANCO(1)	$PuntoTarget	no	nombre
+.POSMIRARIMPACTOS	1	1	texto	ACTIROALBLANCO(1)	$PuntoVerImpactos	no	nombre
+.UMBRAL	1	1	num	OIDO01(1)	10	no	si
+.BALASRECARGA	1	1	texto	ACRECARGA(1)	$BALAS	no	si
+.TOKENBOMBAS	1	1	texto	ACCOGEBOMBAS(1)	$TOKENBOMBAS	no	nombre
+.ANM	1	1	texto	ACEXPLOTAVEH(1)	GRNDEXPL	si	si
+.TORRE	1	1	num	ACCANON(1)	50	no	nombre
+.ALCANCE_MINIMO	1	1	num	ACCANON(1)	200	no	nombre
+.INVULNERABLE	1	1	texto	ACCANON(1)	$INVULNERABLE	si	si
+.SONIDOABRIR	1	1	texto	.WAV(1)	PCRA	no	si
+.TOCARWAV	1	1	texto	.WAV(1)	$TocarWav	no	si
+.DESENRROLLADA	1	1	num	ACESCALA(1)	1	no	si
+.PUNTOBAJO	1	1	texto	ACESCALA(1)	$PUNTOBAJO	si	si
+.PUNTOALTO	1	1	texto	ACESCALA(1)	$PUNTOALTO	si	si
+.CAJASELECCION	1	1	texto	ACESCALA(1)	$CAJASELECCION	si	si
+.ESCALAUSABLEPORBUZO	1	1	texto	RAIZ(1)	$ESCALAUSABLEPORBUZO	si	si
+.CASA_HUIDA	1	1	texto	ACFUSILADOR(1)	$CasaHuida	no	nombre
+.SOYJEFE	1	1	texto	ACFUSILADOR(1)	$SoyJefe	no	si
+.MIJEFE	1	1	texto	ACFUSILADOR(1)	$MiJefe	no	si
+.POSGALLINERO	1	1	texto	ACGALLINA(1)	$PosGallinero	no	nombre
+.EVENTOS_DESACTIVADORES	1	1	texto	ACGENERAL(1)	$ReacDesac	no	nombre
+.EVENTOS_ACTIVADORES	1	1	texto	ACGENERAL(1)	$ReacActiv	no	nombre
+.EV_HUIDA	1	1	texto	ACGENERAL(1)	$Ev_Huida	no	si
+.EV_EXITPOINT	1	1	texto	ACGENERAL(1)	$Ev_ExitPoint	no	si
+.VOLVERORIGEN	1	1	texto	ACGENERAL(1)	$VolverOrigen	no	si
+.HUIRPOREXITPOINT	1	1	texto	ACGENERAL(1)	$HuirPorExitPoint	no	nombre
+.VELVOLVERPATRULLA	1	1	num	ACGENERAL(1)	3	no	nombre
+.EXITPOINTPREFIJADO	1	1	texto	ACGENERAL(1)	$ExitPointPrefijado	no	si
+.CONTACTO	1	1	texto	ACGUARDA(1)	$Contacto	no	nombre
+.EXPLOTACASA	1	1	num	.IMPACTOS(1)	1	no	nombre
+.GUARDIAN	1	1	texto	ACMAQUINA(1)	$Guardian	no	nombre
+.PUNTOACTIVACION	1	1	texto	ACMAQUINA(1)	$PuntoActivacion	no	nombre
+.RADIOACT	1	1	texto	ACMAQUINA(1)	$RadioAct	no	nombre
+.POTENCIAMINA	1	1	num	ACMINA(1)	10000	no	si
+.RANGOVISION	1	1	texto	ACMETRALLERO(1)	$Giro	no	nombre
+.VEHICULO	1	1	texto	ACPUNTOEMPUJE(1)	$Vehiculo	no	si
+.DIRECCIONEMPUJE	1	1	texto	ACPUNTOEMPUJE(1)	$DireccionEmpuje	no	si
+.SONIDO	1	1	texto	ACPUNTOEMPUJE(1)	$Sonido	no	si
+.AMO	1	1	texto	ACPERRO(1)	$Amo	no	nombre
+.LADRADOR	1	1	texto	ACPERRO(1)	$Ladrador	no	nombre
+.POSICIONJUGAR	1	1	texto	ACPRESOCHUSMA(1)	$PosJugar	no	nombre
+.ANGULOJUGAR	1	1	texto	ACPRESOCHUSMA(1)	$AnguloJugar	no	nombre
+.TIEMPOENTREJUEGOS	1	1	texto	ACPRESOCHUSMA(1)	$TEntreJuegos	no	nombre
+.TIEMPOJUGANDO	1	1	texto	ACPRESOCHUSMA(1)	$TJugando	no	nombre
+.TABACO	1	1	num	RAIZ(1)	1	no	nombre
+.CONTACTOS	1	1	texto	ACPRESOTRAIDOR(1)	$Contactos	no	nombre
+.CEREBRO	1	1	texto	ACTRANSMITEIMPACTO(1)	$BichoExplota	no	nombre
+.INTERVALOSND	1	1	texto	ACSEGNUELO(1)	$INTERVALOSND	no	si
+.HOTSPOTSEQUENCE	1	1	lista	.TORRETA(1)	[DISPAROLANCHA]	no	nombre
+.BUNKER	1	1	num	ACNIDOMETRALLETA(1)	1	no	si
+.VOLUMEN	1	1	texto	ACSOCAVON(1)	$Volumen	no	si
+.TILEANTIGUO	1	1	texto	ACSOCAVON(1)	$TileAntiguo	no	nombre
+.TILENUEVO	1	1	texto	ACSOCAVON(1)	$TileNuevo	no	nombre
+.EVENTO	1	1	texto	ACSOCAVON(1)	$Evento	no	si
+.UNIFORME	1	1	texto	ACUNIFORME(1)	ESPIAA	no	si
+.PROPIETARIO	1	1	texto	ACLAPA(1)	$PROPIETARIO	no	nombre
+.DIST	1	1	texto	ACLAPA(1)	$DIST	no	si
+.OTROVIGI	1	1	texto	ACVIGILANTE(1)	$OtroVigi	no	nombre
+.POSPUERTACARCEL	1	1	texto	ACVIGILANTE(1)	$PosPuertaCarcel	no	nombre
+.ANGPUERTACARCEL	1	1	texto	ACVIGILANTE(1)	$AngPuertaCarcel	no	nombre
+.VELNORMAL	1	1	texto	ACVIGILANTE(1)	$VelNormal	no	nombre
+.PARTICLELIFE	1	1	num	ACPSTAIL(1)	10	no	no
