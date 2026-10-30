@@ -73,7 +73,6 @@ export class Soldier implements Target {
   private readonly post: { x: number; y: number; ang: number };
   private readonly range: number;
   private readonly angle: number;
-  private readonly alt: number | undefined;
   private phase: number;
   private timer = 0;
   private lost = 0;
@@ -93,7 +92,7 @@ export class Soldier implements Target {
     token: string,
     unit: Unit,
     route: Route | null,
-    opts: { readonly range?: number; readonly angle?: number; readonly alt?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number } = {},
+    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number } = {},
   ) {
     this.fixed = opts.fixed ?? false;
     this.sweepAmp = opts.sweep ?? SWEEP_AMP;
@@ -106,7 +105,6 @@ export class Soldier implements Target {
     this.range = opts.range ?? DEFAULT_RANGE;
     this.reach = this.range;
     this.angle = opts.angle ?? DEFAULT_ANGLE;
-    this.alt = opts.alt;
     let h = 0;
     for (const ch of token) h += ch.charCodeAt(0);
     this.phase = ((SWEEP_PHASE[h & 15] ?? 0) + 0x14) * 5; // fase inicial del barrido (AcVigilar +0x18)
@@ -173,12 +171,12 @@ export class Soldier implements Target {
   /** El comando más cercano que ve (cono + oclusión), o null. */
   private scan(w: SoldierWorld): Unit | null {
     const b = this.unit.body;
-    const viewer = { x: b.x, y: b.y, z: this.unit.z, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle, ...(this.alt === undefined ? {} : { alt: this.alt }) };
+    const viewer = { x: b.x, y: b.y, z: this.unit.z, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle };
     let best: Unit | null = null;
     let bestD = Infinity;
     for (const c of w.commandos) {
       if (c.dead || c.hidden || c.diving) continue; // dentro de una casa o buceando (oculto, 0x23C & 0x80000) no lo ven
-      if (!sees(viewer, { x: c.body.x, y: c.body.y, z: c.z, radius: 10, low: c.crouched }, w.sectors)) continue;
+      if (!sees(viewer, { x: c.body.x, y: c.body.y, radius: 10, low: c.crouched }, w.sectors)) continue;
       const d = Math.hypot(c.body.x - b.x, c.body.y - b.y);
       if (d < bestD) {
         bestD = d;
@@ -239,7 +237,7 @@ export class Soldier implements Target {
    */
   private lookForBodies(w: SoldierWorld): void {
     const b = this.unit.body;
-    const viewer = { x: b.x, y: b.y, z: this.unit.z, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle, ...(this.alt === undefined ? {} : { alt: this.alt }) };
+    const viewer = { x: b.x, y: b.y, z: this.unit.z, heading: b.ang + this.headAngle, range: this.reach, angle: this.angle };
     for (const body of w.bodies ?? []) {
       const key = `${Math.round(body.x).toString()},${Math.round(body.y).toString()}`;
       if (this.seenBodies.has(key) || (body.x === b.x && body.y === b.y)) continue;

@@ -69,28 +69,6 @@ const run = (s: Soldier, w: SoldierWorld, n: number): void => {
 };
 
 describe('Soldier', () => {
-  it('tope vertical del cono (FUN_0061AE90): no ve a quien queda a más de ALT/2 (75) por encima o por debajo, aunque esté de frente', () => {
-    const v = { x: 0, y: 0, z: 0, heading: 0 };
-    const at = (z: number) => ({ x: 300, y: 0, z, radius: 10, low: false });
-    expect(inCone(v, at(75))).toBe(true);
-    expect(inCone(v, at(-75))).toBe(true);
-    expect(inCone(v, at(76))).toBe(false);
-    expect(inCone(v, at(-80))).toBe(false);
-    expect(inCone({ ...v, alt: 400 }, at(150))).toBe(true);
-    expect(inCone({ ...v, alt: 40 }, at(25))).toBe(false);
-    expect(inCone(v, { x: 300, y: 0, radius: 10, low: false })).toBe(true); // sin z no se aplica
-    const c = unit(100, 0);
-    c.z = 200; // subió la escalera: otro nivel
-    const s = new Soldier('S', unit(0, 0), null);
-    s.unit.body.ang = 0;
-    const { world } = mkWorld([c]);
-    run(s, world, 5);
-    expect(s.order).toBe(Order.Patrol);
-    c.z = 60; // bajó: vuelve a verlo
-    s.tick(world);
-    expect(s.order).not.toBe(Order.Patrol);
-  });
-
   it('no ve al buzo ni al que está dentro de una casa, aunque esté pegado y de frente', () => {
     const c = unit(100, 0);
     const s = new Soldier('S', unit(0, 0), null);
@@ -255,7 +233,6 @@ describe('artillero de nido (soldado fijo)', () => {
     const { parseClave } = await import('../formats/clave.ts');
     const { vistaOf } = await import('./vision.ts');
     expect(vistaOf(parseClave('.ORGANOS [ .VISTA [ Vista01 [ .MOD 320 .ANG 40 ] ] ]'))).toEqual({ range: 640, angle: 40 });
-    expect(vistaOf(parseClave('.ORGANOS [ .VISTA [ Vista01 [ .ALT 250 ] ] ]'))).toEqual({ alt: 250 });
     expect(vistaOf(parseClave('.ORGANOS [ .VISTA [ Vista01 [ ] ] ]'))).toEqual({});
     expect(vistaOf(parseClave('.X 1'))).toEqual({});
   });
