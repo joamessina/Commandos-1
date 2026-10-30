@@ -26,6 +26,8 @@ import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
+import { HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, slotAt, viewRect } from '../engine/hud.ts';
+import { Hud } from '../render/hud.ts';
 import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
 import { rayReach, vistaOf } from '../engine/vision.ts';
 import { asNumber, find } from '../formats/clave.ts';
@@ -126,6 +128,8 @@ interface Game {
   camX: number;
   camY: number;
   ticks: number;
+  /** HUD de misión (null si faltan sus WAD). */
+  readonly hud: Hud | null;
   /** Ticks de par por dificultad (`PUNTUACIONES`) y el resultado fijado al terminar la misión. */
   readonly par: { easy: number; hard: number };
   result: { score: Score; text: string; victory: boolean; kills: number } | null;
@@ -148,9 +152,17 @@ const zoom = (): number => zoomLevel;
 const ZOOM_MAX = 3.4; // docs/research/q1-camara.md §Cierre
 
 /** Zoom del exe (NUM+/NUM−): paso 0,1 (0,05 por debajo de 1), tope 3,4 y mínimo = el mapa entero en la ventana; la cámara sigue centrada en el mismo punto. */
+/** Zona del mundo en el lienzo: con HUD lo que dejan libre la tira superior y la columna derecha; sin él, todo. */
+function vp(g: Game | null): Rect {
+  const w = stage?.width ?? 0;
+  const h = stage?.height ?? 0;
+  return g?.hud ? viewRect(w, h) : { x: 0, y: 0, w, h };
+}
+
 function setZoom(next: number): void {
   const g = game;
-  const min = g && stage ? Math.max(stage.width / g.map.width, stage.height / g.map.height) : 0.25;
+  const v = vp(g);
+  const min = g && stage ? Math.max(v.w / g.map.width, v.h / g.map.height) : 0.25;
   zoomLevel = Math.round(Math.max(min, Math.min(ZOOM_MAX, next)) * 1000) / 1000;
   let o = zoomSel.querySelector<HTMLOptionElement>('option[data-custom]');
   if (!o) {
@@ -193,6 +205,27 @@ async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffe
   }
   say(`${entries.size.toString()} archivos en el contenedor, ${maps.length.toString()} mapas disponibles.`);
   await load();
+}
+
+/** WAD del HUD (GLOBAL, uno por resolución y las CARAS de los comandos de la misión); null si falta alguno de los básicos. */
+function loadHud(tokens: readonly string[]): Hud | null {
+  const root = 'DATOS/RECURSOS/BMPS/SYSTEM/';
+  const wad = (path: string): Wad | null => {
+    const b = bytes(root + path);
+    return b ? parseWad(b) : null;
+  };
+  const global = wad('GLOBAL/GLOBAL.WAD');
+  const sized = new Map<string, Wad>();
+  for (const [w, h] of HUD_MODES) {
+    const s = wad(`GLOBAL/${w.toString()}X${h.toString()}.WAD`);
+    if (s) sized.set(`${w.toString()}x${h.toString()}`, s);
+  }
+  const faces = new Map<string, Wad>();
+  for (const t of new Set(tokens)) {
+    const f = wad(`CARAS/${t}.WAD`);
+    if (f) faces.set(t, f);
+  }
+  return global && sized.size > 0 ? new Hud(global, sized, faces) : null;
 }
 
 function bytes(path: string): Uint8Array | undefined {
@@ -319,7 +352,7 @@ async function load(): Promise<void> {
     const prop = props.find((x) => x.elem === el);
     return prop ? [{ soldier: s, prop }] : [];
   });
-  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, hud: loadHud(units.map((u) => u.unit.token)), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.`);
@@ -392,8 +425,8 @@ function stepWater(g: Game, w: WaterView): void {
   w.fx.step({ x: g.camX, y: g.camY });
   w.fx.copyTo(w.index);
   const z = zoom();
-  const vw = (stage?.width ?? 0) / z;
-  const vh = (stage?.height ?? 0) / z;
+  const vw = vp(g).w / z;
+  const vh = vp(g).h / z;
   const clip = { x: Math.max(0, Math.floor(g.camX - vw / 2)), y: Math.max(0, Math.floor(g.camY - vh / 2)), w: Math.ceil(vw) + 1, h: Math.ceil(vh) + 1 };
   repaintWater(w.img, w.vol, w.wad, clip);
   const x = Math.min(clip.x, w.img.width - 1);
@@ -516,8 +549,9 @@ function draw(g: Game): void {
   const ctx = stage?.getContext('2d');
   if (!stage || !ctx) return;
   const z = zoom();
-  const vw = stage.width / z;
-  const vh = stage.height / z;
+  const v = vp(g);
+  const vw = v.w / z;
+  const vh = v.h / z;
   g.camX = Math.max(vw / 2, Math.min(g.map.width - vw / 2, g.camX));
   g.camY = Math.max(vh / 2, Math.min(g.map.height - vh / 2, g.camY));
   const ox = g.camX - vw / 2;
@@ -526,6 +560,10 @@ function draw(g: Game): void {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, stage.width, stage.height);
   ctx.save();
+  ctx.beginPath();
+  ctx.rect(v.x, v.y, v.w, v.h);
+  ctx.clip();
+  ctx.translate(v.x, v.y);
   ctx.scale(z, z);
   ctx.translate(-ox, -oy);
   if (g.water) {
@@ -641,6 +679,7 @@ function draw(g: Game): void {
     ctx.stroke();
   }
   ctx.restore();
+  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => ({ token: u.unit.token, energy: u.unit.energy, max: u.maxEnergy, dead: u.unit.dead })), g.selected);
   drawHud(ctx, g);
   if (t) {
     ctx.fillStyle = '#d9dde3';
@@ -703,7 +742,9 @@ function drawCone(ctx: CanvasRenderingContext2D, g: Game, s: Soldier): void {
 
 function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   ctx.font = '12px system-ui';
-  g.units.forEach((u, i) => {
+  const top = g.hud ? HUD_BAR + 8 : 0; // con HUD, los textos van bajo la tira superior
+  const rows = g.hud ? 0 : g.units.length;
+  (g.hud ? [] : g.units).forEach((u, i) => {
     const x = 10;
     const y = 10 + i * 34;
     ctx.fillStyle = 'rgba(0,0,0,.55)';
@@ -721,23 +762,24 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   });
   const sel = g.units[g.selected];
   ctx.fillStyle = '#d9dde3';
-  ctx.fillText(`Arma: ${g.planting ? 'bomba (clic donde plantar)' : (g.mode ?? 'ninguna (clic = mover)')}  ·  F pistola · R fusil · C cuchillo · G agacharse · N bucear · Esc mover · E subir al bote · V conos`, 10, 14 + g.units.length * 34);
-  if (sel) ctx.fillText(`Disponibles: ${sel.weapons.map((w) => (sel.unit.ammo[w] === undefined ? w : `${w} (${Math.max(0, sel.unit.ammo[w] ?? 0).toString()})`)).join(', ') || '—'}`, 10, 30 + g.units.length * 34);
-  let oy = 14;
+  ctx.fillText(`Arma: ${g.planting ? 'bomba (clic donde plantar)' : (g.mode ?? 'ninguna (clic = mover)')}  ·  F pistola · R fusil · C cuchillo · G agacharse · N bucear · Esc mover · E subir al bote · V conos`, 10, top + 14 + rows * 34);
+  if (sel) ctx.fillText(`Disponibles: ${sel.weapons.map((w) => (sel.unit.ammo[w] === undefined ? w : `${w} (${Math.max(0, sel.unit.ammo[w] ?? 0).toString()})`)).join(', ') || '—'}`, 10, top + 30 + rows * 34);
+  const right = ctx.canvas.width - (g.hud ? HUD_COLUMN : 0);
+  let oy = top + 14;
   ctx.fillStyle = 'rgba(0,0,0,.55)';
-  ctx.fillRect(ctx.canvas.width - 210, 8, 200, 20 + g.demo.objectives.size * 15 + 18);
+  ctx.fillRect(right - 210, top + 8, 200, 20 + g.demo.objectives.size * 15 + 18);
   ctx.fillStyle = '#c9a24a';
-  ctx.fillText('Objetivos', ctx.canvas.width - 202, oy + 6);
+  ctx.fillText('Objetivos', right - 202, oy + 6);
   for (const [name, done] of g.demo.objectives) {
     oy += 15;
     ctx.fillStyle = done ? '#6cc070' : '#d9dde3';
-    ctx.fillText(`${done ? '✔' : '○'} ${name}`, ctx.canvas.width - 202, oy + 6);
+    ctx.fillText(`${done ? '✔' : '○'} ${name}`, right - 202, oy + 6);
   }
   ctx.fillStyle = '#d9dde3';
-  ctx.fillText(`Bombas: ${g.demo.bombs.toString()} (B planta, X detona) · plantadas ${g.demo.planted.length.toString()}`, ctx.canvas.width - 202, oy + 24);
+  ctx.fillText(`Bombas: ${g.demo.bombs.toString()} (B planta, X detona) · plantadas ${g.demo.planted.length.toString()}`, right - 202, oy + 24);
   if (g.demo.boatSunk) {
     ctx.fillStyle = '#e0826f';
-    ctx.fillText('¡El Zodiac tocó una mina y se hundió!', 10, 46 + g.units.length * 34);
+    ctx.fillText('¡El Zodiac tocó una mina y se hundió!', 10, top + 46 + rows * 34);
   }
   if (g.result) drawResult(ctx, g.result);
 }
@@ -812,8 +854,8 @@ function onRightUp(e: MouseEvent): void {
     return;
   }
   const z = zoom();
-  const { width, height } = stage;
-  const toMap = (sx: number, sy: number): { x: number; y: number } => ({ x: g.camX - width / z / 2 + sx / z, y: g.camY - height / z / 2 + sy / z });
+  const v = vp(g);
+  const toMap = (sx: number, sy: number): { x: number; y: number } => ({ x: g.camX - v.w / z / 2 + (sx - v.x) / z, y: g.camY - v.h / z / 2 + (sy - v.y) / z });
   const a = toMap(Math.min(d.x, x1), Math.min(d.y, y1));
   const b = toMap(Math.max(d.x, x1), Math.max(d.y, y1));
   const idx = g.units.findIndex((u) => {
@@ -828,8 +870,17 @@ function onMouse(e: MouseEvent): void {
   if (!g || !stage) return;
   const r = stage.getBoundingClientRect();
   const z = zoom();
-  const mx = g.camX - stage.width / z / 2 + (e.clientX - r.left) / z;
-  const my = g.camY - stage.height / z / 2 + (e.clientY - r.top) / z;
+  const v = vp(g);
+  const sx = e.clientX - r.left;
+  const sy = e.clientY - r.top;
+  if (g.hud && overHud(sx, sy, stage.width)) {
+    // clic sobre el HUD: la cara de un comando lo selecciona; el resto del HUD aún no hace nada
+    const slot = e.button === 0 ? slotAt(sx, sy, g.units.length, g.selected) : -1;
+    if (slot >= 0) g.selected = slot;
+    return;
+  }
+  const mx = g.camX - v.w / z / 2 + (sx - v.x) / z;
+  const my = g.camY - v.h / z / 2 + (sy - v.y) / z;
   const hit = g.units.findIndex((u) => {
     const p = project(u.unit.body.x, u.unit.body.y, u.unit.z);
     return Math.abs(mx - p.px) < 14 && my > p.py - 40 && my < p.py + 8;

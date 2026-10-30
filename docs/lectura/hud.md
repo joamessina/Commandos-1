@@ -17,3 +17,11 @@ Estado: **inventario hecho, composición (posiciones) NO leída**. Sin la posici
 1. Quién arma el HUD de misión y dónde pone cada pieza (`ClassVisorMundo`, `ClassVisorComandos`, `ClassButtonBar`, `ClassBoton*`, `FUN_006EEEB0`/`FUN_0069D600` que `FUN_005BA6E0` llama tras cargar el WAD).
 2. Qué muestran `CIRC0000..6`, `MARC0000`, `MARCA000`, `REDLENTA`.
 3. Mensajes del HUD (`699AE0`) y la tabla cursor→acción.
+
+## Cierre 1 (2026-10-30): tira, columna, ranuras de comandos
+Con la captura del original (1280×720, `imagenesReferncia/HUD.PNG`, no versionada) y los sprites:
+- **Tira superior** = `BARRA01` (337) + `BARRA02` (889 a 1280) de alto 45; el **ojo** `P_OJOAL0` (52×45) va pegado al borde derecho, `INTERROG` a 156 px del borde y `CAMARA` (55×69, cuelga bajo la tira) a 121 px. **Columna** de 36 a la derecha bajo la tira: `BARS0000` (337) y `BARS0001` debajo. El mundo ocupa el resto (`viewRect`). Con 1280×720: 1226 + 52 = 1278 de ancho de tira; la columna (1244..1280) arranca bajo la tira.
+- **Ranura de comando** = marco `MARC0000` (62×44: hueco de cara 38×38 en +6,+2 y pozo de la barra de sangre en +47,+4); paso 63. El seleccionado usa `MARCA000` (86×44, con una ventana más). La barra es `SANGRE` (9×37).
+- **Caras**: cada WAD de `CARAS/` trae 10 BMP en orden (COM, FRA, LAN, BOM, MEC, ESP + 0001..0010): 1 sano … 9 muy herido, 10 calavera.
+- Sin leer: regla exacta cara↔energía, contenido de la ventana extra del seleccionado, libreta/minimapa de la columna (`LIBRnnnn.RLE`, archivo suelto con otro formato), significado de `CIRC0000..6`, botones de postura (`AGACHAR`/`DEPIE`/`DOBLEZ`), mochila/bolso (ítems), `ALMR`, interruptores `ON`/`OFF`.
+- Código: `engine/hud.ts` (medidas y reglas, con pruebas), `render/hud.ts` (dibujo), integrado en `app/main.ts` (zona del mundo, clic en caras).

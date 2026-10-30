@@ -1,0 +1,92 @@
+/**
+ * Dibujo del HUD de misión (docs/lectura/hud.md, engine/hud.ts): tira superior (BARRA01 + BARRA02), columna derecha (BARS0000 + BARS0001), caras de los comandos con su barra
+ * de sangre, marco de selección, y los iconos de la esquina (ojo, ayuda, cámara). Todo a 1:1 con el WAD de interfaz que cabe en la ventana.
+ * shortcut: si la ventana es más ancha/alta que el WAD, la tira y la columna se alargan repitiendo su último tramo (el exe solo corre a resoluciones fijas).
+ */
+import { bloodHeight, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, SLOT, slotRect } from '../engine/hud.ts';
+import type { Sprite, Wad } from '../formats/wad.ts';
+import { SpriteCache } from './sprites.ts';
+
+export interface HudUnit {
+  readonly token: string;
+  readonly energy: number;
+  readonly max: number;
+  readonly dead: boolean;
+}
+
+interface Bank {
+  readonly wad: Wad;
+  readonly cache: SpriteCache;
+}
+
+const bank = (wad: Wad): Bank => ({ wad, cache: new SpriteCache(wad) });
+
+export class Hud {
+  private readonly global: Bank;
+  private readonly sized = new Map<string, Bank>();
+  private readonly faces = new Map<string, Bank>();
+
+  /** `sized` = `GLOBAL/<ancho>X<alto>.WAD` por "ancho×alto"; `faces` = `CARAS/<TOKEN>.WAD` por token de comando. */
+  constructor(global: Wad, sized: ReadonlyMap<string, Wad>, faces: ReadonlyMap<string, Wad>) {
+    this.global = bank(global);
+    for (const [mode, wad] of sized) this.sized.set(mode, bank(wad));
+    for (const [token, wad] of faces) this.faces.set(token, bank(wad));
+  }
+
+  private static get(b: Bank, name: string): { s: Sprite; c: HTMLCanvasElement } | null {
+    const s = b.wad.byName.get(name);
+    return s ? { s, c: b.cache.canvasFor(s) } : null;
+  }
+
+  /** Repite horizontalmente el último tramo del sprite hasta cubrir `to`. */
+  private strip(ctx: CanvasRenderingContext2D, c: HTMLCanvasElement, x: number, y: number, to: number): void {
+    ctx.drawImage(c, x, y);
+    const tile = Math.min(120, c.width);
+    for (let px = x + c.width; px < to; px += tile) ctx.drawImage(c, c.width - tile, 0, tile, c.height, px, y, Math.min(tile, to - px), c.height);
+  }
+
+  draw(ctx: CanvasRenderingContext2D, width: number, height: number, units: readonly HudUnit[], selected: number): void {
+    const was = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = false;
+    // tira superior
+    const [mw, mh] = hudMode(width, height);
+    const sized = this.sized.get(`${mw.toString()}x${mh.toString()}`) ?? [...this.sized.values()][0];
+    if (!sized) return;
+    const b1 = Hud.get(sized, 'BARRA01.BMP');
+    const b2 = Hud.get(sized, 'BARRA02.BMP');
+    if (b1) ctx.drawImage(b1.c, 0, 0);
+    if (b2) this.strip(ctx, b2.c, b1?.c.width ?? 0, 0, width);
+    // columna derecha: BARS0000 y BARS0001 una bajo la otra, repetidas si falta alto
+    const c0 = Hud.get(sized, 'BARS0000.RLE');
+    const c1 = Hud.get(sized, 'BARS0001.RLE');
+    const x = width - HUD_COLUMN;
+    let y = HUD_BAR;
+    for (let k = 0; y < height; k++) {
+      const part = k === 0 ? c0 : (c1 ?? c0);
+      if (!part) break;
+      ctx.drawImage(part.c, x, y);
+      y += part.c.height;
+    }
+    // esquina: ojo, ayuda y cámara (posiciones medidas sobre la captura, relativas al borde derecho)
+    const eye = Hud.get(this.global, 'P_OJOAL0.BMP');
+    if (eye) ctx.drawImage(eye.c, width - eye.c.width, 0);
+    const help = Hud.get(this.global, 'INTERROG.RLE');
+    if (help) ctx.drawImage(help.c, width - 156, 8);
+    const cam = Hud.get(this.global, 'CAMARA.RLE');
+    if (cam) ctx.drawImage(cam.c, width - 121, 4);
+    // comandos: cara por energía, barra de sangre y marco del seleccionado
+    units.forEach((u, i) => {
+      const r = slotRect(i, selected);
+      const fb = this.faces.get(u.token);
+      // cada WAD de caras nombra las suyas con otro prefijo (COM, FRA, LAN, BOM, MEC, ESP): son los 10 BMP en orden, del 1 (sano) al 10 (calavera)
+      const face = fb?.wad.sprites.filter((s) => s.name.toUpperCase().endsWith('.BMP'))[faceNumber(u.energy, u.max, u.dead) - 1];
+      const frame = Hud.get(this.global, i === selected ? 'MARCA000.RLE' : 'MARC0000.RLE');
+      if (frame) ctx.drawImage(frame.c, r.x, r.y);
+      if (fb && face) ctx.drawImage(fb.cache.canvasFor(face), r.x + SLOT.faceDx, r.y + SLOT.faceDy);
+      const blood = Hud.get(this.global, 'SANGRE.BMP');
+      const h = bloodHeight(u.energy, u.max, blood?.s.height ?? 37);
+      if (blood && h > 0) ctx.drawImage(blood.c, 0, blood.s.height - h, blood.s.width, h, r.x + SLOT.bloodDx, r.y + SLOT.bloodDy + blood.s.height - h, blood.s.width, h);
+    });
+    ctx.imageSmoothingEnabled = was;
+  }
+}

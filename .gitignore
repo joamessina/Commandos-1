@@ -17,3 +17,4 @@ __pycache__/
 *.pyc
 coverage/
 .env.local
+imagenesReferncia/
