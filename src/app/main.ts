@@ -21,6 +21,7 @@ import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
 import { House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatSlots, freeSeat } from '../engine/boat.ts';
+import { type Cepo, type Decoy, Traps } from '../engine/traps.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
 import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
@@ -66,7 +67,19 @@ interface UnitView {
   readonly maxEnergy: number;
   /** Tiene `AuBucear` (traje de buzo). */
   readonly canDive: boolean;
+  /** `AuManejacepo` / `AuManejaSegnuelo` del MIS: puede colocar cepos / señuelos de su inventario. */
+  readonly canCepo: boolean;
+  readonly canDecoy: boolean;
 }
+/** Objeto del inventario de un comando (cepo, señuelo): su elemento del MIS, su gráfico y cuántos quedan. */
+interface Kit {
+  readonly elem: Elem;
+  readonly anm: Anm;
+  readonly sprites: SpriteCache;
+  left: number;
+}
+/** Qué se está colocando con el próximo clic. */
+type PlaceKind = 'BOMBA' | 'CEPO' | 'SEGNUELO';
 interface SoldierView {
   readonly soldier: Soldier;
   readonly sprites: SpriteCache;
@@ -121,7 +134,11 @@ interface Game {
   /** Arma elegida: el clic en un soldado ataca con ella (null = clic mueve). */
   mode: Weapon | null;
   /** El zapador va a plantar la bomba donde se haga clic (B). */
-  planting: boolean;
+  planting: PlaceKind | null;
+  readonly traps: Traps;
+  readonly kit: { cepo: Kit | null; decoy: Kit | null };
+  /** Gráfico de cada cepo/señuelo colocado. */
+  readonly trapProps: Map<Cepo | Decoy, Prop>;
   showCones: boolean;
   readonly props: Prop[];
   readonly boat: { readonly boat: Boat; readonly prop: Prop } | null;
@@ -303,6 +320,7 @@ async function load(): Promise<void> {
   const nestOf = new Map<Soldier, Elem>();
   let bombCount = 0;
   const barrelProps: { elem: Elem; prop: Prop }[] = [];
+  const kit: { cepo: Kit | null; decoy: Kit | null } = { cepo: null, decoy: null };
   const boats = new Map<Elem, { boat: Boat; prop: Prop }>();
   for (const e of elems) {
     const slots = boatSlots(e);
@@ -342,7 +360,7 @@ async function load(): Promise<void> {
       if (mun !== undefined) unit.ammo['MIRILLA'] = mun;
       const rocks = asNumber(find(aud, '.PIEDRAS'));
       if (rocks !== undefined) unit.ammo['PIEDRA'] = rocks;
-      units.push({ unit, sprites: a.sprites, weapons, maxEnergy: unit.energy, canDive: e.actions.some((x) => x.name.toUpperCase() === 'AUBUCEAR') });
+      units.push({ unit, sprites: a.sprites, weapons, maxEnergy: unit.energy, canDive: e.actions.some((x) => x.name.toUpperCase() === 'AUBUCEAR'), canCepo: e.actions.some((x) => x.name.toUpperCase() === 'AUMANEJACEPO'), canDecoy: e.actions.some((x) => x.name.toUpperCase() === 'AUMANEJASEGNUELO') });
     } else if (e.bando === 'ALEMAN' && e.anim && e.actions.some((x) => /^ac(bap|banpe|metrallero)/i.test(x.name))) {
       const a = asset(e.anim);
       if (!a) continue;
@@ -366,6 +384,13 @@ async function load(): Promise<void> {
     } else if (e.parent?.cls === 'BICHOALIADO') {
       // lo que cuelga de un comando es su inventario (las 4 bombas del ARTIFIC), no un objeto del mapa
       if (e.macro?.toUpperCase() === 'BOMBAACT') bombCount++;
+      const kitOf = e.macro?.toUpperCase() === 'CEPO' ? 'cepo' : e.macro?.toUpperCase() === 'SEGNUELO' ? 'decoy' : null;
+      const ka = kitOf && e.anim ? asset(e.anim) : null;
+      if (kitOf && ka) {
+        const k = kit[kitOf];
+        if (k) k.left++;
+        else kit[kitOf] = { elem: e, anm: ka.anm, sprites: ka.sprites, left: 1 };
+      }
     } else if (e.anim && !boats.has(e) && e.macro?.toUpperCase() !== 'MINASUB') {
       const a = asset(e.anim);
       if (!a) continue;
@@ -388,7 +413,7 @@ async function load(): Promise<void> {
     const prop = props.find((x) => x.elem === el);
     return prop ? [{ soldier: s, prop }] : [];
   });
-  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: false, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: null, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
@@ -523,6 +548,10 @@ function setupStage(): void {
         if (n.prop.anim.has(want)) n.prop.anim.set(want);
       }
       g.demo.tickMines(g.boat?.boat ?? null, g.units.map((u) => u.unit));
+      g.traps.tick(g.soldiers.map((s) => s.soldier), (x, y, r) => {
+        g.battle.noise(x, y, r);
+      });
+      for (const c of g.traps.cepos) if (!c.armed) g.trapProps.get(c)?.anim.advance(0, 1); // PILLAR: el cepo se cierra
       if (g.demo.boatSunk && g.boat?.prop.anim.has('PINCHAR')) g.boat.prop.anim.set('PINCHAR');
       if (g.demo.dirty) recompose(g);
       checkWin(g);
@@ -605,7 +634,7 @@ function updateCursor(g: Game): void {
   if (!stage || !g.cursors) return;
   const hudOver = g.hud !== null && overHud(cursor.x, cursor.y, stage.width, g.hudLeft);
   const mode = hudOver ? null : g.mode;
-  const spec = cursorFor(mode, !hudOver && g.planting, mode !== null && cursor.inside && overTarget(g));
+  const spec = cursorFor(mode, !hudOver && g.planting !== null, mode !== null && cursor.inside && overTarget(g));
   const key = `${spec.sprite}|${spec.hot}`;
   if (key === cursorKey && stage.style.cursor) return;
   cursorKey = key;
@@ -830,7 +859,7 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   });
   const sel = g.units[g.selected];
   ctx.fillStyle = '#d9dde3';
-  ctx.fillText(`Arma: ${g.planting ? 'bomba (clic donde plantar)' : (g.mode ?? 'ninguna (clic = mover)')}  ·  F pistola · R fusil · C cuchillo · G agacharse · N bucear · Esc mover · E subir al bote · V conos`, 10, top + 14 + rows * 34);
+  ctx.fillText(`Arma: ${g.planting ? `${g.planting.toLowerCase()} (clic donde ponerlo)` : (g.mode ?? 'ninguna (clic = mover)')}  ·  F pistola · R fusil · C cuchillo · G agacharse · N bucear · Esc mover · E subir al bote · V conos`, 10, top + 14 + rows * 34);
   if (sel) ctx.fillText(`Disponibles: ${sel.weapons.map((w) => (sel.unit.ammo[w] === undefined ? w : `${w} (${Math.max(0, sel.unit.ammo[w] ?? 0).toString()})`)).join(', ') || '—'}`, 10, top + 30 + rows * 34);
   const right = ctx.canvas.width - (g.hud && !g.hudLeft ? HUD_COLUMN : 0);
   let oy = top + 14;
@@ -982,7 +1011,7 @@ function bombAction(g: Game): void {
   if (cur.token !== 'ARTIFIC') say(`${cur.token} no sabe manejar bombas (solo el zapador, ARTIFIC).`);
   else if (g.demo.bombs <= 0) say('No te quedan bombas.');
   else {
-    g.planting = true;
+    g.planting = 'BOMBA';
     g.mode = null;
     say('Clic donde plantar la bomba (Esc cancela). X detona.');
   }
@@ -995,6 +1024,57 @@ function diveAction(g: Game): void {
   else if (cur.boat) say(cur.diveOut() ? `${cur.token} se tira al agua (buceando). N o clic derecho para salir.` : 'El bote debe estar parado y con agua a mano.');
   else if (cur.diving) say(cur.toggleDive() ? 'No se puede salir en agua profunda: acercate a la orilla.' : `${cur.token} sale del agua.`);
   else say(cur.toggleDive() ? `${cur.token} bucea. N o clic derecho para salir.` : 'Solo se puede empezar a bucear en el agua.');
+}
+
+/** Ítem CEPO (`AuManejacepo`): el próximo clic en el suelo lo coloca. */
+function cepoAction(g: Game): void {
+  const v = g.units[g.selected];
+  if (!v || v.unit.dead || v.unit.boat) return;
+  if (!v.canCepo || !g.kit.cepo) say(`${v.unit.token} no lleva cepos.`);
+  else if (g.kit.cepo.left <= 0) say('No te quedan cepos.');
+  else {
+    g.planting = 'CEPO';
+    g.mode = null;
+    say('Clic donde poner el cepo (Esc cancela). Solo mata a un alemán o animal que lo pise.');
+  }
+}
+
+/** Ítem SEÑUELO (`AuManejaSegnuelo`): la primera vez lo coloca (queda encendido); después alterna encendido/apagado. */
+function decoyAction(g: Game): void {
+  const v = g.units[g.selected];
+  if (!v || v.unit.dead || v.unit.boat) return;
+  const placed = g.traps.decoys[g.traps.decoys.length - 1];
+  if (placed) {
+    placed.on = !placed.on;
+    say(placed.on ? 'Señuelo encendido: hace ruido y atrae a los soldados.' : 'Señuelo apagado.');
+  } else if (!v.canDecoy || !g.kit.decoy) say(`${v.unit.token} no lleva señuelos.`);
+  else if (g.kit.decoy.left <= 0) say('No te quedan señuelos.');
+  else {
+    g.planting = 'SEGNUELO';
+    g.mode = null;
+    say('Clic donde dejar el señuelo (Esc cancela).');
+  }
+}
+
+/** Coloca el cepo/señuelo: camina al sitio, anima PONEBOMBA si el comando la tiene (docs/lectura/au-jugador.md §9) y lo deja en el suelo. */
+function placeTrap(g: Game, u: Unit, spot: { x: number; y: number; sector: Parameters<Unit['goTo']>[2] }, kind: 'CEPO' | 'SEGNUELO'): boolean {
+  const kit = kind === 'CEPO' ? g.kit.cepo : g.kit.decoy;
+  if (!kit || kit.left <= 0) return false;
+  return u.doAt(
+    spot,
+    () => {
+      u.playOnce('PONEBOMBA', () => {
+        if (kit.left <= 0) return;
+        kit.left--;
+        const anim = new Animator(kit.anm, kind === 'CEPO' ? 'PILLAR' : 'SEGNUELO');
+        const prop: Prop = { elem: kit.elem, anim, sprites: kit.sprites, x: u.body.x, y: u.body.y, z: u.z, ang: 0 };
+        g.props.push(prop);
+        g.trapProps.set(kind === 'CEPO' ? g.traps.placeCepo(u.body.x, u.body.y) : g.traps.placeDecoy(u.body.x, u.body.y), prop);
+        say(kind === 'CEPO' ? 'Cepo colocado.' : 'Señuelo colocado y encendido.');
+      });
+    },
+    spot.sector,
+  );
 }
 
 function detonateAction(g: Game): void {
@@ -1016,6 +1096,8 @@ function useItem(g: Game, it: BagItem): void {
   else if (it.wad === 'TRAJEBU') diveAction(g);
   else if (it.wad === 'CARTUCHO') bombAction(g);
   else if (it.wad === 'ACTIVADO') detonateAction(g);
+  else if (it.wad === 'CEPO') cepoAction(g);
+  else if (it.wad === 'SENUELO') decoyAction(g);
   else say(`${it.token}: todavía no está implementado.`);
 }
 
@@ -1025,7 +1107,9 @@ function litItems(g: Game): Set<string> {
   const v = g.units[g.selected];
   if (!v || !g.hud || !stage) return lit;
   if (g.mode) lit.add(g.mode);
-  if (g.planting) lit.add('CARTUCHO');
+  if (g.planting === 'BOMBA') lit.add('CARTUCHO');
+  if (g.planting === 'CEPO') lit.add('CEPO');
+  if (g.planting === 'SEGNUELO') lit.add('SENUELO');
   if (v.unit.diving) lit.add('TRAJEBU');
   if (cursor.inside) {
     const it = g.hud.itemAt(cursor.x, cursor.y, stage.width, stage.height, hudUnit(v, g.bag), g.hudLeft);
@@ -1114,10 +1198,11 @@ function onMouse(e: MouseEvent): void {
     g.battle.cancel(sel);
     if (!sel.useLadder(ladder)) say(ladder.disabled ? 'Esa escalera quedó inutilizable.' : `${sel.token}: no puede usar esa escalera desde acá.`);
   } else if (e.button === 0 && g.planting && sel && !sel.dead && !sel.boat) {
-    g.planting = false;
+    const kind = g.planting;
+    g.planting = null;
     const spot = g.sectors ? g.sectors.pick(mx, my) : { ...unproject(mx, my, sel.z), sector: null };
     g.battle.cancel(sel);
-    if (!spot || !plantBomb(g, sel, spot)) say('No hay camino a pie hasta ese punto.');
+    if (!spot || !(kind === 'BOMBA' ? plantBomb(g, sel, spot) : placeTrap(g, sel, spot, kind))) say('No hay camino a pie hasta ese punto.');
   } else if (e.button === 0 && hit >= 0) g.selected = hit;
   else if (e.button === 0 && (g.mode === 'PISTOLA' || g.mode === 'MIRILLA') && barrel && sel && !sel.dead && !sel.boat && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, barrel, g.mode);
   else if (e.button === 0 && g.mode && foe && sel && !sel.dead && !sel.boat && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, foe.soldier, g.mode);
@@ -1201,7 +1286,7 @@ window.addEventListener('keydown', (e) => {
   if (k === 'f' || k === 'r' || k === 'c') armWeapon(g, k === 'f' ? 'PISTOLA' : k === 'r' ? 'MIRILLA' : 'CUCHILLO');
   if (k === 'escape') {
     g.mode = null;
-    g.planting = false;
+    g.planting = null;
   }
   if (k === 'g') {
     const cu = g.units[g.selected]?.unit;

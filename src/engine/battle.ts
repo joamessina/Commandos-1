@@ -49,7 +49,8 @@ export class Battle {
     return this.attacks.has(unit);
   }
 
-  private noise(x: number, y: number, radius: number): void {
+  /** Ruido en (x,y): los soldados a menos del radio lo oyen. */
+  noise(x: number, y: number, radius: number): void {
     for (const s of this.soldiers) if (Math.hypot(s.unit.body.x - x, s.unit.body.y - y) < radius) s.hear(x, y);
   }
 
