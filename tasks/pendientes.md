@@ -58,7 +58,7 @@
 |---|---|---|---|---|
 | [ ] | Colores y tipo de cada rebanada del cono de visión | 40 % | Media-alta | `render.md` cierre 7c; el decompilado esconde argumentos FPU. |
 | [ ] | Contorno exacto de volúmenes de más de 14 vértices y rombo del cilindro | 60 % | Media | `volorder.ts` (atajo declarado). |
-| [ ] | Oclusión real de la vista (`FUN_005F9820`, volúmenes `FUN_0063E200`) | 40 % | Alta | Hoy: sectores Ocluso + altura de los pies. |
+| [ ] | Oclusión real de la vista: volúmenes `FUN_0063E200`, `FUN_005F51A0`, `FUN_005F5B80` | 65 % | Media-alta | `FUN_005F9820` ya portada (`Nav.sight`: pendiente sobre bordes de sector, alturas de ojo). Falta lo demás. |
 | [ ] | Núcleo del motor (bucle, mensajes, listas) | 10 % | Alta | |
 | [ ] | `AcBap2` (`0x43A0E0…0x43C7F0`) | 0 % | Alta | |
 | [ ] | `FUN_006BB320` (zona permitida del vehículo del jugador) | 0 % | Baja-media | |
