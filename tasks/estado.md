@@ -32,3 +32,8 @@ Portado: `world.ts` (macros `.MAC` + `$Var` + `.NIVEL`), `boat.ts` (Zodiac: Moto
 Portado `demolition.ts`: barril (radio 100; estalla con pistola/fusil y en cadena), bomba del ARTIFIC con detonador (4 bombas = inventario del zapador; **B** planta, **X** detona, radio 250 mata a todo el que esté dentro, incluido el zapador), sitios destructibles (`.AUTOEXPCASAS` y `acExplotaCasa`+`CAMBIATILES` = pares de sprites; sin lista = ruinas) con recomposición del mapa, objetivos del MIS y victoria (todos los objetivos + todos los vivos en el bote con **E** + bote a <250 de `PUNTOHUIDA`). Daños de armas del jugador: pistola 40, fusil de mira 100, cuchillo 120 contra 100 de energía del alemán (herido que sobrevive apunta al agresor).
 Minas submarinas portadas (el Zodiac que las roce explota 1 s después y se hunde con los ocupantes).
 Falta: escaleras/ascensor, buceo, nidos de ametralladora, casas/cuarteles, alarma completa, sonido, z-order real, caminar hasta plantar la bomba (PONEBOMBA), matabichos de sector al caer CASA04.
+
+## 7. Fases "baja" y "≥80 %" (2026-10-30, commits `4e6847f`…buceo)
+Hecho (ver casillas en `tasks/pendientes.md`): controles del original, scroll con zoom<1, ruidos por sonido, cuerpos, energía 100, zapador, matabichos, escaleras/montacargas (L), nidos, munición MUNMIRILLA, casas/cuarteles, buceo (N). Teclas nuevas: N bucear / tirarse del bote parado (derecho = salir), L montacargas, G agacharse, B/X bomba.
+Atajos declarados (`shortcut:` en el código): buceo en línea recta sin rutas ni R×2/H×0,125; el buzo pisa minas sin haber leído la masa del comando; munición ilimitada salvo MUNMIRILLA.
+`npm run check:task`: 209 pruebas, ramas 90,06 % (umbral 90, justo: añadir pruebas con cada cambio de `engine`).
