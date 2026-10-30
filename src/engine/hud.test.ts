@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BAG_POS, bagItems, bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, ITEM_WAD, overHud, parseInterface, slotAt, slotRect, viewRect } from './hud.ts';
+import { BAG, BAG_POS, BULLET, bagItems, bulletX, itemPos, photoRect, visibleItems, bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, ITEM_WAD, overHud, parseInterface, slotAt, slotRect, viewRect } from './hud.ts';
 
 describe('hud', () => {
   it('elige el WAD de interfaz más grande que cabe', () => {
@@ -88,8 +88,32 @@ describe('parseInterface', () => {
       { token: 'IT_PIEDRA', available: false },
       { token: 'IT_SEGNUELO', available: true },
     ] }], ['SIN_MEDIR', { items: [{ token: 'IT_MANO', available: true }] }]]);
-    expect(bagItems(iface).get('COMANDO')).toEqual([{ wad: 'CUCHILLO', sprite: 'MACHETE.RLE', x: -9, y: 1 }, { wad: 'MANO', sprite: 'MANO.RLE', x: 49, y: -67 }, { wad: 'PUNO', sprite: 'PUNO.RLE', x: 69, y: 14 }, { wad: 'SENUELO', sprite: 'SENUEL.RLE', x: 63, y: 66 }]);
+    expect(bagItems(iface).get('COMANDO')).toEqual([{ token: 'IT_CUCHILLO', wad: 'CUCHILLO', sprite: 'MACHETE.RLE', x: -9, y: 1 }, { token: 'IT_MANO', wad: 'MANO', sprite: 'MANO.RLE', x: 49, y: -67 }, { token: 'IT_GOLPEAR', wad: 'PUNO', sprite: 'PUNO.RLE', x: 69, y: 14 }, { token: 'IT_SEGNUELO', wad: 'SENUELO', sprite: 'SENUEL.RLE', x: 63, y: 66 }]);
     expect(bagItems(iface).get('SIN_MEDIR')).toEqual([]);
     expect(Object.keys(BAG_POS)).toEqual(['COMANDO', 'LANCHERO', 'FRANCOT', 'ARTIFIC']);
+  });
+
+  it('en un vehículo solo se ven los ítems permitidos en vehículos (el francotirador en el bote: solo la mirilla)', () => {
+    const iface = new Map([['FRANCOT', { items: [
+      { token: 'IT_MANO', available: true },
+      { token: 'IT_PISTOLA', available: true },
+      { token: 'IT_MIRILLA', available: true },
+      { token: 'IT_BOTIQUIN', available: true },
+    ] }], ['LANCHERO', { items: [{ token: 'IT_TRAJEBUZO', available: true }, { token: 'IT_PISTOLA', available: true }] }]]);
+    const bag = bagItems(iface);
+    expect(visibleItems(bag.get('FRANCOT') ?? [], false).map((i) => i.wad)).toEqual(['MANO', 'PISTOLA', 'MIRILLA', 'BOTIQUIN']);
+    expect(visibleItems(bag.get('FRANCOT') ?? [], true).map((i) => i.wad)).toEqual(['MIRILLA']);
+    expect(visibleItems(bag.get('LANCHERO') ?? [], true).map((i) => i.wad)).toEqual(['TRAJEBU']);
+  });
+
+  it('la posición en pantalla se espeja con la mochila a la izquierda y las balas van en fila de a 15 px', () => {
+    const it = { token: 'IT_MIRILLA', wad: 'MIRILLA', sprite: 'MIRATELE.RLE', x: 11, y: -1 };
+    const right = bagRect(1280, 720, false);
+    const left = bagRect(1280, 720, true);
+    expect(itemPos(it, 101, right, false)).toEqual({ x: 1179, y: 570 });
+    expect(itemPos(it, 101, left, true)).toEqual({ x: 0, y: 570 });
+    expect([0, 1, 4].map((k) => bulletX(k, left, true))).toEqual([13, 28, 73]);
+    expect(bulletX(0, right, false)).toBe(1168 + BAG.w - BULLET.w - BULLET.x0);
+    expect(photoRect(1280, 720, false)).toEqual({ x: 1210, y: 569, w: 71, h: 91 });
   });
 });

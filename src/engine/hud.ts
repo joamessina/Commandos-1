@@ -83,8 +83,14 @@ export const overHud = (x: number, y: number, width: number, left = false): bool
  * Mochila del comando seleccionado: 112×149 pegada al borde inferior del lado de la columna, con la foto grande (71×91) clavada arriba.
  * shortcut: el lado de la mochila (siempre el de la columna) y los desplazamientos salen de una sola captura (columna a la izquierda); los ítems aún no se dibujan.
  */
-export const BAG = { w: 112, h: 149, photoDx: 42, photoDy: -2 } as const;
+export const BAG = { w: 112, h: 149, photoDx: 42, photoDy: -2, photoW: 71, photoH: 91 } as const;
 export const bagRect = (width: number, height: number, left: boolean): Rect => ({ x: left ? 0 : width - BAG.w, y: height - BAG.h, w: BAG.w, h: BAG.h });
+
+/** Foto grande del comando seleccionado (en el bote, un clic sobre ella lo hace bajar). */
+export const photoRect = (width: number, height: number, left: boolean): Rect => {
+  const b = bagRect(width, height, left);
+  return { x: b.x + BAG.photoDx, y: b.y + BAG.photoDy, w: BAG.photoW, h: BAG.photoH };
+};
 
 export interface HudItem {
   /** Token del catálogo (`IT_PISTOLA`, …). */
@@ -216,6 +222,8 @@ export const BAG_POS: Readonly<Record<string, Readonly<Record<string, { readonly
 };
 
 export interface BagItem {
+  /** Token del catálogo (`IT_PISTOLA`, …): qué acción dispara. */
+  readonly token: string;
   /** Archivo de `OPCIONES/` y sprite con el dibujo. */
   readonly wad: string;
   readonly sprite: string;
@@ -231,8 +239,25 @@ export function bagItems(iface: ReadonlyMap<string, HudCommando>): Map<string, B
     out.set(token, c.items.flatMap((i) => {
       const wad = ITEM_WAD[i.token];
       const at = wad === undefined ? undefined : pos[wad];
-      return i.available && wad !== undefined && at ? [{ wad, sprite: at.sprite, x: at.x, y: at.y }] : [];
+      return i.available && wad !== undefined && at ? [{ token: i.token, wad, sprite: at.sprite, x: at.x, y: at.y }] : [];
     }));
   }
   return out;
 }
+
+/** Ítems que el exe deja ver en un vehículo (`BPERMITIDOENVEHICULOS`, `+0x90` del registro: MIRILLA, TRAJEBUZO, INTERRUPTOR_ASCENSOR, MALETIN), por archivo de `OPCIONES/`. */
+const IN_VEHICLE: ReadonlySet<string> = new Set(['MIRILLA', 'TRAJEBU', 'PALANCA', 'MALETIN']);
+
+/** Ítems de la mochila que se ven: en un vehículo solo los permitidos en vehículos. */
+export const visibleItems = (items: readonly BagItem[], inVehicle: boolean): BagItem[] => (inVehicle ? items.filter((i) => IN_VEHICLE.has(i.wad)) : [...items]);
+
+/**
+ * Esquina sup. izq. del dibujo en pantalla (`FUN_006F4150`): con la mochila a la derecha `x = mochila.x + ox`; a la izquierda se espeja, `mochila.x + ancho_mochila − ancho − ox`.
+ * shortcut: el espejo sale del código, no se comparó con una captura de la mochila a la izquierda con un comando a pie.
+ */
+export const itemPos = (it: BagItem, w: number, bag: Rect, left: boolean): { x: number; y: number } => ({ x: left ? bag.x + bag.w - w - it.x : bag.x + it.x, y: bag.y + it.y });
+
+/** Balas que le quedan al francotirador: una `BALA0000` de 15 px por bala, en fila (medido con la mochila a la izquierda: x = 13 + 15·k, y = 110). */
+export const BULLET = { w: 15, x0: 13, y: 110 } as const;
+/** shortcut: con la mochila a la derecha la fila se espeja (sin captura de ese caso). */
+export const bulletX = (k: number, bag: Rect, left: boolean): number => (left ? bag.x + BULLET.x0 + BULLET.w * k : bag.x + bag.w - BULLET.w - (BULLET.x0 + BULLET.w * k));

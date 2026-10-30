@@ -26,8 +26,8 @@ import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
-import { type BagItem, bagItems, FaceAnim, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, parseInterface, slotAt, viewRect } from '../engine/hud.ts';
-import { Hud } from '../render/hud.ts';
+import { type BagItem, bagItems, FaceAnim, photoRect, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, parseInterface, slotAt, viewRect } from '../engine/hud.ts';
+import { Hud, type HudUnit } from '../render/hud.ts';
 import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
 import { rayReach, vistaOf } from '../engine/vision.ts';
 import { asNumber, find } from '../formats/clave.ts';
@@ -691,7 +691,7 @@ function draw(g: Game): void {
     ctx.stroke();
   }
   ctx.restore();
-  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => ({ token: u.unit.token, energy: u.unit.energy, max: u.maxEnergy, dead: u.unit.dead, items: g.bag.get(u.unit.token) ?? [] })), g.selected, (i) => g.faces.of(i), g.hudLeft);
+  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => hudUnit(u, g.bag)), g.selected, (i) => g.faces.of(i), g.hudLeft);
   drawHud(ctx, g);
   if (t) {
     ctx.fillStyle = '#d9dde3';
@@ -877,6 +877,81 @@ function onRightUp(e: MouseEvent): void {
   if (idx >= 0) g.selected = idx;
 }
 
+const WEAPON_OF_WAD: Readonly<Record<string, Weapon>> = { PISTOLA: 'PISTOLA', MIRILLA: 'MIRILLA', CUCHILLO: 'CUCHILLO' };
+
+/** Datos del comando para el HUD (caras, mochila, balas). */
+function hudUnit(v: UnitView, bag: ReadonlyMap<string, readonly BagItem[]>): HudUnit {
+  const u = v.unit;
+  return { token: u.token, energy: u.energy, max: v.maxEnergy, dead: u.dead, items: bag.get(u.token) ?? [], inVehicle: u.boat !== null, bullets: v.weapons.includes('MIRILLA') ? Math.max(0, u.ammo['MIRILLA'] ?? 0) : 0 };
+}
+
+function armWeapon(g: Game, w: Weapon): void {
+  const u = g.units[g.selected];
+  if (u?.weapons.includes(w)) g.mode = w;
+  else say(`${u?.unit.token ?? ''} no tiene ${w.toLowerCase()}.`);
+}
+
+function bombAction(g: Game): void {
+  const cur = g.units[g.selected]?.unit;
+  if (!cur || cur.dead || cur.boat) return;
+  if (cur.token !== 'ARTIFIC') say(`${cur.token} no sabe manejar bombas (solo el zapador, ARTIFIC).`);
+  else if (g.demo.bombs <= 0) say('No te quedan bombas.');
+  else {
+    g.planting = true;
+    g.mode = null;
+    say('Clic donde plantar la bomba (Esc cancela). X detona.');
+  }
+}
+
+function diveAction(g: Game): void {
+  const cur = g.units[g.selected]?.unit;
+  if (!cur || cur.dead) return;
+  if (!g.units[g.selected]?.canDive) say(`${cur.token} no tiene traje de buzo (solo el LANCHERO).`);
+  else if (cur.boat) say(cur.diveOut() ? `${cur.token} se tira al agua (buceando). N o clic derecho para salir.` : 'El bote debe estar parado y con agua a mano.');
+  else if (cur.diving) say(cur.toggleDive() ? 'No se puede salir en agua profunda: acercate a la orilla.' : `${cur.token} sale del agua.`);
+  else say(cur.toggleDive() ? `${cur.token} bucea. N o clic derecho para salir.` : 'Solo se puede empezar a bucear en el agua.');
+}
+
+function detonateAction(g: Game): void {
+  if (g.demo.detonate() === 0) say('No hay bombas plantadas.');
+}
+
+function liftAction(g: Game): void {
+  const cur = g.units[g.selected]?.unit;
+  if (!g.lift || !cur) return;
+  const p = g.lift.pos;
+  if (Math.hypot(cur.body.x - p.x, cur.body.y - p.y) < 40 && Math.abs(cur.z - p.z) < 25) g.lift.activate();
+  else say('Ponete sobre el montacargas para activarlo.');
+}
+
+/** Clic sobre un ítem de la mochila: dispara la acción que el juego ya tiene; los demás ítems todavía no hacen nada. */
+function useItem(g: Game, it: BagItem): void {
+  const w = WEAPON_OF_WAD[it.wad];
+  if (w) armWeapon(g, w);
+  else if (it.wad === 'TRAJEBU') diveAction(g);
+  else if (it.wad === 'CARTUCHO') bombAction(g);
+  else if (it.wad === 'ACTIVADO') detonateAction(g);
+  else say(`${it.token}: todavía no está implementado.`);
+}
+
+/** Clic en la mochila del comando elegido: la foto lo baja del bote, un ítem lo usa. Devuelve true si el clic era de la mochila. */
+function bagClick(g: Game, sx: number, sy: number): boolean {
+  const v = g.units[g.selected];
+  if (!g.hud || !stage || !v || v.unit.dead) return false;
+  const ph = photoRect(stage.width, stage.height, g.hudLeft);
+  if (sx >= ph.x && sx < ph.x + ph.w && sy >= ph.y && sy < ph.y + ph.h) {
+    if (v.unit.boat) {
+      g.battle.cancel(v.unit);
+      say(v.unit.disembark() ? `${v.unit.token} baja del bote.` : 'El bote debe estar parado y con una orilla a mano para bajar.');
+    }
+    return true;
+  }
+  const it = g.hud.itemAt(sx, sy, stage.width, stage.height, hudUnit(v, g.bag), g.hudLeft);
+  if (!it) return false;
+  useItem(g, it);
+  return true;
+}
+
 function onMouse(e: MouseEvent): void {
   const g = game;
   if (!g || !stage) return;
@@ -886,11 +961,12 @@ function onMouse(e: MouseEvent): void {
   const sx = e.clientX - r.left;
   const sy = e.clientY - r.top;
   if (g.hud && overHud(sx, sy, stage.width, g.hudLeft)) {
-    // clic sobre el HUD: la cara de un comando lo selecciona; el resto del HUD aún no hace nada
+    // clic sobre el HUD: la cara de un comando lo selecciona; el resto de la tira y la columna aún no hacen nada
     const slot = e.button === 0 ? slotAt(sx, sy, g.units.length) : -1;
     if (slot >= 0) g.selected = slot;
     return;
   }
+  if (e.button === 0 && bagClick(g, sx, sy)) return;
   const mx = g.camX - v.w / z / 2 + (sx - v.x) / z;
   const my = g.camY - v.h / z / 2 + (sy - v.y) / z;
   const hit = g.units.findIndex((u) => {
@@ -1002,12 +1078,7 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     g.hudLeft = !g.hudLeft;
   }
-  if (k === 'f' || k === 'r' || k === 'c') {
-    const w: Weapon = k === 'f' ? 'PISTOLA' : k === 'r' ? 'MIRILLA' : 'CUCHILLO';
-    const u = g.units[g.selected];
-    if (u?.weapons.includes(w)) g.mode = w;
-    else say(`${u?.unit.token ?? ''} no tiene ${w.toLowerCase()}.`);
-  }
+  if (k === 'f' || k === 'r' || k === 'c') armWeapon(g, k === 'f' ? 'PISTOLA' : k === 'r' ? 'MIRILLA' : 'CUCHILLO');
   if (k === 'escape') {
     g.mode = null;
     g.planting = false;
@@ -1024,27 +1095,10 @@ window.addEventListener('keydown', (e) => {
     }
   }
   const cur = g.units[g.selected]?.unit;
-  if (k === 'b' && cur && !cur.dead && !cur.boat) {
-    if (cur.token !== 'ARTIFIC') say(`${cur.token} no sabe manejar bombas (solo el zapador, ARTIFIC).`);
-    else if (g.demo.bombs <= 0) say('No te quedan bombas.');
-    else {
-      g.planting = true;
-      g.mode = null;
-      say('Clic donde plantar la bomba (Esc cancela). X detona.');
-    }
-  }
-  if (k === 'n' && cur && !cur.dead) {
-    if (!g.units[g.selected]?.canDive) say(`${cur.token} no tiene traje de buzo (solo el LANCHERO).`);
-    else if (cur.boat) say(cur.diveOut() ? `${cur.token} se tira al agua (buceando). N o clic derecho para salir.` : 'El bote debe estar parado y con agua a mano.');
-    else if (cur.diving) say(cur.toggleDive() ? 'No se puede salir en agua profunda: acercate a la orilla.' : `${cur.token} sale del agua.`);
-    else say(cur.toggleDive() ? `${cur.token} bucea. N o clic derecho para salir.` : 'Solo se puede empezar a bucear en el agua.');
-  }
-  if (k === 'x' && g.demo.detonate() === 0) say('No hay bombas plantadas.');
-  if (k === 'l' && g.lift && cur) {
-    const p = g.lift.pos;
-    if (Math.hypot(cur.body.x - p.x, cur.body.y - p.y) < 40 && Math.abs(cur.z - p.z) < 25) g.lift.activate();
-    else say('Ponete sobre el montacargas para activarlo.');
-  }
+  if (k === 'b') bombAction(g);
+  if (k === 'n') diveAction(g);
+  if (k === 'x') detonateAction(g);
+  if (k === 'l') liftAction(g);
   if (k === 'e' && cur && !cur.dead && !cur.boat && g.boat) {
     const bt = g.boat.boat;
     const seat = g.units.filter((u) => u.unit.boat === bt).length;

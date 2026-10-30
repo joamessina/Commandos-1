@@ -3,8 +3,8 @@
  * de sangre, marco de selección, y los iconos de la esquina (ojo, ayuda, cámara). Todo a 1:1 con el WAD de interfaz que cabe en la ventana.
  * shortcut: si la ventana es más ancha/alta que el WAD, la tira y la columna se alargan repitiendo su último tramo (el exe solo corre a resoluciones fijas).
  */
-import { BAG, bagRect, bloodHeight, columnX, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, SLOT, slotRect, type BagItem } from '../engine/hud.ts';
-import type { Sprite, Wad } from '../formats/wad.ts';
+import { BAG, bagRect, BULLET, bulletX, bloodHeight, columnX, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, itemPos, SLOT, slotRect, visibleItems, type BagItem } from '../engine/hud.ts';
+import { TRANSPARENT, type Sprite, type Wad } from '../formats/wad.ts';
 import { SpriteCache } from './sprites.ts';
 
 export interface HudUnit {
@@ -14,6 +14,10 @@ export interface HudUnit {
   readonly dead: boolean;
   /** Ítems que se dibujan en su mochila (engine/hud.ts `bagItems`). */
   readonly items: readonly BagItem[];
+  /** Va en un vehículo (bote): solo se ven los ítems permitidos en vehículos. */
+  readonly inVehicle: boolean;
+  /** Balas que le quedan con la mirilla (0 = no se dibujan). */
+  readonly bullets: number;
 }
 
 interface Bank {
@@ -47,6 +51,22 @@ export class Hud {
     ctx.drawImage(c, x, y);
     const tile = Math.min(120, c.width);
     for (let px = x + c.width; px < to; px += tile) ctx.drawImage(c, c.width - tile, 0, tile, c.height, px, y, Math.min(tile, to - px), c.height);
+  }
+
+  /** Ítem de la mochila bajo el punto (el de más arriba cuya parte opaca lo contiene), o null. */
+  itemAt(x: number, y: number, width: number, height: number, unit: HudUnit, left: boolean): BagItem | null {
+    const bag = bagRect(width, height, left);
+    const list = visibleItems(unit.items, unit.inVehicle);
+    for (let i = list.length - 1; i >= 0; i--) {
+      const it = list[i];
+      const art = it ? this.items.get(it.wad)?.wad.byName.get(it.sprite) : undefined;
+      if (!it || !art) continue;
+      const at = itemPos(it, art.width, bag, left);
+      const lx = Math.floor(x - at.x);
+      const ly = Math.floor(y - at.y);
+      if (lx >= 0 && ly >= 0 && lx < art.width && ly < art.height && art.mode[ly * art.width + lx] !== TRANSPARENT) return it;
+    }
+    return null;
   }
 
   /** `phase(i)` = fotograma de la cara del comando i (engine/hud.ts `FaceAnim`); `left` = columna y mochila a la izquierda. */
@@ -108,11 +128,17 @@ export class Hud {
       const fb = this.faces.get(sel.token);
       const photo = fb?.wad.sprites.find((s) => /^FOTO\d+\.RLE$/i.test(s.name));
       if (fb && photo) ctx.drawImage(fb.cache.canvasFor(photo), bag.x + BAG.photoDx, bag.y + BAG.photoDy);
-      for (const it of sel.items) {
+      for (const it of visibleItems(sel.items, sel.inVehicle)) {
+        const art = this.items.get(it.wad)?.wad.byName.get(it.sprite);
         const ib = this.items.get(it.wad);
-        const art = ib?.wad.byName.get(it.sprite);
-        if (ib && art) ctx.drawImage(ib.cache.canvasFor(art), bag.x + it.x, bag.y + it.y);
+        if (ib && art) {
+          const at = itemPos(it, art.width, bag, left);
+          ctx.drawImage(ib.cache.canvasFor(art), at.x, at.y);
+        }
       }
+      const mb = this.items.get('MIRILLA');
+      const bullet = mb?.wad.sprites.find((sp) => /^BALA0000/i.test(sp.name));
+      if (mb && bullet) for (let k = 0; k < sel.bullets; k++) ctx.drawImage(mb.cache.canvasFor(bullet), bulletX(k, bag, left), bag.y + BULLET.y);
     }
     ctx.imageSmoothingEnabled = was;
   }
