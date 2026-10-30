@@ -23,6 +23,8 @@ Fuente: exe de la raíz. **[hecho]** = leído con dirección. Pedido del usuario
 - El visor actual está al revés en tres cosas: derecho = mover, Mayús = correr, y el izquierdo sobre un comando = seleccionarlo.
 
 ## NO LEÍDO
+
+Actualización2026-10-30: el primer punto (clic sobre aliado) está leído en [`cierre-70.md` §8](../lectura/cierre-70.md#8-controles-y-puntuación): puede seleccionar según modo/subinterfaz, o enviar ACTUASOBREELEMENTO. El resto de los límites de esta lista se conserva.
 - Qué hace exactamente el izquierdo cuando se hace clic sobre **un aliado** (¿lo selecciona o es `ACTUASOBREELEMENTO` con otro significado?): `FUN_0069A4F0` pasa por `FUN_00598810`/`FUN_006964B0`/`FUN_005BB2B0`, no leídas.
 - Cuál es el efecto de `BOTON2VIRTUAL` en las demás acciones (`AuGoTo` no lo maneja: lo ignora la base `FUN_004BB830`; falta ver si la base lo trata como parar). Hay 11 manejadores más con `BOTON2VIRTUAL` (`FUN_004E9F40`, `4EC770`, `4F5430`, `5034A0`, `68B220`, `68FE50`…).
 - Atajos de teclado (R16), zona de scroll por borde de pantalla, y los modos de la interfaz (`+0x1418`: 0/1/2/3).

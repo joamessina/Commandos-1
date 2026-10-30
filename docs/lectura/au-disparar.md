@@ -1,8 +1,10 @@
 # Lectura del exe — AUDisparar (disparo del jugador) `0x4EFE00–0x4F2C00` (tanda 20261029-002949)
 
+**Correcciones verificadas (2026-10-30):** [cierre-70.md §5](cierre-70.md#5-armas-estados-camuflaje-y-objetos-del-jugador): recarga **pistola1 / metralleta10** ciclos (la tabla inicial era correcta; los cierres siguientes las contradijeron). Base0x8143C0 tiene NULO en índice0, pistola en0x814468 y terminador9: diez registros contando ambos. La piedra manda PEDRADA y **no atonta600 ciclos como la cachiporra** en BAP/Guarda; el port tiene ese atajo pendiente de corregir.
+
 **[hecho]** leído con dirección. Tabla de armas del jugador volcada con `/tmp/weapons.py` (guardada abajo).
 
-## Tabla de armas `0x8143C0` (9 entradas de 0xA8 B; `FUN_004EF880(nombre)` y `FUN_004EF910(id)` la consultan) [hecho]
+## Tabla de armas `0x8143C0` (10 entradas de 0xA8 B con NULO y terminador; `FUN_004EF880(nombre)` y `FUN_004EF910(id)` la consultan) [hecho]
 | id | nombre (+4) | animación (+0x50) | alcance (+0x24, float) | +0x28 | +0x2C | +0x7C | notas |
 |---|---|---|---|---|---|---|---|
 | 1 | PISTOLA | DISPARAPISTOLA | **300** | 80 | 1 | 1 | sonido `DISPAROPISTOLA`; flag +0x74 |
@@ -33,14 +35,14 @@ Claves del MAC de la acción: `ARMAS [ … ]` (qué armas lleva, marca `+0x98 + 
 Estados `+0x188`: 2 camina al **punto de empuje** del objeto (`AcPuntoEmpuje`, tipo 8: `blanco+0x190 == 8`) con tolerancia `DAT_00795658 (15)`; 3 gira (`MSGO_MOTOR_SETANG`) hasta quedar a < `DAT_0079AE98` del ángulo; 4 camina el último tramo; 5 anima `EMPUJAR` y cada ciclo manda `MSGA_ERES_EMPUJADO` al objeto mientras el objeto no esté muerto y se haya desplazado ≤ `radio² + DAT_00796388`; máximo **26 reintentos** (`+0x1A8`). Marca `bicho+0x24C |= 0x2000` al crearse.
 
 ## Cierre: `RETARDOPISTOLA` (2026-10-29)
-`FUN_004F07E0` pisa el enfriamiento de la pistola (`tabla+0x2C`) con `cfg+0x60` **solo si ≠ −1**. `cfg+0x60` lo escribe únicamente el lector de `COMANDO.CFG` (`FUN_0061EBC0`, clave `.RETARDOPISTOLA`) y el `Comando.cfg` real instalado (`OUTPUT\Comando.cfg`: `.SONIDO`, `.SIZE`, `.PROFILE`, `.DEVELOP`, …) **no la trae**; el test `!= -1` implica que el valor inicial del ctor de la configuración es −1 (el ctor no se localizó por desensamblado). Efecto: **la pistola usa el enfriamiento de la tabla (10 ciclos)**; solo un `Comando.cfg` editado a mano lo cambiaría.
+`FUN_004F07E0` pisa el enfriamiento de la pistola (`tabla+0x2C`) con `cfg+0x60` **solo si ≠ −1**. `cfg+0x60` lo escribe únicamente el lector de `COMANDO.CFG` (`FUN_0061EBC0`, clave `.RETARDOPISTOLA`) y el `Comando.cfg` real instalado (`OUTPUT\Comando.cfg`: `.SONIDO`, `.SIZE`, `.PROFILE`, `.DEVELOP`, …) **no la trae**. El ctor de la configuración no se localizó aquí: su valor inicial queda pendiente de comprobar, no se deduce solo del test. **La tabla estática trae 1 ciclo para pistola** (reverificada en `cierre-70.md` §5); una configuración distinta puede sobrescribirlo.
 
 ## Cierre: `FUN_00676F20 / 00676B20` (2026-10-29)
-No son la lógica de la ráfaga de la metralleta: son el **efecto visual del fogonazo** (objeto `ClassEfectoFogonazo`-like): colocan el efecto en la posición del bicho que dispara (`bicho+0x58` = altura del arma, offset del cuerpo `motor+0x1C..0x24`), le fijan el ángulo (`sin/cos` del rumbo) y lo encienden (`FUN_006819A0`, `FUN_00680D50(1)`). La cadencia y el consumo de la metralleta del jugador están en `AUDisparar` (tabla de armas: enfriamiento 1 ciclo, 5 de munición por disparo) y el daño en `impactos.md`.
+No son la lógica de la ráfaga de la metralleta: son el **efecto visual del fogonazo** (objeto `ClassEfectoFogonazo`-like): colocan el efecto en la posición del bicho que dispara (`bicho+0x58` = altura del arma, offset del cuerpo `motor+0x1C..0x24`), le fijan el ángulo (`sin/cos` del rumbo) y lo encienden (`FUN_006819A0`, `FUN_00680D50(1)`). La cadencia y el consumo de la metralleta del jugador están en `AUDisparar` (tabla de armas: enfriamiento **10 ciclos**, 5 de munición por disparo) y el daño en `impactos.md`.
 
 ## Cierre: la granada (2026-10-29)
 - **No hay vuelo ni mecha**: `FUN_006761B0` crea el objeto `GRANADA` directamente **en el punto de destino** (`MotorObjeto` `.EXPLOTA 1 .FIJO 1 .NOCAE 1` + acción `AcGranada .CARISMA 200`), lo registra en su sector y silencia su física (`MSGO_MOTOR_BORRAFISICA`). El único retardo es el de la animación de lanzamiento del soldado (columna `+0x70` de la tabla de armas).
 - **`AcGranada`** (`FUN_0046FEC0`, update; ctor `FUN_004700A0`; la fábrica de acciones (zona `0x64xxxx`) lo construye con `(150, 200, 2000)`: `+0x48 = 150`, `+0x30 = 200`, `+0x28 = 2000`): en su **primer ciclo** fija el sector, emite el sonido `'GRAN'` (cat. 3, 0,75) y aplica `FUN_00571FE0(origen, tipo 2 = EXPLOSIONMENOR, radio 200, potencia 2000)`: a todos los objetos en el radio con línea de vista les llega `MSGA_IMPACTO {tipo 2, 2000}` **sin decaer con la distancia** (`armas-danio.md` §7). Después cuenta ciclos y a `max(10, acc+0x74)` se destruye (`mensaje 5` al dueño). Efecto visual `EXPLOS1`/`EXPLOSION1`, cilindro de choque del objeto con radio = 200 (`FUN_00507E80(200, 10)`).
 - Por tanto una granada mata (2000 ≫ 100) a todo lo que esté a ≤ 200 u con línea de vista, y destruye lo que declare `.EXPLOSIONMENOR` (cañón, vehículos con ese contador).
-- La piedra (`AcPiedra`) es análoga: objeto en el destino, `MSGA_PEDRADA` al llegar (aturde sin daño, `muerte.md`).
+- La piedra (`CAcPiedra`) manda `MSGA_PEDRADA` al impactar; su receptor decide la reacción. **No genera el aturdimiento del puño en BAP/Guarda**, ver `cierre-70.md` §5.2.
 `MotorObjeto` (objetos con física: barril rodando, cuerpos): `SimObjeto` (`FUN_00669D30`, 0xC4 B) con paso máximo² `1000²`, giro máximo 45°, **fricción 0,6** por ciclo en el suelo (`+0xAC`; `FUN_00669B50` multiplica x,y y anula z cuando `+0xB4` = apoyado, apoyado ⇔ `z ≤ z_plano + 1`), velocidad inicial por `MSGO_MOTOR_SETVELVEC(vx,vy,vz)` y cuenta atrás `MSGO_MOTOR_EXPLOTAR(n, k)`.

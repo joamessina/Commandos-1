@@ -103,7 +103,7 @@ def generar(carpeta, raiz):
         "",
         "Las líneas son del **C exportado por Ghidra**, numeradas desde 1; el exe binario no tiene líneas fuente. Cada fila enlaza la cabecera real, da el intervalo completo de la función y enlaza la nota previa que explica su atribución. Se comprobó existencia, dirección, nombre y tamaño de todas las anclas; eso no significa releer íntegramente todos sus cuerpos en esta tarea. Los nombres funcionales en español son descripciones nuestras, no símbolos recuperados del original.",
         "",
-        "La exportación inicial `all` conserva 29.304 funciones y el cuerpo truncado de `FUN_00786e60` (13.395 B). `all2` incorpora las funciones descubiertas después y ese inicializador completo (37.808 B), también disponible en `bigfn.c`. No mezclar los números de línea entre exportaciones. El generador solo sustituye la entrada por `bigfn.c` si la versión de la carpeta es más corta, sin contarla dos veces.",
+        "La exportación inicial `all` conserva 29.304 funciones y declara 13.395 B para `FUN_00786e60`; `all2` declara 37.808 B, igual que `bigfn.c`. **Ese tamaño no garantiza que el C represente todos sus bloques**: las escrituras de mochila en 0x78B6D0…0x78BCD1 aparecen en el ensamblador y no en ese C (ver [cierre-70.md](lectura/cierre-70.md) §2). No mezclar líneas entre exportaciones. El generador solo sustituye la entrada por `bigfn.c` si su tamaño declarado es mayor, sin contarla dos veces.",
         "",
         "## Arquitectura para orientarse",
         "",

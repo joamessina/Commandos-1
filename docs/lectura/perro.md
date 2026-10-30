@@ -1,5 +1,7 @@
 # Lectura del exe — `ClassAcPerro` (perros guardianes): `0x48E6D0–0x491E40`
 
+**Cierre del desvío aleatorio (2026-10-30):** [cierre-70.md §6](cierre-70.md#6-animales-huecos-de-avestruz-gaviota-y-perro). `FUN_0045D6F0(a,b)=b+rand·(a−b)/32767`. En caso7 de `FUN_0048F9B0` (0x48FED0…0x48FF3C), magnitud10…45°, signo positivo con `rand()%3==0`, negativo en los otros dos casos; se suma al rumbo y el punto queda a85 unidades. Resuelve la duda del final: no es uniforme en ±45°.
+
 **[hecho]** leído con dirección; **[hip]** interpretación. Constantes verificadas. Los perros usan el motor de rutas de `AcPatrulla` (mensajes `MSGA_PATRULLA_*`) mientras no han visto nada, y el `BUSCADOR` sin escaleras (`MSGA_BUSCADOR_IRA_SINESCALAS`) para perseguir.
 
 ## 1. Parámetros del MAC (`FUN_0048E8C0`) [hecho]

@@ -6,7 +6,7 @@ Inventario comprobado en esta exportación: **37,026 funciones**, **2,787,187 by
 
 Las líneas son del **C exportado por Ghidra**, numeradas desde 1; el exe binario no tiene líneas fuente. Cada fila enlaza la cabecera real, da el intervalo completo de la función y enlaza la nota previa que explica su atribución. Se comprobó existencia, dirección, nombre y tamaño de todas las anclas; eso no significa releer íntegramente todos sus cuerpos en esta tarea. Los nombres funcionales en español son descripciones nuestras, no símbolos recuperados del original.
 
-La exportación inicial `all` conserva 29.304 funciones y el cuerpo truncado de `FUN_00786e60` (13.395 B). `all2` incorpora las funciones descubiertas después y ese inicializador completo (37.808 B), también disponible en `bigfn.c`. No mezclar los números de línea entre exportaciones. El generador solo sustituye la entrada por `bigfn.c` si la versión de la carpeta es más corta, sin contarla dos veces.
+La exportación inicial `all` conserva 29.304 funciones y declara 13.395 B para `FUN_00786e60`; `all2` declara 37.808 B, igual que `bigfn.c`. **Ese tamaño no garantiza que el C represente todos sus bloques**: las escrituras de mochila en 0x78B6D0…0x78BCD1 aparecen en el ensamblador y no en ese C (ver [cierre-70.md](lectura/cierre-70.md) §2). No mezclar líneas entre exportaciones. El generador solo sustituye la entrada por `bigfn.c` si su tamaño declarado es mayor, sin contarla dos veces.
 
 ## Arquitectura para orientarse
 
@@ -47,7 +47,7 @@ Lecturas de referencia: [IA y mensajes](engine/ia-mensajes.md), [simulación](le
 | Función / VA | Papel documentado | C de Ghidra (líneas; bytes) | Lectura previa |
 |---|---|---|---|
 | `FUN_004364a0` / `0x004364A0` | AcBap: llamador del buscador de ruta | [fn_00400000.c:422105](<D:/Joaquin/research-c1/ghidra/all2/fn_00400000.c:422105>) · 422105–422204; 576 B | [buscador.md:3](<D:/Joaquin/commandos1-web/docs/lectura/buscador.md:3>) |
-| `FUN_006afc10` / `0x006AFC10` | Clasificación de lo visto | [fn_00680000.c:34921](<D:/Joaquin/research-c1/ghidra/all2/fn_00680000.c:34921>) · 34921–35059; 655 B | [pendientes.md:19](<D:/Joaquin/commandos1-web/tasks/pendientes.md:19>) |
+| `FUN_006afc10` / `0x006AFC10` | Clasificación de lo visto | [fn_00680000.c:34921](<D:/Joaquin/research-c1/ghidra/all2/fn_00680000.c:34921>) · 34921–35059; 655 B | [pendientes.md:21](<D:/Joaquin/commandos1-web/tasks/pendientes.md:21>) |
 | `FUN_0061c5b0` / `0x0061C5B0` | Escaneo de Vista01 | [fn_00600000.c:21773](<D:/Joaquin/research-c1/ghidra/all2/fn_00600000.c:21773>) · 21773–21896; 579 B | [organos.md:17](<D:/Joaquin/commandos1-web/docs/lectura/organos.md:17>) |
 | `FUN_0061b580` / `0x0061B580` | Oclusión de Vista01 por sectores y obstáculos | [fn_00600000.c:21260](<D:/Joaquin/research-c1/ghidra/all2/fn_00600000.c:21260>) · 21260–21293; 267 B | [organos.md:16](<D:/Joaquin/commandos1-web/docs/lectura/organos.md:16>) |
 | `FUN_0061a830` / `0x0061A830` | Mensajes de Oido01 | [fn_00600000.c:20706](<D:/Joaquin/research-c1/ghidra/all2/fn_00600000.c:20706>) · 20706–20760; 399 B | [organos.md:8](<D:/Joaquin/commandos1-web/docs/lectura/organos.md:8>) |
@@ -68,9 +68,9 @@ Lecturas de referencia: [IA y mensajes](engine/ia-mensajes.md), [simulación](le
 
 | Función / VA | Papel documentado | C de Ghidra (líneas; bytes) | Lectura previa |
 |---|---|---|---|
-| `FUN_004eff40` / `0x004EFF40` | Carga de armas y munición desde MAC | [fn_004c0000.c:30434](<D:/Joaquin/research-c1/ghidra/all2/fn_004c0000.c:30434>) · 30434–30605; 1315 B | [au-disparar.md:19](<D:/Joaquin/commandos1-web/docs/lectura/au-disparar.md:19>) |
-| `FUN_004f1a50` / `0x004F1A50` | Máquina de estados de AUDisparar | [fn_004c0000.c:31349](<D:/Joaquin/research-c1/ghidra/all2/fn_004c0000.c:31349>) · 31349–31471; 793 B | [au-disparar.md:22](<D:/Joaquin/commandos1-web/docs/lectura/au-disparar.md:22>) |
-| `FUN_006771a0` / `0x006771A0` | Raycast de disparo | [fn_00640000.c:42854](<D:/Joaquin/research-c1/ghidra/all2/fn_00640000.c:42854>) · 42854–42912; 447 B | [au-disparar.md:17](<D:/Joaquin/commandos1-web/docs/lectura/au-disparar.md:17>) |
+| `FUN_004eff40` / `0x004EFF40` | Carga de armas y munición desde MAC | [fn_004c0000.c:30434](<D:/Joaquin/research-c1/ghidra/all2/fn_004c0000.c:30434>) · 30434–30605; 1315 B | [au-disparar.md:21](<D:/Joaquin/commandos1-web/docs/lectura/au-disparar.md:21>) |
+| `FUN_004f1a50` / `0x004F1A50` | Máquina de estados de AUDisparar | [fn_004c0000.c:31349](<D:/Joaquin/research-c1/ghidra/all2/fn_004c0000.c:31349>) · 31349–31471; 793 B | [au-disparar.md:24](<D:/Joaquin/commandos1-web/docs/lectura/au-disparar.md:24>) |
+| `FUN_006771a0` / `0x006771A0` | Raycast de disparo | [fn_00640000.c:42854](<D:/Joaquin/research-c1/ghidra/all2/fn_00640000.c:42854>) · 42854–42912; 447 B | [au-disparar.md:19](<D:/Joaquin/commandos1-web/docs/lectura/au-disparar.md:19>) |
 | `FUN_0045f400` / `0x0045F400` | Recepción de daño por energía y blindaje | [fn_00440000.c:19937](<D:/Joaquin/research-c1/ghidra/all2/fn_00440000.c:19937>) · 19937–19960; 53 B | [impactos.md:9](<D:/Joaquin/commandos1-web/docs/lectura/impactos.md:9>) |
 | `FUN_005986a0` / `0x005986A0` | Envío de MSGA_IMPACTO a la víctima | [fn_00580000.c:18833](<D:/Joaquin/research-c1/ghidra/all2/fn_00580000.c:18833>) · 18833–18870; 186 B | [impactos.md:20](<D:/Joaquin/commandos1-web/docs/lectura/impactos.md:20>) |
 
@@ -80,8 +80,8 @@ Lecturas de referencia: [IA y mensajes](engine/ia-mensajes.md), [simulación](le
 |---|---|---|---|
 | `FUN_0059eaa0` / `0x0059EAA0` | Tick de la intendencia base | [fn_00580000.c:24459](<D:/Joaquin/research-c1/ghidra/all2/fn_00580000.c:24459>) · 24459–24488; 180 B | [mision-intendencia.md:34](<D:/Joaquin/commandos1-web/docs/lectura/mision-intendencia.md:34>) |
 | `FUN_0059cf00` / `0x0059CF00` | Evaluador de fin de misión | [fn_00580000.c:23073](<D:/Joaquin/research-c1/ghidra/all2/fn_00580000.c:23073>) · 23073–23103; 110 B | [mision-intendencia.md:35](<D:/Joaquin/commandos1-web/docs/lectura/mision-intendencia.md:35>) |
-| `FUN_0059a2a0` / `0x0059A2A0` | Despacho de eventos por tipo y slot virtual | [fn_00580000.c:20865](<D:/Joaquin/research-c1/ghidra/all2/fn_00580000.c:20865>) · 20865–20908; 251 B | [sonido.md:73](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:73>) |
-| `FUN_0059a060` / `0x0059A060` | Difusión de eventos a patrullas y escuchas | [fn_00580000.c:20791](<D:/Joaquin/research-c1/ghidra/all2/fn_00580000.c:20791>) · 20791–20864; 461 B | [sonido.md:79](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:79>) |
+| `FUN_0059a2a0` / `0x0059A2A0` | Despacho de eventos por tipo y slot virtual | [fn_00580000.c:20865](<D:/Joaquin/research-c1/ghidra/all2/fn_00580000.c:20865>) · 20865–20908; 251 B | [sonido.md:75](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:75>) |
+| `FUN_0059a060` / `0x0059A060` | Difusión de eventos a patrullas y escuchas | [fn_00580000.c:20791](<D:/Joaquin/research-c1/ghidra/all2/fn_00580000.c:20791>) · 20791–20864; 461 B | [sonido.md:3](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:3>) |
 | `FUN_005a2760` / `0x005A2760` | Reposición de grupos desde casas | [fn_00580000.c:26577](<D:/Joaquin/research-c1/ghidra/all2/fn_00580000.c:26577>) · 26577–26670; 700 B | [mision-intendencia.md:39](<D:/Joaquin/commandos1-web/docs/lectura/mision-intendencia.md:39>) |
 
 ## Render y animación
@@ -100,7 +100,7 @@ Lecturas de referencia: [IA y mensajes](engine/ia-mensajes.md), [simulación](le
 |---|---|---|---|
 | `FUN_0068e210` / `0x0068E210` | Visibilidad de ítems en vehículo | [fn_00680000.c:10868](<D:/Joaquin/research-c1/ghidra/all2/fn_00680000.c:10868>) · 10868–11070; 1092 B | [verificacion-exe.md:10](<D:/Joaquin/commandos1-web/tasks/verificacion-exe.md:10>) |
 | `FUN_006f4150` / `0x006F4150` | Espejo de la mochila | [fn_006c0000.c:36599](<D:/Joaquin/research-c1/ghidra/all2/fn_006c0000.c:36599>) · 36599–36633; 132 B | [verificacion-exe.md:15](<D:/Joaquin/commandos1-web/tasks/verificacion-exe.md:15>) |
-| `FUN_005bf6b0` / `0x005BF6B0` | Cambios de estado de pantallas y música | [fn_00580000.c:49143](<D:/Joaquin/research-c1/ghidra/all2/fn_00580000.c:49143>) · 49143–49289; 766 B | [sonido.md:21](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:21>) |
+| `FUN_005bf6b0` / `0x005BF6B0` | Cambios de estado de pantallas y música | [fn_00580000.c:49143](<D:/Joaquin/research-c1/ghidra/all2/fn_00580000.c:49143>) · 49143–49289; 766 B | [sonido.md:23](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:23>) |
 
 ## Guardado y preferencias
 
@@ -113,10 +113,10 @@ Lecturas de referencia: [IA y mensajes](engine/ia-mensajes.md), [simulación](le
 
 | Función / VA | Papel documentado | C de Ghidra (líneas; bytes) | Lectura previa |
 |---|---|---|---|
-| `FUN_00682970` / `0x00682970` | Tick de fuentes de ambiente | [fn_00680000.c:2406](<D:/Joaquin/research-c1/ghidra/all2/fn_00680000.c:2406>) · 2406–2441; 112 B | [sonido.md:14](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:14>) |
-| `FUN_0067f9c0` / `0x0067F9C0` | Reproducción de sonido posicional | [fn_00640000.c:48590](<D:/Joaquin/research-c1/ghidra/all2/fn_00640000.c:48590>) · 48590–48599; 27 B | [sonido.md:36](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:36>) |
-| `FUN_00680530` / `0x00680530` | Consulta de la tabla de radios de ruido | [fn_00680000.c:257](<D:/Joaquin/research-c1/ghidra/all2/fn_00680000.c:257>) · 257–318; 230 B | [sonido.md:80](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:80>) |
-| `FUN_006ffae0` / `0x006FFAE0` | Sensor de sonidos por zona | [fn_006c0000.c:45066](<D:/Joaquin/research-c1/ghidra/all2/fn_006c0000.c:45066>) · 45066–45090; 98 B | [sonido.md:73](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:73>) |
+| `FUN_00682970` / `0x00682970` | Tick de fuentes de ambiente | [fn_00680000.c:2406](<D:/Joaquin/research-c1/ghidra/all2/fn_00680000.c:2406>) · 2406–2441; 112 B | [sonido.md:16](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:16>) |
+| `FUN_0067f9c0` / `0x0067F9C0` | Reproducción de sonido posicional | [fn_00640000.c:48590](<D:/Joaquin/research-c1/ghidra/all2/fn_00640000.c:48590>) · 48590–48599; 27 B | [sonido.md:38](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:38>) |
+| `FUN_00680530` / `0x00680530` | Consulta de la tabla de radios de ruido | [fn_00680000.c:257](<D:/Joaquin/research-c1/ghidra/all2/fn_00680000.c:257>) · 257–318; 230 B | [sonido.md:82](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:82>) |
+| `FUN_006ffae0` / `0x006FFAE0` | Sensor de sonidos por zona | [fn_006c0000.c:45066](<D:/Joaquin/research-c1/ghidra/all2/fn_006c0000.c:45066>) · 45066–45090; 98 B | [sonido.md:75](<D:/Joaquin/commandos1-web/docs/lectura/sonido.md:75>) |
 
 ## Límites y zonas a investigar
 

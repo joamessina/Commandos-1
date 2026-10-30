@@ -1,5 +1,7 @@
 # HUD: inventario de recursos y lo leído hasta ahora (2026-10-30)
 
+**Actualización (investigación ≥70 %):** [cierre-70.md §2](cierre-70.md#2-hud-la-tabla-que-faltaba-y-por-qué-no-coincidía-con-capturas) cierra quién recoloca los ítems: tabla por personaje0x822768, inicializador0x78B6D0, registro0x58 y `FUN_006F3A90`. Incluye zapador/conductor y coincide con memoria previa. También se leyeron los filtros de postura y el dibujante de balas. Las afirmaciones de cierres anteriores «quién recoloca: sin leer» quedan resueltas; minimapa/paletas/hover siguen parciales. No se cambió el port.
+
 Estado: **inventario hecho, composición (posiciones) NO leída**. Sin la posición de cada pieza no se puede dibujar el HUD sin inventar.
 
 ## Recursos (todos dentro de `WAR_MP.DIR`, `DATOS/RECURSOS/BMPS/SYSTEM/`)

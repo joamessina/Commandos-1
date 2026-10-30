@@ -1,5 +1,7 @@
 # Vehículos: acción del jugador y motores (exe)
 
+**Actualización (2026-10-30):** [cierre-70.md §3](cierre-70.md#3-vehículos-pilotaje-daños-y-conductores) agrega Pilotaje (parser/tick/mensajes y reparto de impactos), CLancha/CTanque (objetivo y disparo), y TiroAlBlanco (entrenamiento, no pilotaje). Varada: `FUN_005EF940/005EFA00` seleccionan Sim por sector. Se consultó `FUN_006BB320`, todavía parcial. Quedan transiciones/selectores de conductores y contraste en juego: no están cerrados todos los vehículos.
+
 Fuente: `0x502430–0x504300` (`ClassAUUsarVehiculo`), `0x5EE250–0x5F3400` (motores de vehículo), `0x5D6600–0x5DA440` (base `MotorAndante/Aliado`, ya en `q1-movimiento.md`). Leído con dirección; lo que no se leyó figura al final.
 
 ## 1. Acción `AUUsarVehiculo` (`FUN_00503160`, ctor; `acc+0x188` = estado)

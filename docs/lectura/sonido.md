@@ -1,5 +1,7 @@
 # Sonido: qué suena, con qué volumen y atenuación, ambiente y música (exe `coman_mp.exe`)
 
+**Corrección y cierre (2026-10-30):** [cierre-70.md §4](cierre-70.md#4-casas-patrullas-y-oído-cadena-del-sensor-cerrada) demuestra tipo6 → slot7 (0x409016) → `FUN_0059CEA0` → `FUN_0059A060` en todas las intendencias. `FUN_00681170` pasa el **sector** (`sonido+0x28`): las máscaras son `sector+0x2C+i*4`, no un array copiado al sonido. Esto corrige los cierres anteriores y resuelve ambos huecos; las categorías siguen viniendo de cada emisor. Los48 radios fueron contrastados otra vez con el exe.
+
 Complementa `docs/engine/sonido-parsers.md` §1 (capas Miles, tabla evento→WAV de 152 entradas en `0x820F28`, voces ESA, formatos) y `docs/lectura/obj-explosivos.md` (tabla de 48 radios de oído de la IA en `0x821DE0`). Aquí solo lo que faltaba: ambiente del `.MIS`, música por misión/fin de misión, mapeo de las opciones de volumen y cómo se juntan atenuación y radio de oído. **[hecho]** = leído con dirección; **[hip]**; **Dudas abiertas** al final. Familia `#23 Sonido` de `readbatch` leída por rangos (`0x67C030…0x683400`, 185 funciones), el detalle ya cubierto no se repite.
 
 ## 1. Dos cosas distintas que se llaman "radio" [hecho]

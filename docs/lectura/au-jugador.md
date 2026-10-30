@@ -1,5 +1,7 @@
 # Acciones del jugador `ClassAU*` (exe, `0x4E5000–0x505000`)
 
+**Revisión (2026-10-30):** [cierre-70.md §5](cierre-70.md#5-armas-estados-camuflaje-y-objetos-del-jugador) revisa piedra, recargas, tabaco y control alemán; §9 contrasta buceo y bombas. La frase de §9 «tabaco = distracción por sonido» no está demostrada: la creación y `CAcTabaco` no emiten ruido y negocian quién lo recoge por mensajes/distancia. Falta seguir su detección por cada cerebro. Vehículos: lectura ampliada en §3 del cierre nuevo.
+
 Lectura del exe para el port. Ya cubiertos en otros informes: `AUEscalar`/`AuGoTo` (`docs/research/q1-escaleras.md`, `q1-rutas.md`), `AUDisparar`/`AUEmpujar` (`au-disparar.md`). Aquí: el resto.
 Fuera de alcance (no leído): serialización, destructores y getters (el lector los omite).
 
