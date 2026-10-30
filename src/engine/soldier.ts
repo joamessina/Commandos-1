@@ -9,6 +9,7 @@
  *           que sobrevive apunta al agresor. Cuándo mejorar: al portar AcBap2 completo (0x43A0E0…).
  */
 import { DAMAGE, type Target, type Weapon } from './attack.ts';
+import { followPoint } from './groups.ts';
 import { DEFAULT_ANGLE, DEFAULT_RANGE, sees } from './vision.ts';
 import { Patrol, type Route } from './patrol.ts';
 import type { SectorMap } from './sectors.ts';
@@ -30,6 +31,18 @@ const SWEEP_PHASE = [0, 4, 3, 0, 2, 1, 1, 4, 2, 0, 2, 4, 2, 0, 3, 1]; // 0x812B2
 const INVESTIGATE_WAIT = 60;
 /** `AcBap` base (BAP1, BANPE1): ante un estímulo se queda mirando el punto (orden 9) `+0x90 = 100` ciclos; AcBap2/AcBanpe2 caminan hasta él (docs/lectura/soldado-acbap2.md §0). */
 const LOOK_CYCLES = 100;
+/** Cada cuántos ciclos un patrullero recalcula su puesto en la formación. */
+const FOLLOW_EVERY = 10;
+/** Velocidad extra del seguidor sobre la del líder (`ORDEN_MUEVETE`: `acc+0xD0 + 0,5`). */
+const FOLLOW_SPEED_BONUS = 0.5;
+
+/** Patrullero de un grupo: sigue a su líder con un lateral y una distancia hacia atrás (engine/groups.ts). */
+export interface Follow {
+  /** Posición y rumbo del líder, o null si ya no está. */
+  readonly leader: () => { readonly x: number; readonly y: number; readonly ang: number; readonly speed: number | null } | null;
+  readonly lateral: number;
+  readonly back: number;
+}
 /** Entrada 7 (atontado): `+0x34 = 600` ciclos (30 s); altura del bicho 5,0 (`0x793734`) en 6 y 7 (docs/lectura/guarda.md §4). */
 const STUN_CYCLES = 600;
 const DOWN_HEIGHT = 5;
@@ -97,6 +110,8 @@ export class Soldier implements Target {
   private readonly elliptical: boolean;
   /** false = soldado de la base `AcBap` (BAP1/BANPE1): mira el punto del estímulo pero no va hasta él. */
   private readonly walks: boolean;
+  private readonly follow: Follow | null;
+  private followWait = 0;
   /** Radio del ruido de su disparo (fusil 400 `FUSL`; el nido `NIDO` 500). */
   readonly noiseRadius: number;
 
@@ -104,12 +119,13 @@ export class Soldier implements Target {
     token: string,
     unit: Unit,
     route: Route | null,
-    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean } = {},
+    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean; readonly follow?: Follow } = {},
   ) {
     this.fixed = opts.fixed ?? false;
     this.sweepAmp = opts.sweep ?? SWEEP_AMP;
     this.elliptical = opts.elliptical ?? true;
     this.walks = opts.walks ?? true;
+    this.follow = opts.follow ?? null;
     this.noiseRadius = opts.noise ?? GUNSHOT_RADIUS;
     this.token = token;
     this.unit = unit;
@@ -285,7 +301,10 @@ export class Soldier implements Target {
       case Order.Return:
       case Order.Investigate:
         if (seen) this.startAim(seen);
-        else if (this.order === Order.Patrol) this.walkRoute();
+        else if (this.order === Order.Patrol) {
+          if (this.follow) this.followLeader(this.follow);
+          else this.walkRoute();
+        }
         else if (this.order === Order.Investigate) this.investigating();
         else this.returning();
         break;
@@ -401,6 +420,24 @@ export class Soldier implements Target {
       this.unit.body.ang = this.post.ang;
       this.idleAnim();
     }
+  }
+
+  /** Patrullero de un grupo: cada `FOLLOW_EVERY` ciclos va al puesto que le toca detrás de su líder (`FUN_004D5650`/`FUN_004C31C0`); sin líder se queda donde está. */
+  private followLeader(f: Follow): void {
+    const u = this.unit;
+    if (this.moving && u.target === null) {
+      this.moving = false;
+      this.idleAnim();
+    }
+    const l = f.leader();
+    if (!l || this.followWait-- > 0) return;
+    this.followWait = FOLLOW_EVERY;
+    const p = followPoint(l.x, l.y, l.ang, f.lateral, f.back);
+    if (Math.hypot(p.x - this.x, p.y - this.y) < 6) return;
+    u.speed = l.speed === null ? null : l.speed + FOLLOW_SPEED_BONUS;
+    u.goTo(p, false);
+    this.moving = u.target !== null;
+    if (this.moving) u.anim.set('ANDAR');
   }
 
   /** Recorrido de `acPatrulla`: ir al punto, girar, esperar, siguiente. */

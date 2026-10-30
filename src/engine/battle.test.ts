@@ -62,4 +62,32 @@ describe('Battle', () => {
     expect(u.hit(1e9)).toBe(true);
     expect(u.dead).toBe(true);
   });
+
+  it('onDanger avisa de los disparos de pistola del comando (los sensores de zona lanzan eventos con él)', () => {
+    const c = mk(0, 0, 0, 'C');
+    const target = new Soldier('S', mk(200, 0, 0, 'S'), null);
+    const b = new Battle([target], [c], null, () => 0.5);
+    const log: [number, number][] = [];
+    b.onDanger = (x, y) => log.push([x, y]);
+    b.attack(c, target, 'PISTOLA');
+    for (let i = 0; i < 40; i++) {
+      b.tick();
+      c.tick();
+    }
+    expect(log.length).toBeGreaterThan(0);
+    expect(log[0]).toEqual([0, 0]);
+  });
+
+  it('onDanger también avisa cuando dispara un soldado', () => {
+    const c = mk(100, 0, 0, 'C');
+    const sol = new Soldier('S', mk(0, 0, 0, 'S'), null);
+    const b = new Battle([sol], [c], null, () => 0);
+    let shots = 0;
+    b.onDanger = () => shots++;
+    for (let i = 0; i < 120; i++) {
+      b.tick();
+      c.tick();
+    }
+    expect(shots).toBeGreaterThan(0);
+  });
 });

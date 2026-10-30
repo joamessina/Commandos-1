@@ -283,4 +283,17 @@ describe('artillero de nido (soldado fijo)', () => {
     for (let i = 0; i < 80; i++) look.tick(w);
     expect(look.order).not.toBe(Order.Investigate);
   });
+
+  it('patrullero de un grupo: va al puesto detrás de su líder con lateral y se queda quieto si el líder ya no está', () => {
+    const w: SoldierWorld = { commandos: [], sectors: null, rng: () => 0, onShot: () => undefined };
+    let lead: { x: number; y: number; ang: number; speed: number | null } | null = { x: 400, y: 0, ang: 0, speed: 1.7 };
+    const f = new Soldier('S', unit(0, 0, 0), null, { follow: { leader: () => lead, lateral: 0, back: 30 } });
+    for (let i = 0; i < 200; i++) f.tick(w);
+    expect(Math.round(f.x)).toBeGreaterThan(300); // camina hasta ~370 (400 − 30)
+    expect(f.unit.speed).toBeCloseTo(2.2, 5);
+    const x = f.x;
+    lead = null;
+    for (let i = 0; i < 30; i++) f.tick(w);
+    expect(f.x).toBeCloseTo(x, 0);
+  });
 });

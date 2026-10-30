@@ -22,6 +22,8 @@ export class Battle {
   private readonly attacks = new Map<Unit, Attack>();
   private readonly sectors: SectorMap | null;
   private readonly rng: () => number;
+  /** Se avisa de cada ruido de peligro (disparo de pistola de un comando o de un soldado) en (x, y): lo usan los sensores de zona (engine/groups.ts). */
+  onDanger: ((x: number, y: number) => void) | null = null;
 
   constructor(soldiers: Soldier[], commandos: Unit[], sectors: SectorMap | null, rng: () => number = Math.random) {
     this.soldiers = soldiers;
@@ -61,6 +63,7 @@ export class Battle {
         sectors: this.sectors,
         noise: (x, y, r) => {
           this.noise(x, y, r);
+          this.onDanger?.(x, y);
         },
         onShot: (fx, fy, tx, ty) => this.tracers.push({ fromX: fx, fromY: fy, toX: tx, toY: ty, hit: true, ttl: TRACER_CYCLES, enemy: false }),
       });
@@ -75,6 +78,7 @@ export class Battle {
         rng: this.rng,
         onShot: (from, shot) => {
           this.tracers.push({ ...shot, ttl: TRACER_CYCLES, enemy: true });
+          this.onDanger?.(shot.fromX, shot.fromY);
           for (const o of this.soldiers) if (o !== from && Math.hypot(o.unit.body.x - shot.fromX, o.unit.body.y - shot.fromY) < from.noiseRadius) o.hear(shot.fromX, shot.fromY);
         },
       });

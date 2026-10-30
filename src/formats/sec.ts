@@ -50,6 +50,13 @@ export interface Sec {
   readonly sectors: readonly Sector[];
   /** Cantidad de sectores de la lista A (los siguientes son B). */
   readonly nA: number;
+  /** Grupos con nombre (las zonas de `.SENSORES_SND_ZONA`, p. ej. `CAMPAMENTO`): pares (a, b) de 4 bytes sin interpretar aún. */
+  readonly groups: readonly SecGroup[];
+}
+
+export interface SecGroup {
+  readonly name: string;
+  readonly items: readonly (readonly [number, number])[];
 }
 
 const MAX_NAME = 4096;
@@ -86,6 +93,13 @@ class Reader {
   skip(n: number): void {
     this.need(n);
     this.p += n;
+  }
+  text(n: number): string {
+    this.need(n);
+    let s = '';
+    for (let i = 0; i < n && (this.b[this.p + i] ?? 0) !== 0; i++) s += String.fromCharCode(this.b[this.p + i] ?? 0);
+    this.p += n;
+    return s;
   }
   tag(t: string): boolean {
     for (let i = 0; i < t.length; i++) if (this.b[this.p + i] !== t.charCodeAt(i)) return false;
@@ -149,14 +163,17 @@ export function parseSec(bytes: Uint8Array): Sec {
   const listB = readList(r, verts, true);
   const sectors = [...listA, ...listB];
   const nA = listA.length;
-  // grupos con nombre y pares: se leen para llegar a la cola; su consumidor no está leído (R4)
+  // grupos con nombre (zonas) y pares: los pares todavía no se interpretan (R4)
   const ng = r.count(8);
+  const groups: SecGroup[] = [];
   for (let g = 0; g < ng; g++) {
     const items = r.count(8);
     const nameLen = r.u32();
     if (nameLen > MAX_NAME) throw new SecError('nombre de grupo demasiado largo');
-    r.skip(nameLen);
-    r.skip(items * 8);
+    const name = r.text(nameLen);
+    const pairs: [number, number][] = [];
+    for (let k = 0; k < items; k++) pairs.push([r.i32(), r.i32()]);
+    groups.push({ name, items: pairs });
   }
   r.skip(r.count(8) * 8);
 
@@ -195,5 +212,5 @@ export function parseSec(bytes: Uint8Array): Sec {
     }
   }
   if (r.left !== 0) throw new SecError(`sobran ${r.left.toString()} bytes`);
-  return { verts, sectors, nA };
+  return { verts, sectors, nA, groups };
 }

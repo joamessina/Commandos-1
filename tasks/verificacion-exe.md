@@ -19,3 +19,6 @@ Regla: antes de implementar algo se lee su definición en el exe (tabla, funció
 | Ítems sin implementar | mano, señuelo, control alemán, arpón, cepo, botiquín, tabaco, granada | leer cada acción `Au*` antes |
 | Balsa: solo el marino la maneja, el resto va de pasajero | leído (`FUN_004B74D0`, `FUN_005034A0`) | intercambio de plazas con `MSGA_INTERCAMBIA_POS` sin implementar |
 | Habilidades por comando (matriz de `docs/engine/acciones-jugador.md` §3) | en el doc, **no aplicada entera**: bomba (zapador) está por token y no por la acción del MIS; escalar, agacharse y otros no se filtran por comando | revisar cada fila de la matriz contra el código |
+| Cepo y señuelo del inventario | reglas leídas (`obj-explosivos.md`), implementado en `engine/traps.ts` | señuelo arranca encendido y sin ítems ON/OFF aparte; un uso; sin sonidos; el boina verde no tiene `PONEBOMBA` |
+| Soldados BAP1/BANPE1 miran, BAP2/BANPE2 caminan | leído (`soldado-acbap2.md` §0) | `NERVIOSISMO`, `PERSIGUESONIDO` y demás parámetros del MAC sin aplicar |
+| Refuerzos por evento `REAC` (zona CAMPAMENTO) y patrulla libre | grupos y formación leídos (`policia.md`); zona leída del `.SEC` | `NSOLDIERS` con o sin cabo, regeneración, posiciones de ataque, sensor de sonido real |

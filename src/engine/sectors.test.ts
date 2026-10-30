@@ -191,4 +191,9 @@ describe('Unit sobre sectores', () => {
     run(u, 10);
     expect(u.body.x).toBeGreaterThan(150);
   });
+
+  it('el lector conserva los grupos con nombre (zonas) del .SEC', () => {
+    const sec = parseSec(secBytes({ verts: [[0, 0], [10, 0], [10, 10], [0, 10]], a: [{ verts: [0, 1, 2, 3] }] }));
+    expect(sec.groups).toEqual([{ name: '', items: [[0, 0]] }]);
+  });
 });

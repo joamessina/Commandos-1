@@ -22,6 +22,7 @@ import { House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, Traps } from '../engine/traps.ts';
+import { formationOf, type GroupDef, parseGroups, parseZoneSensors, ZoneEvents } from '../engine/groups.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
 import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
@@ -299,7 +300,8 @@ async function load(): Promise<void> {
 
   const units: UnitView[] = [];
   const secBytes = bytes(`DATOS/MISIONES/MAPA${n}.SEC`);
-  const sectors = secBytes ? new SectorMap(parseSec(secBytes)) : null;
+  const sec = secBytes ? parseSec(secBytes) : null;
+  const sectors = sec ? new SectorMap(sec) : null;
   const macro = (name: string): string | undefined => {
     const b = bytes(`DATOS/MISIONES/${name.toUpperCase()}.MAC`);
     return b ? new TextDecoder('latin1').decode(b) : undefined;
@@ -413,7 +415,42 @@ async function load(): Promise<void> {
     const prop = props.find((x) => x.elem === el);
     return prop ? [{ soldier: s, prop }] : [];
   });
-  game = { houses: parseHouses(elems), nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: null, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  const houses = parseHouses(elems);
+  // Grupos de `.PATRULLAS` (cabo + patrulleros) y eventos de zona de ruido (engine/groups.ts): los de casa salen con el evento, los libres empiezan en su ruta
+  const groups = parseGroups(misText, diffSel.value as Difficulty);
+  const spawned = new Set<string>();
+  const spawnGroup = (def: GroupDef): void => {
+    if (spawned.has(def.token)) return;
+    const house = def.home ? houses.find((h) => h.token.toUpperCase() === def.home?.toUpperCase()) : undefined;
+    const p0 = def.route?.points[0];
+    const at = house ? house.exit : p0 ? { x: p0.x, y: p0.y, z: p0.z } : null;
+    if (!at) return;
+    spawned.add(def.token);
+    const made: Soldier[] = [];
+    for (let i = 0; i < def.n; i++) {
+      const a = asset(i === 0 ? def.animCabo : def.animSoldier);
+      if (!a) break;
+      const f = i === 0 ? null : formationOf(i - 1, def.columns, def.n - 1, def.formX);
+      const lead = f ? made[f.leader + 1] : undefined;
+      const follow = f && lead ? { leader: () => (lead.dead ? null : { x: lead.x, y: lead.y, ang: lead.unit.body.ang, speed: lead.unit.speed }), lateral: f.lateral, back: def.formY } : undefined;
+      const s = new Soldier(`${def.token}_${i.toString()}`, new Unit(`${def.token}_${i.toString()}`, a.anm, at.x, at.y, at.z, 0, sectors), i === 0 ? def.route : null, follow ? { follow } : {});
+      made.push(s);
+      soldiers.push({ soldier: s, sprites: a.sprites });
+      battle.soldiers.push(s);
+    }
+  };
+  const raise = (event: string): void => {
+    for (const def of groups) if (def.home && def.exitEvents.includes(event)) spawnGroup(def);
+  };
+  for (const def of groups) if (!def.home && def.exitEvents.length === 0) spawnGroup(def);
+  if (sec && sectors) {
+    const zones = new ZoneEvents(sec, parseZoneSensors(misText));
+    battle.onDanger = (x, y) => {
+      const s = sectors.at(x, y);
+      if (s) for (const ev of zones.at(sec.sectors.indexOf(s))) raise(ev);
+    };
+  }
+  game = { houses, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: null, showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
