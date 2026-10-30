@@ -170,29 +170,36 @@ export const ITEM_WAD: Readonly<Record<string, string>> = {
 };
 
 /**
- * Hueco entre el dibujo de un ítem y el borde derecho/inferior de la ventana, medido por coincidencia de plantilla sobre una captura 1280×720 del original (boina verde
- * a pie, mochila a la derecha; diferencia media 2,6–7,8 de 255 contra >17 para cualquier otro dibujo). El exe no trae la posición en el `.MIS`, ni en los WAD, ni en la tabla de ítems.
- * shortcut: solo los 7 ítems que mostraba esa captura (los demás no se dibujan hasta tener su posición); se dibujan todos los `.DISPONIBLE` del comando sin la regla de contexto del exe.
+ * Posición de la esquina sup. izq. del dibujo de cada ítem (clave = archivo de `OPCIONES/`) respecto de la esquina sup. izq. de la mochila, por comando.
+ * Medida por coincidencia de plantilla sobre capturas 1280×720 del original (diferencia media 2,6–10 de 255 en los aciertos, >17 en el resto); el boina verde sale de la
+ * captura nativa, el resto de capturas reescaladas (±2 px). El exe trae un (x, y) por ítem (`.data` 0x822FA0, registros de 36 B que recorre `FUN_005B8C00` y guarda
+ * `FUN_00512AC0` en `ClassInterfaceItem+0xD4/+0xD8`): coincide con lo medido en PISTOLA (59,46) y MANO (50,−66) pero no en los demás, y no hallé quién lo consume.
+ * shortcut: solo los ítems que se vieron en las capturas (los demás no se dibujan hasta tener su posición); se dibujan todos los `.DISPONIBLE` del comando, sin la regla de contexto del exe.
  */
-export const BAG_GAP: Readonly<Record<string, { readonly right: number; readonly bottom: number }>> = {
-  CUCHILLO: { right: 0, bottom: 126 },
-  MANO: { right: 0, bottom: 94 },
-  PUNO: { right: 0, bottom: 98 },
-  PISTOLA: { right: 0, bottom: 33 },
-  PIEDRA: { right: 39, bottom: 101 },
-  ESPOSAS: { right: 35, bottom: 0 },
-  CONTROLA: { right: 76, bottom: 0 },
+export const BAG_POS: Readonly<Record<string, Readonly<Record<string, { readonly x: number; readonly y: number }>>>> = {
+  COMANDO: { CUCHILLO: { x: -9, y: 1 }, MANO: { x: 49, y: -67 }, PUNO: { x: 69, y: 14 }, PISTOLA: { x: 59, y: 45 }, PIEDRA: { x: 43, y: 18 }, ESPOSAS: { x: 24, y: 91 }, CONTROLA: { x: -20, y: 79 } },
+  LANCHERO: { CUCHILLO: { x: -9, y: 0 }, MANO: { x: 49, y: -68 }, PISTOLA: { x: 59, y: 46 }, PIEDRA: { x: 81, y: 19 } },
+  ARTIFIC: { MANO: { x: 49, y: -67 }, PISTOLA: { x: 59, y: 46 }, PIEDRA: { x: 55, y: 8 } },
+  FRANCOT: { MANO: { x: 49, y: -67 }, PISTOLA: { x: 59, y: 46 } },
 };
 
-/** Archivos de `OPCIONES/` que se dibujan en la mochila de cada comando (disponibles, con archivo y con posición medida), por token de comando. */
-export function bagItems(iface: ReadonlyMap<string, HudCommando>): Map<string, string[]> {
-  const out = new Map<string, string[]>();
+export interface BagItem {
+  /** Archivo de `OPCIONES/` con el dibujo. */
+  readonly wad: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+/** Ítems que se dibujan en la mochila de cada comando (disponibles, con archivo y con posición medida), por token de comando. */
+export function bagItems(iface: ReadonlyMap<string, HudCommando>): Map<string, BagItem[]> {
+  const out = new Map<string, BagItem[]>();
   for (const [token, c] of iface) {
-    const names = c.items.flatMap((i) => {
+    const pos = BAG_POS[token] ?? {};
+    out.set(token, c.items.flatMap((i) => {
       const wad = ITEM_WAD[i.token];
-      return i.available && wad !== undefined && wad in BAG_GAP ? [wad] : [];
-    });
-    out.set(token, names);
+      const at = wad === undefined ? undefined : pos[wad];
+      return i.available && wad !== undefined && at ? [{ wad, x: at.x, y: at.y }] : [];
+    }));
   }
   return out;
 }

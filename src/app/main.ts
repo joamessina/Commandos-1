@@ -26,7 +26,7 @@ import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
-import { bagItems, FaceAnim, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, parseInterface, slotAt, viewRect } from '../engine/hud.ts';
+import { type BagItem, bagItems, FaceAnim, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, parseInterface, slotAt, viewRect } from '../engine/hud.ts';
 import { Hud } from '../render/hud.ts';
 import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
 import { rayReach, vistaOf } from '../engine/vision.ts';
@@ -132,8 +132,8 @@ interface Game {
   readonly hud: Hud | null;
   /** Columna (y mochila) a la izquierda: la tecla º/| la cambia de lado. */
   hudLeft: boolean;
-  /** Archivos de `OPCIONES/` que se dibujan en la mochila de cada comando (por token). */
-  readonly bag: ReadonlyMap<string, readonly string[]>;
+  /** Ítems que se dibujan en la mochila de cada comando (por token). */
+  readonly bag: ReadonlyMap<string, readonly BagItem[]>;
   readonly faces: FaceAnim;
   /** Ticks de par por dificultad (`PUNTUACIONES`) y el resultado fijado al terminar la misión. */
   readonly par: { easy: number; hard: number };
@@ -213,7 +213,7 @@ async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffe
 }
 
 /** WAD del HUD (GLOBAL, uno por resolución y las CARAS de los comandos de la misión); null si falta alguno de los básicos. */
-function loadHud(tokens: readonly string[], bag: ReadonlyMap<string, readonly string[]>): Hud | null {
+function loadHud(tokens: readonly string[], bag: ReadonlyMap<string, readonly BagItem[]>): Hud | null {
   const root = 'DATOS/RECURSOS/BMPS/SYSTEM/';
   const wad = (path: string): Wad | null => {
     const b = bytes(root + path);
@@ -231,7 +231,7 @@ function loadHud(tokens: readonly string[], bag: ReadonlyMap<string, readonly st
     if (f) faces.set(t, f);
   }
   const items = new Map<string, Wad>();
-  for (const name of new Set([...bag.values()].flat())) {
+  for (const name of new Set([...bag.values()].flat().map((i) => i.wad))) {
     const w = wad(`OPCIONES/${name}.WAD`);
     if (w) items.set(name, w);
   }

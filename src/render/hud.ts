@@ -3,7 +3,7 @@
  * de sangre, marco de selección, y los iconos de la esquina (ojo, ayuda, cámara). Todo a 1:1 con el WAD de interfaz que cabe en la ventana.
  * shortcut: si la ventana es más ancha/alta que el WAD, la tira y la columna se alargan repitiendo su último tramo (el exe solo corre a resoluciones fijas).
  */
-import { BAG, BAG_GAP, bagRect, bloodHeight, columnX, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, SLOT, slotRect } from '../engine/hud.ts';
+import { BAG, bagRect, bloodHeight, columnX, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, SLOT, slotRect, type BagItem } from '../engine/hud.ts';
 import type { Sprite, Wad } from '../formats/wad.ts';
 import { SpriteCache } from './sprites.ts';
 
@@ -12,8 +12,8 @@ export interface HudUnit {
   readonly energy: number;
   readonly max: number;
   readonly dead: boolean;
-  /** Archivos de `OPCIONES/` de los ítems que se dibujan en su mochila (engine/hud.ts `bagItems`). */
-  readonly items: readonly string[];
+  /** Ítems que se dibujan en su mochila (engine/hud.ts `bagItems`). */
+  readonly items: readonly BagItem[];
 }
 
 interface Bank {
@@ -108,13 +108,10 @@ export class Hud {
       const fb = this.faces.get(sel.token);
       const photo = fb?.wad.sprites.find((s) => /^FOTO\d+\.RLE$/i.test(s.name));
       if (fb && photo) ctx.drawImage(fb.cache.canvasFor(photo), bag.x + BAG.photoDx, bag.y + BAG.photoDy);
-      for (const name of sel.items) {
-        const ib = this.items.get(name);
-        const gap = BAG_GAP[name];
-        const art = ib?.wad.sprites.find((s) => !/^M[_-]/i.test(s.name));
-        if (!ib || !gap || !art) continue;
-        // el hueco se mide contra el borde del lado de la columna; con la mochila a la izquierda el dibujo se pega al borde izquierdo
-        ctx.drawImage(ib.cache.canvasFor(art), left ? gap.right : width - art.width - gap.right, height - art.height - gap.bottom);
+      for (const it of sel.items) {
+        const ib = this.items.get(it.wad);
+        const art = ib?.wad.sprites.find((sp) => !/^M[_-]/i.test(sp.name));
+        if (ib && art) ctx.drawImage(ib.cache.canvasFor(art), bag.x + it.x, bag.y + it.y);
       }
     }
     ctx.imageSmoothingEnabled = was;

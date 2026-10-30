@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BAG_GAP, bagItems, bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, ITEM_WAD, overHud, parseInterface, slotAt, slotRect, viewRect } from './hud.ts';
+import { BAG_POS, bagItems, bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, ITEM_WAD, overHud, parseInterface, slotAt, slotRect, viewRect } from './hud.ts';
 
 describe('hud', () => {
   it('elige el WAD de interfaz más grande que cabe', () => {
@@ -87,8 +87,10 @@ describe('parseInterface', () => {
       { token: 'IT_TABACO', available: false },
       { token: 'IT_PIEDRA', available: false },
       { token: 'IT_SEGNUELO', available: true },
-    ] }]]);
-    expect(bagItems(iface).get('COMANDO')).toEqual(['CUCHILLO', 'MANO', 'PUNO']);
-    expect(Object.keys(BAG_GAP)).toHaveLength(7);
+    ] }], ['SIN_MEDIR', { items: [{ token: 'IT_MANO', available: true }] }]]);
+    expect(bagItems(iface).get('COMANDO')).toEqual([{ wad: 'CUCHILLO', x: -9, y: 1 }, { wad: 'MANO', x: 49, y: -67 }, { wad: 'PUNO', x: 69, y: 14 }]);
+    expect(bagItems(iface).get('SIN_MEDIR')).toEqual([]);
+    // MANO y PISTOLA coinciden con el (x, y) del exe: (50,−66) y (59,46)
+    expect(Object.keys(BAG_POS)).toEqual(['COMANDO', 'LANCHERO', 'ARTIFIC', 'FRANCOT']);
   });
 });
