@@ -17,7 +17,7 @@ Mapa general (2026-10-30): `docs/exe-mapa-general.md` enlaza 49 funciones con VA
 | Posiciones de ítems por personaje | **leído del exe y contrastado con memoria previa** | `cierre-70.md` §2: tabla0x822768, init0x78B6D0, registro0x58 y fórmula de offsets. Incluye zapador/conductor; falta aplicar tabla completa al port. |
 | Ítems visibles por contexto | vehículo y postura leídos (`FUN_0068E210`) | `cierre-70.md` §2; restan todos los flags de acción/disfraz y su implementación. |
 | Foto grande solo en vehículo | leído (flag `+0x124` en memoria) | |
-| Retícula del francotirador (`C_MIRILL`, hotspot 47,47) | leído (`FUN_005BFE20`) | cuándo se ve exactamente (¿solo apuntando?): sin leer |
+| Retícula del francotirador (`C_MIRILL`, hotspot 47,47) | carga y condición de dibujo leídas | `hud-consumidores.md` §8: ids de cursor24/25 y control actual del visor; `005BFE20` carga, `005CA590` dibuja. Falta contraste en pantalla. |
 | Cursores de armas (sprite por arma) |81 registros, hotspots y tiempos leídos del init | `hud-consumidores.md` §7; audita-hud.py reproduce la extracción. El centro supuesto queda refutado. Resta integrar y completar selección de variantes por acción. |
 | Iluminado de ítems | atajo del port; mecanismo original leído | `cierre-80.md` §2: flags pulsado/hover → estado1/2/3; paletas nominales+0x11C/+0x120 y overlay+0x118. Falta reconstruir colores de todos los bancos y portar; suma0,4 no corresponde a esa regla. |
 | Mochila a la izquierda (espejo de x) y balas a la derecha | espejo leído de `FUN_006F4150`, sin captura | |

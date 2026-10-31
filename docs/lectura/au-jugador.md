@@ -25,18 +25,24 @@ Fuera de alcance (no leído): serialización, destructores y getters (el lector 
   - Bloqueada si el bicho está **visto por un alemán** (`+0x23C & 0x800000`).
 
 ## 2. Botiquín / Jeringuilla (`ClassAUBotiquin`)
-- Parámetros de misión (`FUN_004E8B50`): lee un bloque de script y fija `acc+0x1A0 = entero·2` (por defecto `6` usos en el ctor, `acc+0x1A0`=`[0x68]`).
+- Parámetros de misión (`FUN_004E8B50`): lee un bloque de script y fija `acc+0x1A0 = entero·2` (por defecto `6` cargas en el ctor, `acc+0x1A0`=`[0x68]`). En M0, `.USOS 5` fija **10 cargas**; cada cura efectiva descuenta una (`cierre-mision-0.md`).
 - Objetivo válido (`FUN_004E8A50`): es un comando (clase 2) con `vida(+0x208) < vidaMáx(+0x20C)`; si no, `acc+0x194 = 1` (rechazado).
 - Estado 3: camina hasta llegar (`FUN_0050A380`), anima **`JERINGA`** (vel 1.0, prio 6) → estado 4. Estado 4: cuenta cuadros desde 0; **al cuadro 10** aplica la cura; si pasa de `ficha+0x8CC` sin haberla aplicado la aplica igualmente y termina.
 - **Cura** (`FUN_004E8C30`): `blanco.vida += 0x22` (**34**), recortada a `vidaMáx`; `usos -= 1`; al llegar a 0 quita el ítem `0x52`.
 - Mensajes: clic sobre elemento ⇒ si es persona herida va al estado 3 (cura), si no estado 2 (camina hasta allí). Clic sobre punto ⇒ ir ahí.
 
 ## 3. Bucear (`ClassAuBucear`, buzo; `0x4E9C10`)
-- Solo se puede **empezar** si el parámetro es `"URGENTE"` o **todos** los sectores pisados son de agua (`MSGO_MOTOR_GETSECTORESPISADOS`, `FUN_004E95A0`: cada sector `[0] == 1`, tipo agua).
+- Solo se puede **empezar** si el parámetro es `"URGENTE"` o hay al menos un sector pisado y **todos** son de agua (`MSGO_MOTOR_GETSECTORESPISADOS`, `FUN_004E95A0`, `fn_004c0000.c:25964–26009`: cada sector `[0] == 1`, tipo agua). Una lista vacía no satisface la condición; tampoco se acepta automáticamente el tipo 3 solo por ser agua profunda.
 - Entrar: anima `BUCEAR` (vel 1, prio 2); `bicho+0x23C |= 0x80 | 0x1000 | 0x80000` (agachado + buceando + oculto); `MSGO_MOTOR_SETBUCEAR`; **volumen de render** del bicho (`bicho+0x13C` = objeto gráfico → `+0x50` = `.RENDERVOL [ CILINDRO [ .R .H ] ]`; `+8` = **R** radio, `+0xC` = **H** altura; `FUN_00590E30/E40` lo escriben): **R ×2** y **H ×0,125**; **altura de ojo `bicho+0x58` ×0,125** (el buzo casi no se ve). Los valores previos se guardan en `acc+0x19C` (R), `acc+0x1A4` (H) y `acc+0x1A0` (ojo) y se restauran al salir. El volumen de render sólo decide el *orden de dibujo* frente a edificios (`q1-orden-dibujo.md`), no la colisión.
 - Salir (`FUN_004E97B0`): quita `0x80`,`0x1000`,`0x80000`; restaura R, H y ojo; anima pose 2.
 - Mientras bucea, si aparece un sector no-agua (`FUN_004E9730`) o `ficha+0x824 & 0x4000` se corta (devuelve 0).
 - Clic derecho (`MSG_BOTON2VIRTUAL`) marca bit 2 de `acc+0x198`: salir.
+
+**Cambio de modo en el motor [hecho]:** `ClassMotorAliado::FUN_005DB900` (`fn_005c0000.c:18599–18661`) recibe `MSGO_MOTOR_SETBUCEAR` y pasa su bloque a `FUN_005D69B0` (`15984–16015`). Ese intermediario admite valores 0/0x80 para salir y 1/0x81 para entrar; escribe éxito en el segundo entero del bloque y actualiza `motor+0x90`. `FUN_0066B460` (`fn_00640000.c:34261–34295`) solo cambia el modo si ya coincide o si pasa la comprobación geométrica: al salir consulta máscara8, al entrar máscara1, salvo que esté activo el bit `0x80`, que evita esa consulta. `FUN_00576190` (`fn_00540000.c:36403–36476`) interpreta la máscara como `1 << tipoSector` y prueba intersección con el círculo de radio del bicho. Así, la salida normal se rechaza ante un sector tipo3 (agua profunda) que interseca, y la entrada normal ante uno tipo0 (tierra); el bit `0x80` fuerza el cambio sin ese filtro. Al aceptarse guarda el modo en `sim+0xD8` y en la estructura asociada `+0x18`. Este control de solapamiento complementa, no reemplaza, la comprobación de sectores pisados de `004E95A0`.
+
+**Excepción `URGENTE`:** `FUN_004E9C10` (`fn_004c0000.c:26276–26355`) salta tanto `004E95A0` como el envío normal de `MSGO_MOTOR_SETBUCEAR` cuando recibe ese parámetro y procede a la animación y flags. No equivale a mandar automáticamente `0x81` al motor: ese cambio lo realiza antes el contexto de salida del vehículo descrito abajo. En la entrada normal manda 1 y solo continúa si el motor responde éxito.
+
+**Salida del vehículo hacia buceo [hecho]:** `FUN_00502CB0` (`fn_00500000.c:1778–1862`), en la rama del ítem `0x11` (traje), pide parar al piloto si existe y envía primero `MSGO_MOTOR_SETBUCEAR` con `0x81` y prioridad 900. Si el motor confirma y `00502BD0` logra `MSGA_SALIR_HABITACULO`, envía `MSG_PON_A_BUCEAR`; el manejador del aliado (`00515A30`, `fn_00500000.c:14853–14870`) activa `AuBucear` con `URGENTE`. Si alguna de las dos operaciones iniciales falla, la rutina solicita al motor `0x80` para revertir el modo. En `00502BD0` el C exportado confunde el valor de éxito con el cookie de pila: el asm `0x502C31–0x502C51` comprueba el entero de salida que escribió `MSGA_SALIR_HABITACULO`.
 
 ## 4. Cachiporra (`ClassAUCachiporra`)
 - Blanco: enemigo (clase `≠ 2`); `acc+0x19C` es el flag de validez. Estados: 2 anda al blanco, 3 llegó ⇒ gira hacia él (`FUN_004DFCF0`, ángulo por atan2) y elige animación según arma equipada `ficha+0x7A8`: `0` `LANZARPIEDRA` · `4` `SACACACHIPORRA` · `5` `JERINGA` (vel 2.0) · otro `ANDAR`.
