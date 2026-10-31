@@ -16,7 +16,35 @@ El foco no se enciende por hora en M0: `FUN_00468FA0` (`fn_00440000.c:26443–26
 
 ## Sombras, agua y partículas [hecho con límite]
 
-No hay sombra dinámica genérica para cada comando: la sombra de voladores es otra secuencia del ANM. `FUN_0046E180` (`fn_00440000.c:29591–29623`) crea `VOLARSOMBRA`; el selector `FUN_0046E2B0` (`fn_00440000.c:29627–29664`) actualiza secuencia de vuelo y sombra. Edificios y objetos usan tiles con alfa precompuesto. Las estelas de agua usan emisores del ANM, no una sombra nueva: `render.md` §§2.2 y Cierre 6 describen hotspots y animación del mar; Cierre 7b documenta la composición de sombras en tierra sobre el agua. Partículas k=1/3/5/6 están identificadas por la tabla de `render.md` §2.2; la vida/color/velocidad fina de cada clase sigue sin lectura. Esto cierra qué mecanismo corresponde a M0, no los parámetros no expuestos por el exe.
+No hay sombra dinámica genérica para cada comando: la sombra de voladores es otra secuencia del ANM. `FUN_0046E180` (`fn_00440000.c:29591–29623`) crea `VOLARSOMBRA`; el selector `FUN_0046E2B0` (`fn_00440000.c:29627–29664`) actualiza secuencia de vuelo y sombra. Edificios y objetos usan tiles con alfa precompuesto. Las estelas de agua usan emisores del ANM, no una sombra nueva: `render.md` §§2.2 y Cierre 6 describen hotspots y animación del mar; Cierre 7b documenta la composición de sombras en tierra sobre el agua. Los parámetros de inicialización de agua, sangre y humo están ampliados en `render.md` §2.2; aún faltan partes de su actualización fina y el contraste visual.
+
+## Acciones declaradas por aliado en M0 [hecho]
+
+`node --experimental-transform-types tools/audita-acciones-m0.ts` recorre también los bloques anidados del `MAPA0000.MIS` real. Los cuatro registros siguientes son declaraciones del archivo: la tabla no supone que todos estén disponibles desde el primer ciclo.
+
+| Token | Acciones y parámetros particulares declarados |
+|---|---|
+| `FRANCOT` | `AuDisparar`: MIRILLA, PISTOLA y PIEDRA, seis cargas de mirilla y 100 piedras; `AuBotiquin` con cinco usos. |
+| `LANCHERO` | cuchillo, buceo, pistola, arpón y 100 piedras; `AcUsaHab` con habilidad BALSA, `AuUsarVehiculo` restringida a BALSA y `AuManejaBalsa` con `ZODIAC5`, `IT_BALSA`, `LANZABARCA`. |
+| `COMANDO` | cuchillo, pistola, piedra y escopeta, 100 piedras; escalar con `ESCALAMUROS SI`, cargar barril y cuerpo (`AuGarfio`), señuelo `SEGNUELOUNO`, esposas y cachiporra. |
+| `ARTIFIC` | pistola y piedra, 100 piedras; manejar `BOMBA1` a `BOMBA4` y `CEPO`. |
+
+Cada uno declara además movimiento, uso y recogida, escalada, vehículos, entrada en habitáculo, tabaco y toma de control alemán; las prioridades y la lista completa se obtienen del auditor. Los ids de acción y la relación ítem→acción están en `docs/engine/acciones-jugador.md` §§4–6; la ejecución de cada acción en ese documento §7 y `au-jugador.md`. Declarar una acción no implica que cualquier blanco sea válido ni que el ítem ya esté disponible. El mismo recorrido recursivo encuentra BAP1=5, BAP2=6, BANPE1=13 y BANPE2=4: confirma que el conteo de 28 de las entradas directas no omitió instancias adicionales de esas cuatro macros en otros bloques.
+
+### Emisores de atención y peligro vinculados a M0 [hecho]
+
+El sensor de CAMPAMENTO usa el tipo de sonido y el sector del emisor, no solo la distancia al guardia: `FUN_00681170` (`fn_00680000.c:1158–1167`) entrega sector y categoría al gestor; `FUN_006FFAE0` y `FUN_006FFA00` (`fn_006c0000.c:45066–45088`, `45010–45023`) comprueban zona y máscara. La categoría predeterminada del sensor es peligro (3), por lo que las voces o emisores de atención (2) no bastan por sí solos para disparar `REAC`.
+
+| Fuente y condición | Ruido para IA | Relación con el sensor |
+|---|---|---|
+| Bomba al detonar, `FUN_00440D30` (`fn_00440000.c:355–395`) | `XPLO`, categoría 3, radio 1200 | Puede disparar `REAC` si el sector pertenece a CAMPAMENTO. |
+| Mina al detonar, `FUN_00483540` (`fn_00480000.c:1682–1764`) | `XPLO`, categoría 3, radio 1200 | Igual; la mina submarina también usa este emisor. |
+| Barril al explotar, `FUN_0043F9B0` (`fn_00400000.c:427205–427245`) | `EBAR`, categoría 3, radio 1200 | Igual, sujeto al sector donde explota. |
+| Señuelo activado, `FUN_004A8CB0` (`fn_00480000.c:24185–24214`) y registro `FUN_00680D50` (`fn_00680000.c:856–887`) | `DCOY`, categoría 2, radio 300 | Puede ser oído por guardias; no pasa por sí solo el filtro de peligro predeterminado. |
+| Guardia BAP2 ante bandera de cuerpo, `FUN_0043A200` y `FUN_00430DF0` (`fn_00400000.c:424133–424157`, `419095–419105`) | `VMUE`, categoría 2, radio 150 | Atención; no activa por sí sola el sensor de peligro. |
+| Guardia cuando `FUN_00430C40` permite la voz (`fn_00400000.c:418991–419008`) | `ALRM`, categoría 3, radio 300 | Puede activar el sensor si se emite dentro de la zona. |
+
+Los radios vienen de la tabla `0x821DE0` (`obj-explosivos.md` §0), y son el alcance de percepción de guardias: el filtro de zona del sensor no se calcula con esos radios. El señuelo puede provocar después otras acciones de los guardias; la fila solo describe el sonido `DCOY` original.
 
 ## Explosión y demolición de CASA04 [hecho; contraste pendiente]
 
