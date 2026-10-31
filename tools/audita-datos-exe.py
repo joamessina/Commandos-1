@@ -28,7 +28,7 @@ def main():
             datos = pe.get_data(va - base, 0xa8)
             identificador = struct.unpack_from("<i", datos)[0]
             nombre = datos[4:0x24].split(b"\0")[0].decode("ascii")
-            print(f"{va:08x}: índice={i} id={identificador} nombre={nombre} alcance={struct.unpack_from('<f', datos, 0x24)[0]:g} recarga={struct.unpack_from('<i', datos, 0x2c)[0]} consumo={struct.unpack_from('<i', datos, 0x78)[0]}")
+            print(f"{va:08x}: índice={i} id={identificador} nombre={nombre} alcance={struct.unpack_from('<f', datos, 0x24)[0]:g} recarga={struct.unpack_from('<i', datos, 0x2c)[0]} municion_inicial={struct.unpack_from('<i', datos, 0x74)[0]} consumo={struct.unpack_from('<i', datos, 0x78)[0]}")
             if identificador == 9:
                 break
     if args.mochila:

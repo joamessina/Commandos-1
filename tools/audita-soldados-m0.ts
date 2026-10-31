@@ -22,6 +22,7 @@ const buscar = (nodos: readonly Node[], clave: string): Node | undefined => {
 const resumen = (n: Node | undefined): string => n === undefined ? '-' : JSON.stringify(n);
 for (const macro of ['BAP1', 'BAP2', 'BANPE1', 'BANPE2']) {
   const base = leer(`${macro}.MAC`);
+  console.log('MAC_COMPLETA', macro, resumen(base));
   console.log('MAC', macro, 'ACCIONES', resumen(buscar(base, '.ACCIONES')), 'ORGANOS', resumen(buscar(base, '.ORGANOS')));
 }
 const elementos = asList(buscar(leer('MAPA0000.MIS'), '.ELEMENTOS')) ?? [];

@@ -21,6 +21,8 @@
 ## Munición y arranque (`FUN_004EFF40`, desde el MAC) [hecho]
 Claves del MAC de la acción: `ARMAS [ … ]` (qué armas lleva, marca `+0x98 + id·4 = 1`), `MUNPISTOLA`, `MUNMIRILLA`, `MUNMETRA`, `FLECHAS` (ballesta), `GRANADAS` (al leerlas registra el ítem `GRAN`), `PIEDRAS` (si hay piedras registra el sonido `CAEPIED`), `MUNARPON`, `MUNESCOPETA`. La munición actual de cada arma está en `acción + 0x48 + id·4`.
 
+**Valores iniciales de M0 [hecho]:** el constructor `FUN_004F08E0` (`fn_004c0000.c:30727–30776`, asm `0x4F098E–0x4F09ED`) inicializa cada contador desde el entero `+0x74` de su fila de la tabla. El exe da 1 para pistola, arpón y escopeta, y 0 para mirilla y piedra (`py tools/audita-datos-exe.py --armas`). Después `FUN_004EFF40` (`30462–30587`) sustituye solo las cantidades declaradas por la instancia. En M0, los cuatro aliados declaran 100 piedras y FRANCOT declara seis de mirilla; ninguno declara cantidad de pistola, arpón o escopeta. El 1 inicial no equivale a una sola bala: `FUN_004F1680` (`31242–31344`) deja `bVar1=false` para los dos casos de pistola (1/2), arpón (7/8) y escopeta (0xD/0xE), por lo que no descuenta su contador en esa rama. La mirilla y las piedras sí se descuentan según sus casos. El acceso también exige que el arma esté declarada en `.ARMAS`: el contador inicial solo no habilita armas ajenas.
+
 ## Máquina de estados (`FUN_004F1A50`, uno por ciclo; estado en `+0x28`, arma en `+0x30`, blanco `+0x1F4/…`) [hecho]
 - **Enfriamiento** `+0x150`: si > 0 resta 1 y no hace nada más.
 - **Estado 1 (listo)**: si el arma elegida tiene munición 0 → termina la acción.

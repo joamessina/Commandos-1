@@ -2,6 +2,8 @@
 
 Regla: antes de implementar algo se lee su definición en el exe (tabla, función o memoria del juego en marcha); lo que no, queda acá como atajo con su fecha de revisión.
 
+**Lectura de misión 0 (2026-10-31):** el botiquín `.USOS 5` representa 10 curas efectivas, no 5; pistola/arpón/escopeta no descuentan el contador al disparar; `CAMPAMENTO` abarca 473 sectores reales y su selector de lista se lee en `FUN_005FA5F0`. `ZoneEvents` ignora ese selector, diferencia que no afecta al SEC de M0 porque no tiene sectores superpuestos pero puede afectar otras misiones. Fuentes y límites: `cierre-mision-0.md` y `au-disparar.md`. Cursores, efectos y visión: `hud-consumidores.md`, `render.md` y `organos.md`. Son investigaciones: falta integrar y contrastar el port.
+
 **HUD compartido:** [hud-consumidores.md](../docs/lectura/hud-consumidores.md) y auditores `tools/audita-hud.py`/`tools/audita-hud-recursos.ts`:81 cursores extraídos con hotspots/tiempos;69 WAD,403 sprites,286 paletas reales; barra de vida, marco secundario, alarma, postura y modos de cámara leídos. Son reglas investigadas, pendientes de port. El paso63 y los hotspots centrados del port contradicen esta lectura. `npm run check:task`:245 pruebas pasan, cobertura de ramas global90,26 %.
 
 **Barrido ≥80 % (2026-10-30):** [`cierre-80.md`](../docs/lectura/cierre-80.md),22 filas de todo el juego. Consumidores positivos de recinto (reacción enemiga, no confinamiento demostrado) y NOVERHASTA (tick de vista); hover/pulsación y paletas nominales; puente/compuerta/Testigo y ciclos de acciones. Verificados115 scripts y166 ANM reales. No se implementaron reglas ni se validó audiovisual; los límites específicos constan en cada sección.
