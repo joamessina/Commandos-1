@@ -2,6 +2,8 @@
 
 Regla: antes de implementar algo se lee su definición en el exe (tabla, función o memoria del juego en marcha); lo que no, queda acá como atajo con su fecha de revisión.
 
+**HUD compartido:** [hud-consumidores.md](../docs/lectura/hud-consumidores.md) y auditores `tools/audita-hud.py`/`tools/audita-hud-recursos.ts`:81 cursores extraídos con hotspots/tiempos;69 WAD,403 sprites,286 paletas reales; barra de vida, marco secundario, alarma, postura y modos de cámara leídos. Son reglas investigadas, pendientes de port. El paso63 y los hotspots centrados del port contradicen esta lectura. `npm run check:task`:245 pruebas pasan, cobertura de ramas global90,26 %.
+
 **Barrido ≥80 % (2026-10-30):** [`cierre-80.md`](../docs/lectura/cierre-80.md),22 filas de todo el juego. Consumidores positivos de recinto (reacción enemiga, no confinamiento demostrado) y NOVERHASTA (tick de vista); hover/pulsación y paletas nominales; puente/compuerta/Testigo y ciclos de acciones. Verificados115 scripts y166 ANM reales. No se implementaron reglas ni se validó audiovisual; los límites específicos constan en cada sección.
 
 **Continuación 2026-10-30:** [`cierre-faltantes-70.md`](../docs/lectura/cierre-faltantes-70.md) lee minimapa, bucle PASW de agua y selección/transiciones CLancha/CTanque; valida9 libretas y22 grafos contra el DIR raíz. PASW usa volumen0,3 y carece de radio IA. No se implementó ninguna regla nueva; siguen pendientes recinto final, otras locomociones/conductores, paletas/hover y verificación audiovisual.
@@ -14,7 +16,7 @@ Mapa general (2026-10-30): `docs/exe-mapa-general.md` enlaza 49 funciones con VA
 | Ítems visibles por contexto | vehículo y postura leídos (`FUN_0068E210`) | `cierre-70.md` §2; restan todos los flags de acción/disfraz y su implementación. |
 | Foto grande solo en vehículo | leído (flag `+0x124` en memoria) | |
 | Retícula del francotirador (`C_MIRILL`, hotspot 47,47) | leído (`FUN_005BFE20`) | cuándo se ve exactamente (¿solo apuntando?): sin leer |
-| Cursores de armas (sprite por arma) | tabla leída del init del exe | **hotspot** (centro supuesto), variantes `C_N*` ("no aplicable") y `_ACT` (sobre blanco válido): regla de cuándo se usa cada una sin leer |
+| Cursores de armas (sprite por arma) |81 registros, hotspots y tiempos leídos del init | `hud-consumidores.md` §7; audita-hud.py reproduce la extracción. El centro supuesto queda refutado. Resta integrar y completar selección de variantes por acción. |
 | Iluminado de ítems | atajo del port; mecanismo original leído | `cierre-80.md` §2: flags pulsado/hover → estado1/2/3; paletas nominales+0x11C/+0x120 y overlay+0x118. Falta reconstruir colores de todos los bancos y portar; suma0,4 no corresponde a esa regla. |
 | Mochila a la izquierda (espejo de x) y balas a la derecha | espejo leído de `FUN_006F4150`, sin captura | |
 | Balas del francotirador (15 px, x=13, y=110) | medición previa; dibujante leído | `FUN_006F5380`: repite por nº de balas y avanza ancho del sprite (`cierre-70.md` §2). Origen/lado completo sin captura nueva. |

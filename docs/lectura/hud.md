@@ -1,10 +1,39 @@
 # HUD: inventario de recursos y lo leído hasta ahora (2026-10-30)
 
+**Continuación vigente:** [hud-consumidores.md](hud-consumidores.md) documenta barra de vida, dos caras por ranura, paso65/89, secuencia de alarma, CIRC sobre el mundo, postura, posiciones, modos ojo/cámara/info,81 cursores con hotspots/tiempos y auditoría de69 WAD. Corrige las hipótesis históricas de este archivo: el marco ancho depende de la cara secundaria visible;10 en el constructor es capacidad del vector; hay cinco resoluciones y512/640 tienen tres sprites. Quedan límites explícitos al final del informe; el inventario anterior no debe usarse como cierre.
+
+## HUD compartido entre misiones: lectura adicional
+
+Esta sección separa lo que sirve a cualquier misión del estado particular del port de M0. El porcentaje de «HUD real» de la fila A de `tasks/pendientes.md` cubre piezas ya investigadas para M0; no mide la interfaz completa.
+
+### Lo confirmado en el exe y el DIR raíz
+
+- `FUN_006FB800` (`D:/Joaquin/research-c1/ghidra/all2/fn_006c0000.c:41898–42043`) crea `ClassComandoMenuArriba`, carga `BARRA01.BMP` desde el banco de resolución y crea el subcomponente de caras con `FUN_006FAC70`. El constructor de caras (`:41332–41526`) inicializa diez estados, carga `SANGRE.BMP`, el marco normal `MARC0000.RLE` y el marco seleccionado `MARCA000.RLE`. Este bloque prueba las dependencias y los estados de recursos, no por sí solo la lógica que selecciona cara según salud.
+- `FUN_006F76A0` (`fn_006c0000.c:38975–39039`) carga `ALMR0001.RLE` y `ALMR0000.RLE` para el componente de alarma y llama a su inicializador de dibujo. No demuestra todavía qué evento activa cada fotograma ni el ciclo temporal.
+- `FUN_00697DD0` (`D:/Joaquin/research-c1/ghidra/all2/fn_00680000.c:17774–17838`) carga conjuntamente los recursos de botones `AGACHAR`, `DEPIE`, cámara y alerta, además de `REDLENTA`; para los primeros crea sprites, máscaras y paletas. La condición que muestra cada botón y su ubicación siguen pendientes.
+- Lectura del `WAR_MP.DIR` raíz con `parseContainer` + `parseWad`: `GLOBAL/GLOBAL.WAD` contiene 47 sprites y 34 paletas. Incluye `CIRC0000..0006` (47×102 cada uno, paleta 8), `ALMR0000..0003`, marcos, sangre, posturas, cámara, alerta y mochila. Los cuatro bancos de resolución encontrados incluyen `BARRA01/02` y dos segmentos verticales; las dimensiones cambian por resolución (por ejemplo 1024×768: segmentos horizontales 337+633 y verticales 337+386; 800×600: 389+359 y 280+275). `CARAS/COMANDO.WAD` trae 10 caras 38×38, más 3 fotos; sus 7 paletas se registran en ese WAD.
+- `FUN_00519DE0`, `FUN_0051A480`, `FUN_0051E480` y `FUN_0051E5E0` ya fijan la interacción y los estados visuales de botones de mochila; detalle y offsets en [cierre-80.md §2](cierre-80.md#2-botones-de-mochila-hover-pulsación-y-paletas-hecho). Es evidencia reutilizable del componente común, pero no cierra bancos/paletas de todos los widgets.
+- El minimapa, transformación, marcadores y clic están documentados en [cierre-faltantes-70.md §1](cierre-faltantes-70.md#1-minimapa-coordenadas-clic-y-marcadores-hecho), con las nueve libretas del DIR raíz contrastadas.
+
+### Pendiente de investigación compartida
+
+| Área | Investigado aprox. | Falta para cerrar |
+|---|---:|---|
+| Estructura de pantalla y bancos por resolución | 60 % | Consumidores que posicionan todos los segmentos y widgets; cubrir las cuatro resoluciones y explicar los sobrantes/bordes. |
+| Caras, selección y salud | 55 % | Función que elige los diez cuadros, umbrales de salud, selección/animación y trazado de barra roja. |
+| Alarma, ojo y alertas | 35 % | Productores de estado, significado de cada recurso y temporización; confirmar en partida. |
+| Botones de postura/cámara | 35 % | Posición, estado habilitado, clic y regla de visibilidad según acción/contexto. |
+| Minimapa/libretas | 90 % | Contraste visual en ejecución y discrepancia tutorial BMP/RLE. |
+| Mochila/ítems comunes | 75 % | El mecanismo de hover/pressed está leído; cerrar bancos concretos, contextos fuera de vehículo y contraste en ejecución. |
+| `CIRC0000..0006`, `ON/OFF`, `REDLENTA` y mensajes | 20 % | Hallar consumidores por referencias al sprite/índice o banco, establecer semántica y transiciones. La mera presencia en el WAD no permite asignarles significado. |
+
+Estimación global revisada: **45 %**. Es un promedio de áreas y no significa que el HUD ya esté completo para el port. No se atribuye significado a `CIRC*` ni a `ALMR*` sin localizar sus consumidores.
+
 **Minimapa:** [cierre-faltantes-70.md §1](cierre-faltantes-70.md#1-minimapa-coordenadas-clic-y-marcadores-hecho) documenta transformación XY, doble truncación, colores, recorte, rectángulo de cámara y clic inverso con VA/líneas/asm. Validadas las2.003 filas de las9 libretas del DIR raíz. Lo pendiente es contraste en pantalla, alias BMP/RLE del tutorial y paletas/hover.
 
 **Actualización (investigación ≥70 %):** [cierre-70.md §2](cierre-70.md#2-hud-la-tabla-que-faltaba-y-por-qué-no-coincidía-con-capturas) cierra quién recoloca los ítems: tabla por personaje0x822768, inicializador0x78B6D0, registro0x58 y `FUN_006F3A90`. Incluye zapador/conductor y coincide con memoria previa. También se leyeron los filtros de postura y el dibujante de balas. Las afirmaciones de cierres anteriores «quién recoloca: sin leer» quedan resueltas; minimapa/paletas/hover siguen parciales. No se cambió el port.
 
-Estado: **inventario hecho, composición (posiciones) NO leída**. Sin la posición de cada pieza no se puede dibujar el HUD sin inventar.
+Estado histórico: el inventario y varias posiciones/contextos ya están documentados abajo. Para el estado vigente, ver «HUD compartido entre misiones» al comienzo; esta frase no describe el avance actual.
 
 ## Recursos (todos dentro de `WAR_MP.DIR`, `DATOS/RECURSOS/BMPS/SYSTEM/`)
 - `GLOBAL/<ancho>X<alto>.WAD` (512X384, 640X480, 800X600, 1024X768; el exe arma el nombre con `sprintf("%s%ldX%ld.WAD")` en `FUN_005BA6E0`): 4 sprites cada uno: `BARRA01.BMP` y `BARRA02.BMP` (tiras de lona horizontales, 45 de alto) y `BARS0000.RLE`/`BARS0001.RLE` (tiras verticales, 36 de ancho). En 1024X768: 337+633 de ancho de barras horizontales; 337+386 de alto de verticales (+45 = 768); en 800X600: 389+359 y 280+275 (+45 = 600). Falta 16-18 px de ancho en ambos: ¿ventana del minimapa o esquina?
@@ -27,7 +56,7 @@ Con la captura del original (1280×720, `imagenesReferncia/HUD.PNG`, no versiona
 - **Tira superior** = `BARRA01` (337) + `BARRA02` (889 a 1280) de alto 45; el **ojo** `P_OJOAL0` (52×45) va pegado al borde derecho, `INTERROG` a 156 px del borde y `CAMARA` (55×69, cuelga bajo la tira) a 121 px. **Columna** de 36 a la derecha bajo la tira: `BARS0000` (337) y `BARS0001` debajo. El mundo ocupa el resto (`viewRect`). Con 1280×720: 1226 + 52 = 1278 de ancho de tira; la columna (1244..1280) arranca bajo la tira.
 - **Ranura de comando** = marco `MARC0000` (62×44: hueco de cara 38×38 en +6,+2 y pozo de la barra de sangre en +47,+4); paso 63. El seleccionado usa `MARCA000` (86×44, con una ventana más). La barra es `SANGRE` (9×37).
 - **Caras**: cada WAD de `CARAS/` trae 10 BMP en orden (COM, FRA, LAN, BOM, MEC, ESP + 0001..0010): 1 sano … 9 muy herido, 10 calavera.
-- Sin leer: regla exacta cara↔energía, contenido de la ventana extra del seleccionado, libreta/minimapa de la columna (`LIBRnnnn.RLE`, archivo suelto con otro formato), significado de `CIRC0000..6`, botones de postura (`AGACHAR`/`DEPIE`/`DOBLEZ`), mochila/bolso (ítems), `ALMR`, interruptores `ON`/`OFF`.
+- Pendiente vigente según esta nota: regla exacta cara↔energía, significado de `CIRC0000..6`, botones de postura (`AGACHAR`/`DEPIE`/`DOBLEZ`), estados de `ALMR` e interruptores `ON`/`OFF`. El minimapa y buena parte de mochila/ítems se cerraron parcialmente en las secciones posteriores.
 - Código: `engine/hud.ts` (medidas y reglas, con pruebas), `render/hud.ts` (dibujo), integrado en `app/main.ts` (zona del mundo, clic en caras).
 
 ## Cierre 2 (2026-10-30): selección, lado y mochila (capturas + lo que dijo el usuario)
@@ -79,7 +108,7 @@ Con la captura del original (1280×720, `imagenesReferncia/HUD.PNG`, no versiona
 
 ## Cierre 9 (2026-10-30): foto solo en vehículo, ítems iluminados, piedra
 - **Foto grande**: en la memoria del exe los botones `IT_CARA_*` (FOTO02, FOTO04, … 71×91) están con el flag de oculto `+0x124 = 1` con los comandos a pie; solo se ven en un vehículo. Se dibuja y se hace clic solo en vehículo (`render/hud.ts`, `app/main.ts bagClick`).
-- **Iluminado** (`ILUMINAITEM`, `.ACTUALILUMINADO` en el guardado): el ítem del arma/acción activa y el que está bajo el cursor se dibujan con luz sumada (shortcut: el exe no se leyó en cómo ilumina; aquí 0,4 de luz aditiva sobre el propio dibujo).
+- **Iluminado** (`ILUMINAITEM`, `.ACTUALILUMINADO` en el guardado): el ítem del arma/acción activa y el que está bajo el cursor se dibujan con un estado de sprite/paleta. `cierre-80.md` §2 lee el mecanismo del botón; queda pendiente mapear los nombres de paleta de cada ítem a los colores y confirmar el contexto completo. Se retira el atajo anterior de luz aditiva 0,4 porque no coincide con el mecanismo leído en `FUN_0051E5E0`.
 - **Piedra** (`AuDisparar` arma 7: alcance 300, daño 0, `.PIEDRAS 100` en el MIS): una pedrada atonta como el puño (shortcut: duración del aturdimiento por piedra sin leer, llega al instante, sin ruido).
 
 ## Cierre 10 (2026-10-30): cursores del mouse
