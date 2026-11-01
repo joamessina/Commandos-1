@@ -18,7 +18,7 @@ import { Animator } from '../engine/anim.ts';
 import { groundTarget, RANGE, type Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
 import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
-import { House, parseHouses } from '../engine/house.ts';
+import { destroyLinkedHouses, House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, Traps } from '../engine/traps.ts';
@@ -446,6 +446,7 @@ async function load(): Promise<void> {
   const spawnGroup = (def: GroupDef): void => {
     if (spawned.has(def.token)) return;
     const house = def.home ? houses.find((h) => h.token.toUpperCase() === def.home?.toUpperCase()) : undefined;
+    if (house?.destroyed) return;
     const p0 = def.route?.points[0];
     const at = house ? house.exit : p0 ? { x: p0.x, y: p0.y, z: p0.z } : null;
     if (!at) return;
@@ -473,6 +474,7 @@ async function load(): Promise<void> {
     let retired = false;
     groupTicks.push(() => {
         if (retired) return;
+        if (house?.destroyed) { retired = true; return; }
         if (exit && !exit.done) {
           const i = exit.step(game?.ticks ?? 0);
           if (i !== null && make(i, at)) house?.leaveGarrison();
@@ -675,6 +677,7 @@ function setupStage(): void {
       if (!g.battle.lost && !g.won) g.battle.tick();
       if (!g.battle.lost && !g.won) g.tickGroups();
       g.demo.tick();
+      destroyLinkedHouses(g.houses, g.demo.destroyed);
       tickWorld(g);
       for (const h of g.houses) h.tick();
       for (const n of g.nests) {

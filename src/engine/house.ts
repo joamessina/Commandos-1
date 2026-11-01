@@ -5,7 +5,7 @@
  * shortcut: capacidad 20 sin ranuras ni conductor; sin la puerta animada ni el sonido; la salida es el punto `XYZSALIDA` tal cual (el exe busca un sitio libre por
  *           ángulos, `FUN_004B90A0`); no hay soldados alemanes que entren o salgan (refuerzos con la alarma no portados). Cuándo mejorar: al portar la alarma.
  */
-import { asNumbers, find, type Node } from '../formats/clave.ts';
+import { asNumbers, asText, find, type Node } from '../formats/clave.ts';
 import type { Unit } from './unit.ts';
 import type { Elem } from './world.ts';
 
@@ -23,6 +23,7 @@ const COOLDOWN = 4; // +0x50 = 4 → un golpe cada 5 ciclos
 
 export class House {
   readonly token: string;
+  readonly linkedBuilding: string | null;
   readonly x: number;
   readonly y: number;
   readonly z: number;
@@ -33,6 +34,7 @@ export class House {
   private readonly barracksKind: boolean;
   /** shortcut: cuenta patrulleros sin instancias ni ranuras; mejorar al portar el habitáculo completo. */
   private garrison = 0;
+  destroyed = false;
   readonly jail: boolean;
   readonly box: HouseBox;
   readonly occupants: Unit[] = [];
@@ -40,6 +42,8 @@ export class House {
 
   constructor(e: Elem, params: readonly Node[]) {
     this.token = e.token;
+    const logic = e.actions.find((a) => a.name.toUpperCase() === 'ACCASALOGICA');
+    this.linkedBuilding = logic ? (asText(find(logic.params, '.TOKENCASA')) ?? null) : null;
     this.x = e.x;
     this.y = e.y;
     this.z = e.z;
@@ -93,7 +97,7 @@ export class House {
 
   /** Un comando entra (si hay sitio): queda oculto. */
   enter(u: Unit): boolean {
-    if (this.occupants.length + this.garrison >= CAPACITY || u.dead || this.occupants.includes(u)) return false;
+    if (this.destroyed || this.occupants.length + this.garrison >= CAPACITY || u.dead || this.occupants.includes(u)) return false;
     this.occupants.push(u);
     u.hidden = true;
     u.inHouse = this.token;
@@ -114,6 +118,7 @@ export class House {
 
   /** Muere la casa: los de dentro mueren (BOMBA 100). */
   destroy(): void {
+    this.destroyed = true;
     this.reserve = 0;
     this.garrison = 0;
     for (const u of this.occupants.splice(0)) {
@@ -135,6 +140,13 @@ export class House {
     }
     for (const u of this.occupants) u.hit(DAMAGE);
     this.cooldown = COOLDOWN;
+  }
+}
+
+/** `AcCasaLogica` transmite ARGG cuando se destruye su `TOKENCASA`. */
+export function destroyLinkedHouses(houses: readonly House[], destroyed: ReadonlySet<string>): void {
+  for (const house of houses) {
+    if (!house.destroyed && house.linkedBuilding && destroyed.has(house.linkedBuilding.toUpperCase())) house.destroy();
   }
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseAnm } from '../formats/anm.ts';
 import { anmSeq, bnm } from '../testing/builders.ts';
-import { CAPACITY, parseHouses } from './house.ts';
+import { CAPACITY, destroyLinkedHouses, parseHouses } from './house.ts';
 import { Soldier } from './soldier.ts';
 import { Unit } from './unit.ts';
 import { flatten, loadWorld } from './world.ts';
@@ -28,6 +28,20 @@ describe('parseHouses', () => {
 });
 
 describe('House', () => {
+  it('la destrucción del edificio enlazado vacía la casa, mata ocupantes y bloquea la entrada', () => {
+    const mac = `.CLASS BICHO .ACCIONES [ [ acCasa [ .NUMREGENSOLDIERS 8 ] ] [ acCasaLogica [ .TOKENCASA CASA06A ] ] ]`;
+    const hs = parseHouses(flatten(loadWorld('.MISSION [ .ELEMENTOS [ [ .CLASS MACRO .MACRO Q .TOKEN Q1 ] ] ]', { difficulty: 'FACIL', macro: () => mac })));
+    const h = hs[0];
+    const u = cmd();
+    h?.enter(u);
+    h?.addGarrison(4);
+    destroyLinkedHouses(hs, new Set(['OTRA']));
+    expect(h?.destroyed).toBe(false);
+    destroyLinkedHouses(hs, new Set(['CASA06A']));
+    expect([h?.destroyed, h?.regen, h?.soldiersInside, u.dead]).toEqual([true, 0, 0, true]);
+    expect(h?.enter(cmd())).toBe(false);
+    destroyLinkedHouses(hs, new Set(['CASA06A']));
+  });
   it('regenera un grupo completo o reducido, y no gasta reserva si falla su creación', () => {
     const getHouse = () => parseHouses(flatten(loadWorld(MIS, { difficulty: 'FACIL', macro: (n) => ({ CASA: MAC_CASA, CUARTEL: MAC_CUARTEL })[n] })))[1];
     const h = getHouse();
