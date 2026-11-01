@@ -50,12 +50,25 @@ describe('House', () => {
     for (let i = 0; i < 8; i++) expect(cuartel?.recruit(() => true)).toBe(true);
     expect(cuartel?.regen).toBe(0);
     expect(cuartel?.barracks).toBe(true);
+    const u = cmd();
+    cuartel?.enter(u);
+    cuartel?.tick();
+    expect(u.energy).toBe(100);
+    cuartel?.addGarrison(1);
+    expect(cuartel?.soldiersInside).toBe(1);
+    cuartel?.tick();
+    expect(u.energy).toBe(70);
+    cuartel?.leaveGarrison();
+    cuartel?.leaveGarrison();
+    expect(cuartel?.soldiersInside).toBe(0);
     let called = false;
     expect(cuartel?.recruit(() => { called = true; return true; })).toBe(false);
     expect(called).toBe(false);
     const otro = parseHouses(flatten(loadWorld(MIS, { difficulty: 'FACIL', macro: (n) => ({ CASA: MAC_CASA, CUARTEL: MAC_CUARTEL })[n] })))[1];
+    otro?.addGarrison(2);
     otro?.destroy();
     expect(otro?.regen).toBe(0);
+    expect(otro?.soldiersInside).toBe(0);
     expect(otro?.recruit(() => true)).toBe(false);
   });
   it('entrar oculta al comando (los soldados no lo ven) y salir lo deja en el punto de salida', () => {

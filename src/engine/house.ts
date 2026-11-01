@@ -31,6 +31,8 @@ export class House {
   /** `NUMREGENSOLDIERS` (cuartel si > 0). */
   private reserve: number;
   private readonly barracksKind: boolean;
+  /** shortcut: cuenta patrulleros sin instancias ni ranuras; mejorar al portar el habitáculo completo. */
+  private garrison = 0;
   readonly jail: boolean;
   readonly box: HouseBox;
   readonly occupants: Unit[] = [];
@@ -58,6 +60,19 @@ export class House {
 
   get regen(): number {
     return this.reserve;
+  }
+
+  /** Patrulleros que permanecen en el habitáculo, incluidos sus jefes. */
+  get soldiersInside(): number {
+    return this.garrison;
+  }
+
+  addGarrison(count: number): void {
+    this.garrison += count;
+  }
+
+  leaveGarrison(): void {
+    if (this.garrison > 0) this.garrison--;
   }
 
   /** `FUN_005A2AD0`: solo descuenta una reserva cuando se creó el patrullero. */
@@ -100,6 +115,7 @@ export class House {
   /** Muere la casa: los de dentro mueren (BOMBA 100). */
   destroy(): void {
     this.reserve = 0;
+    this.garrison = 0;
     for (const u of this.occupants.splice(0)) {
       u.inHouse = null;
       u.hit(1e9);
@@ -109,7 +125,7 @@ export class House {
   /** Un ciclo: cuartel con aliados dentro = 30 de daño a cada uno cada 5 ciclos. */
   tick(): void {
     for (let i = this.occupants.length - 1; i >= 0; i--) if (this.occupants[i]?.dead) this.occupants.splice(i, 1);
-    if (!this.barracks || this.occupants.length === 0) {
+    if ((this.regen <= 0 && this.garrison === 0) || this.occupants.length === 0) {
       this.cooldown = 0;
       return;
     }

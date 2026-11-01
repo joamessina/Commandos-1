@@ -436,6 +436,10 @@ async function load(): Promise<void> {
   const houses = parseHouses(elems);
   // Grupos de `.PATRULLAS` (cabo + patrulleros) y eventos de zona de ruido (engine/groups.ts): los de casa salen con el evento, los libres empiezan en su ruta
   const groups = parseGroups(misText, diffSel.value as Difficulty);
+  for (const def of groups) {
+    if (!def.startAtHome || !def.home) continue;
+    houses.find((h) => h.token.toUpperCase() === def.home?.toUpperCase())?.addGarrison(groupSize(def));
+  }
   const spawned = new Set<string>();
   const pendingGroups = new Map<string, GroupDef>();
   const groupTicks: (() => void)[] = [];
@@ -459,6 +463,7 @@ async function load(): Promise<void> {
       return true;
     };
     if (!make(0, at)) { spawned.delete(def.token); return; }
+    if (house && def.startAtHome) house.leaveGarrison();
     const exit = house && def.startAtHome ? new ExitSchedule(def.n) : null;
     if (!exit) for (let i = 1; i < groupSize(def); i++) if (!make(i, at)) break;
     // shortcut: el turno de salida usa el ciclo de misión; el exe usa el contador del sargento. Mejorar al portar su reloj y ocupantes ocultos.
@@ -470,7 +475,7 @@ async function load(): Promise<void> {
         if (retired) return;
         if (exit && !exit.done) {
           const i = exit.step(game?.ticks ?? 0);
-          if (i !== null) make(i, at);
+          if (i !== null && make(i, at)) house?.leaveGarrison();
           return;
         }
         let leader = made[0];
@@ -485,7 +490,10 @@ async function load(): Promise<void> {
               const replacement = { ...def, n };
               spawned.delete(def.token);
               // shortcut: STARTATHOME conserva el grupo como definición pendiente, sin instancias ocultas; mejorar al portar ocupantes alemanes.
-              if (def.startAtHome) pendingGroups.set(def.token, replacement);
+              if (def.startAtHome) {
+                house.addGarrison(groupSize(replacement));
+                pendingGroups.set(def.token, replacement);
+              }
               else spawnGroup(replacement);
               return true;
             });
