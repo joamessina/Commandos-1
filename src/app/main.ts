@@ -22,7 +22,7 @@ import { House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, Traps } from '../engine/traps.ts';
-import { formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, ZoneEvents } from '../engine/groups.ts';
+import { formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
 import { canThrow, type Pack, type Throwable } from '../engine/throwing.ts';
 import { norm360 } from '../engine/walk.ts';
@@ -458,12 +458,23 @@ async function load(): Promise<void> {
       return true;
     };
     for (let i = 0; i < groupSize(def); i++) if (!make(i, at)) break;
-    if (house) {
-      // shortcut: el cabo usa la orden de investigar para volver al cuartel y no hereda el mando; mejorar al portar AcpSargento completo.
-      let returning = false;
-      groupTicks.push(() => {
-        const leader = made[0];
-        if (!leader || leader.dead || leader.down || leader.controlled || house.regen <= 0) return;
+    // shortcut: la sucesión es inmediata, reinicia la ruta y excluye incapacitados o soldados dentro de casa; mejorar al portar SPECIALRUN y la migración completa.
+    // shortcut: el cabo usa la orden de investigar para volver al cuartel; mejorar al portar AcpSargento completo.
+    let returning = false;
+    groupTicks.push(() => {
+        let leader = made[0];
+        if (!leader) return;
+        if (leader.dead) {
+          const next = successor(made.slice(1));
+          if (!next) return;
+          const index = made.indexOf(next);
+          made[index] = leader;
+          made[0] = next;
+          next.promote(def.route);
+          leader = next;
+          returning = false;
+        }
+        if (!house || leader.down || leader.controlled || house.regen <= 0) return;
         const alive = made.slice(1).filter((s) => !s.dead).length;
         const missing = def.n - alive;
         if (missing <= 0) { returning = false; return; }
@@ -484,8 +495,7 @@ async function load(): Promise<void> {
           return i > 0 && make(i, house.entry);
         });
         returning = false;
-      });
-    }
+    });
   };
   const raise = (event: string): void => {
     for (const def of groups) if (def.home && def.exitEvents.includes(event)) spawnGroup(def);

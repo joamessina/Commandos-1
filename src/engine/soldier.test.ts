@@ -87,6 +87,15 @@ const run = (s: Soldier, w: SoldierWorld, n: number): void => {
 };
 
 describe('Soldier', () => {
+  it('al tomar el mando deja de seguir y comienza el recorrido de la patrulla', () => {
+    const s = new Soldier('S', unit(0, 0), null, { follow: { leader: () => ({ x: -200, y: 0, ang: 0, speed: 1 }), lateral: 0, back: 30 } });
+    s.promote(route(100));
+    s.tick(mkWorld([]).world);
+    expect(s.unit.target?.x).toBe(100);
+    s.promote(null);
+    expect(s.unit.target).toBeNull();
+    expect(s.order).toBe(Order.Patrol);
+  });
   it('no ve al buzo ni al que está dentro de una casa, aunque esté pegado y de frente', () => {
     const c = unit(100, 0);
     const s = new Soldier('S', unit(0, 0), null);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eventList, followPoint, formationOf, groupSize, parseGroups, parseZoneSensors, recruitMissing, ZoneEvents } from './groups.ts';
+import { eventList, followPoint, formationOf, groupSize, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from './groups.ts';
 
 const MIS = `.MISSION [
   .SENSORES_SND_ZONA [ [ .ZONA CAMPAMENTO .MENSAJE REAC ] [ .ZONA OTRA .MENSAJE ZOIN ] ]
@@ -31,6 +31,23 @@ describe('groups', () => {
     reserve = 2;
     expect(recruitMissing(house, 2, () => false)).toBe(0);
     expect(reserve).toBe(2);
+  });
+
+  it('elige como sucesor al patrullero disponible con mayor energía', () => {
+    const soldiers = [
+      { dead: true, down: false, unit: { energy: 100 } },
+      { dead: false, down: true, unit: { energy: 90 } },
+      { dead: false, down: false, unit: { energy: 40 } },
+      { dead: false, down: false, unit: { energy: 80 } },
+      { dead: false, down: false, unit: { energy: 80 } },
+    ];
+    expect(successor(soldiers)).toBe(soldiers[3]);
+    expect(successor(soldiers.slice(0, 2))).toBeNull();
+    expect(successor([])).toBeNull();
+    const inside = { dead: false, down: false, unit: { energy: 100, hidden: true } };
+    const outside = { dead: false, down: false, unit: { energy: 20, hidden: false } };
+    expect(successor([inside, outside])).toBe(outside);
+    expect(successor([inside])).toBeNull();
   });
   it('lee los grupos de .PATRULLAS con sus valores por defecto', () => {
     const g = parseGroups(MIS, 'FACIL');

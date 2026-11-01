@@ -104,7 +104,7 @@ export class Soldier implements Target, Claimant {
   /** Alcance actual de la vista (cambia con el giro de la cabeza, ver `lookRange`). */
   reach: number;
   target: Unit | null = null;
-  private readonly patrol: Patrol | null;
+  private patrol: Patrol | null;
   private readonly post: { x: number; y: number; ang: number };
   private readonly range: number;
   private readonly angle: number;
@@ -136,7 +136,7 @@ export class Soldier implements Target, Claimant {
   private readonly elliptical: boolean;
   /** false = soldado de la base `AcBap` (BAP1/BANPE1): mira el punto del estímulo pero no va hasta él. */
   private readonly walks: boolean;
-  private readonly follow: Follow | null;
+  private follow: Follow | null;
   private followWait = 0;
   /** AcBap2/AcBanpe2: van a por la cajetilla y fuman; los de la base solo la anotan. */
   private readonly smokes: boolean;
@@ -180,6 +180,17 @@ export class Soldier implements Target, Claimant {
 
   get y(): number {
     return this.unit.body.y;
+  }
+
+  /** El patrullero elegido deja de seguir y toma el recorrido del jefe (`FUN_004D4680`). */
+  promote(route: Route | null): void {
+    this.releasePack();
+    this.follow = null;
+    this.patrol = route && route.points.length > 0 ? new Patrol(route) : null;
+    this.target = null;
+    this.order = Order.Patrol;
+    this.moving = false;
+    this.unit.stop();
   }
 
   /** Golpe de un comando (daño de `DAMAGE`): si sobrevive se vuelve hacia quien lo hirió. */

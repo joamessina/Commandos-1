@@ -40,6 +40,16 @@ export function recruitMissing(house: Pick<House, 'recruit'>, missing: number, c
   return recruited;
 }
 
+/** `FUN_004D4680`: prefiere al de mayor energía fuera de casa. */
+export function successor<T extends { readonly dead: boolean; readonly down: boolean; readonly unit: { readonly energy: number; readonly hidden?: boolean } }>(soldiers: readonly T[]): T | null {
+  let best: T | null = null;
+  for (const s of soldiers) {
+    if (s.dead || s.down || s.unit.hidden) continue;
+    if (!best || s.unit.energy > best.unit.energy) best = s;
+  }
+  return best;
+}
+
 /** `ev` o `[ ev ev ]` -> lista de códigos de evento. */
 export function eventList(n: Node | undefined): string[] {
   if (typeof n === 'string') return [n.toUpperCase()];
