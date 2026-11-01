@@ -26,7 +26,7 @@ describe('Battle', () => {
     expect(danger).toHaveLength(1);
   });
 
-  it('un BAP2 emite atención VMUE a 150 sin activar el sensor de peligro', () => {
+  it('un BAP2 emite atención VMUE a 150 y da la alarma después de investigar y mirar alrededor', () => {
     const body = new Soldier('MUERTO', mk(100, 0), null);
     body.kill();
     const witness = new Soldier('BAP2', mk(0, 0), null, { brain: 'route' });
@@ -39,6 +39,8 @@ describe('Battle', () => {
     expect(listener.order).toBe(Order.Investigate);
     expect(far.order).toBe(Order.Patrol);
     expect(danger).toEqual([]);
+    for (let i = 0; i < 250; i++) b.tick();
+    expect(danger).toHaveLength(1);
   });
   it('un tiro de pistola del comando mata al soldado y alerta a otro que está a <200 u (investiga); rastro unos ciclos', () => {
     const target = new Soldier('A', mk(250, 0, 180, 'A'), null);

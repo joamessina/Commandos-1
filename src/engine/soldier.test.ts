@@ -87,6 +87,22 @@ const run = (s: Soldier, w: SoldierWorld, n: number): void => {
 };
 
 describe('Soldier', () => {
+  it('BAP2 avisa al interrumpir la búsqueda alrededor de un cadáver', () => {
+    const commandos: Unit[] = [];
+    const voices: string[] = [];
+    const s = new Soldier('BAP2', unit(0, 0), null, { brain: 'route' });
+    const w = { ...mkWorld(commandos).world, bodies: [{ x: 50, y: 0 }], onVoice: (_s: Soldier, voice: 'VMUE' | 'ALRM') => { voices.push(voice); } };
+    for (let i = 0; i < 100 && s.order !== Order.Look; i++) s.tick(w);
+    expect(s.order).toBe(Order.Look);
+    expect(voices).toEqual(['VMUE']);
+    commandos.push(unit(s.x + 50, s.y));
+    for (let i = 0; i < 30 && s.order === Order.Look; i++) {
+      s.unit.body.ang = 0;
+      s.tick(w);
+    }
+    expect(s.order).toBe(Order.Aim);
+    expect(voices).toEqual(['VMUE', 'ALRM']);
+  });
   it('al tomar el mando deja de seguir y comienza el recorrido de la patrulla', () => {
     const s = new Soldier('S', unit(0, 0), null, { follow: { leader: () => ({ x: -200, y: 0, ang: 0, speed: 1 }), lateral: 0, back: 30 } });
     s.promote(route(100));

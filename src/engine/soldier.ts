@@ -21,7 +21,7 @@ import type { SectorMap } from './sectors.ts';
 import type { Unit } from './unit.ts';
 import { norm360 } from './walk.ts';
 
-export const Order = { Patrol: 4, Smoke: 5, Aim: 8, Investigate: 9, Pack: 0xb, Shoot: 0x11, Return: 0x14, Dead: 0x15, Pick: 0x18 } as const;
+export const Order = { Patrol: 4, Smoke: 5, Aim: 8, Investigate: 9, Pack: 0xb, Look: 0xe, Shoot: 0x11, Return: 0x14, Dead: 0x15, Pick: 0x18 } as const;
 export type Order = (typeof Order)[keyof typeof Order];
 
 const AIM_CYCLES = 0x28; // acc+0x90 de la orden 8
@@ -114,6 +114,8 @@ export class Soldier implements Target, Claimant {
   private lost = 0;
   private cooldown = 0;
   private moving = false;
+  private bodyAlertPending = false;
+  private lookTurns = 0;
   private spot: { x: number; y: number } | null = null;
   private readonly seenBodies = new Set<string>();
   /** Ciclos de atontado que faltan (cachiporrazo = puño); 0 = no está atontado. */
@@ -460,6 +462,12 @@ export class Soldier implements Target, Claimant {
       case Order.Aim:
         this.aiming(seen);
         break;
+      case Order.Look:
+        if (seen) {
+          this.finishBodyAlert(w);
+          this.startAim(seen);
+        } else this.lookAround(w);
+        break;
       case Order.Shoot:
         this.shooting(w, seen);
         break;
@@ -483,6 +491,7 @@ export class Soldier implements Target, Claimant {
       this.seenBodies.add(key);
       if (this.brain === 'base') w.onVoice?.(this, 'ALRM');
       if (this.brain) w.onVoice?.(this, 'VMUE');
+      if (this.brain === 'route') this.bodyAlertPending = true;
       this.investigate(body.x, body.y);
       return;
     }
@@ -616,10 +625,37 @@ export class Soldier implements Target, Claimant {
       this.moving = false;
       this.idleAnim();
     }
+    if (this.bodyAlertPending && this.brain === 'route') {
+      this.order = Order.Look;
+      this.lookTurns = 0;
+      this.timer = 30;
+      return;
+    }
     if (--this.timer <= 0) {
       this.order = Order.Return;
       this.returnToPost();
     }
+  }
+
+  private finishBodyAlert(w: SoldierWorld): void {
+    if (this.bodyAlertPending) w.onVoice?.(this, 'ALRM');
+    this.bodyAlertPending = false;
+  }
+
+  /** `FUN_0043BA50`: tres giros, con esperas de 30 ciclos, y ALRM al salir de la orden. */
+  private lookAround(w: SoldierWorld): void {
+    if (--this.timer > 0) return;
+    const angles = [0, 180, 90];
+    const angle = angles[this.lookTurns];
+    if (angle !== undefined) {
+      this.unit.body.ang = norm360(this.unit.body.ang + angle); // shortcut: giro instantáneo; mejorar al portar MOTOR_SETANG.
+      this.lookTurns++;
+      this.timer = 30;
+      return;
+    }
+    this.finishBodyAlert(w);
+    this.order = Order.Return;
+    this.returnToPost();
   }
 
   private returnToPost(): void {
