@@ -479,7 +479,7 @@ export class Soldier implements Target, Claimant {
 
   /**
    * Ve un cuerpo por primera vez (FUN_004326B0: anota su posición y mira hacia él) y va a verlo de cerca.
-   * shortcut: sin niveles de alerta ni REACTIVIDADES; BAP1 emite ALRM/VMUE y BAP2 VMUE al comenzar a investigar, una vez por posición. Mejorar al portar la cadena completa.
+   * shortcut: sin niveles de alerta; BAP1 emite ALRM/VMUE y BAP2 VMUE al comenzar a investigar, una vez por posición. Mejorar al portar la cadena completa.
    */
   private lookForBodies(w: SoldierWorld): void {
     const b = this.unit.body;
