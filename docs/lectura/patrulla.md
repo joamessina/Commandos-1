@@ -1,5 +1,7 @@
 # Lectura del exe — `ClassAcPatrulla` (rutas de patrulla): `0x48ACE0–0x48E600`
 
+**Contraste puntual de M0:** `node --experimental-transform-types tools/audita-cuarteles-m0.ts` encuentra en el MIS raíz 11 `ESPERAEVENTO`, todos 0; 7 `ENLAZAR`, todos 0; ninguna clave exacta `EVENTO` ni `VELOCIDADTRAMO`. Esto no elimina la necesidad de implementar esas claves para otras misiones. El cálculo de velocidad hacia atrás es `FUN_0048ADA0` (`fn_00480000.c:6447`): en PINGPONG con sentido negativo usa el punto anterior, y en el resto el punto de destino. Portado y cubierto con tramos de velocidad distinta; en Chrome con M0 se verificó que `BAP1_MUELLE1` sigue patrullando a 1.5, pero sus datos no prueban velocidades distintas por tramo.
+
 Cubre personas y vehículos (sirve para soldados con ruta, camiones, barcas...). **[hecho]** = leído; **[hip]** = interpretación. Constantes verificadas en `.rdata`. Los mensajes `MSGA_PATRULLA_*` son los que `AcBap`/`AcGuarda` mandan al bicho para pausar/reanudar/cambiar su patrulla (ver `soldado-acbap.md`, `guarda.md`).
 
 ## 0. Clase y datos [hecho]

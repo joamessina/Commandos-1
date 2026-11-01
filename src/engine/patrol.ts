@@ -96,6 +96,7 @@ export type PatrolStep =
  */
 export class Patrol {
   private idx = 0;
+  private previous = 0;
   private dir = 1;
   private phase: 'go' | 'face' | 'wait' | 'done' = 'go';
   private wait = 0;
@@ -111,6 +112,14 @@ export class Patrol {
     return this.route.points[this.idx] ?? null;
   }
 
+  private movingPoint(): RoutePoint | null {
+    const point = this.target;
+    if (!point) return null;
+    if (this.route.type !== RouteType.PingPong || this.dir >= 0) return point;
+    const previous = this.route.points[this.previous];
+    return previous ? { ...point, vel: previous.vel } : point;
+  }
+
   /** Orden de motor pendiente de enviar de nuevo (p. ej. tras una reacción que interrumpió el camino). */
   resend(): void {
     this.sent = false;
@@ -124,7 +133,7 @@ export class Patrol {
     if (this.phase === 'go') {
       if (!this.sent) {
         this.sent = true;
-        return { kind: 'goto', point: pt };
+        return { kind: 'goto', point: this.movingPoint() ?? pt };
       }
       if (!arrived) return { kind: 'wait' };
       this.phase = pt.angle !== 0 ? 'face' : 'wait';
@@ -145,6 +154,7 @@ export class Patrol {
   /** `FUN_0048C500`: siguiente punto según el tipo de ruta. */
   private advance(): PatrolStep {
     const n = this.route.points.length;
+    this.previous = this.idx;
     this.idx += this.dir;
     if (this.idx >= n || this.idx < 0) {
       switch (this.route.type) {
@@ -172,7 +182,7 @@ export class Patrol {
     }
     this.phase = 'go';
     this.sent = true;
-    const pt = this.target;
+    const pt = this.movingPoint();
     return pt ? { kind: 'goto', point: pt } : { kind: 'idle' };
   }
 }

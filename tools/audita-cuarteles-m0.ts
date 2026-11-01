@@ -13,6 +13,10 @@ const leer = (nombre: string): string | undefined => {
 };
 const mis = leer('MAPA0000.MIS');
 if (!mis) throw new Error('No aparece MAPA0000.MIS');
+for (const key of ['EVENTO', 'ESPERAEVENTO', 'ENLAZAR', 'VELOCIDADTRAMO']) {
+  const matches = [...mis.matchAll(new RegExp(`\\.${key}\\s+([^\\s\\]]+)`, 'gi'))].map((m) => m[1]);
+  console.log('CLAVE', key, JSON.stringify(matches));
+}
 const raiz = asList(find(parseClave(mis), '.MISSION')) ?? [];
 for (const p of asList(find(raiz, '.PATRULLAS')) ?? []) console.log('PATRULLA', JSON.stringify(p));
 const elems = flatten(loadWorld(mis, { difficulty: 'FACIL', macro: (name) => leer(name + '.MAC') }));

@@ -51,6 +51,22 @@ const walk = (p: Patrol, n: number): number[] => {
 };
 
 describe('Patrol', () => {
+  it('en PINGPONG usa la velocidad del punto anterior al regresar', () => {
+    const r: Route = { name: 'r', type: RouteType.PingPong, points: [
+      { x: 0, y: 0, z: 0, wait: 0, angle: 0, vel: 1 },
+      { x: 10, y: 0, z: 0, wait: 0, angle: 0, vel: 2 },
+      { x: 20, y: 0, z: 0, wait: 0, angle: 0, vel: 3 },
+    ] };
+    const p = new Patrol(r);
+    expect(p.step(false)).toMatchObject({ kind: 'goto', point: { x: 0, vel: 1 } });
+    expect(p.step(true)).toMatchObject({ kind: 'goto', point: { x: 10, vel: 2 } });
+    expect(p.step(true)).toMatchObject({ kind: 'goto', point: { x: 20, vel: 3 } });
+    expect(p.step(true)).toMatchObject({ kind: 'goto', point: { x: 10, vel: 3 } });
+    p.resend();
+    expect(p.step(false)).toMatchObject({ kind: 'goto', point: { x: 10, vel: 3 } });
+    expect(p.step(true)).toMatchObject({ kind: 'goto', point: { x: 0, vel: 2 } });
+    expect(p.step(true)).toMatchObject({ kind: 'goto', point: { x: 10, vel: 2 } });
+  });
   it('LOOP vuelve al primer punto; PINGPONG invierte el sentido', () => {
     expect(walk(new Patrol(route(RouteType.Loop)), 4)).toEqual([0, 10, 20, 0]);
     expect(walk(new Patrol(route(RouteType.PingPong)), 6)).toEqual([0, 10, 20, 10, 0, 10]);
