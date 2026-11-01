@@ -9,6 +9,37 @@ const anm = parseAnm(bnm([{ type: 0, slots: [5] }, ...anmSeq(1, 'ANDAR', 2, 30, 
 const mk = (x: number, y: number, ang = 0, token = 'X'): Unit => new Unit(token, anm, x, y, 0, ang);
 
 describe('Battle', () => {
+  it('un BAP1 que descubre un cadáver alerta a 300 y activa el sensor de peligro', () => {
+    const body = new Soldier('MUERTO', mk(100, 0), null);
+    body.kill();
+    const witness = new Soldier('BAP1', mk(0, 0), null, { brain: 'base', walks: false });
+    const listener = new Soldier('OTRO', mk(-200, 0, 180), null);
+    const far = new Soldier('LEJOS', mk(-400, 0, 180), null);
+    const b = new Battle([body, witness, listener, far], [], null, () => 0);
+    const danger: number[][] = [];
+    b.onDanger = (x, y) => { danger.push([x, y]); };
+    b.tick();
+    expect(danger).toEqual([[0, 0]]);
+    expect(listener.order).toBe(Order.Investigate);
+    expect(far.order).toBe(Order.Patrol);
+    b.tick();
+    expect(danger).toHaveLength(1);
+  });
+
+  it('un BAP2 emite atención VMUE a 150 sin activar el sensor de peligro', () => {
+    const body = new Soldier('MUERTO', mk(100, 0), null);
+    body.kill();
+    const witness = new Soldier('BAP2', mk(0, 0), null, { brain: 'route' });
+    const listener = new Soldier('CERCA', mk(-100, 0, 180), null);
+    const far = new Soldier('FUERA', mk(-200, 0, 180), null);
+    const b = new Battle([body, witness, listener, far], [], null, () => 0);
+    const danger: number[][] = [];
+    b.onDanger = (x, y) => { danger.push([x, y]); };
+    b.tick();
+    expect(listener.order).toBe(Order.Investigate);
+    expect(far.order).toBe(Order.Patrol);
+    expect(danger).toEqual([]);
+  });
   it('un tiro de pistola del comando mata al soldado y alerta a otro que está a <200 u (investiga); rastro unos ciclos', () => {
     const target = new Soldier('A', mk(250, 0, 180, 'A'), null);
     const other = new Soldier('B', mk(60, 100, 90, 'B'), null); // a ~110 u del tirador y de espaldas a él

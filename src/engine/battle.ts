@@ -93,6 +93,11 @@ export class Battle {
         bodies,
         sectors: this.sectors,
         rng: this.rng,
+        onVoice: (from, voice) => {
+          const radius = voice === 'ALRM' ? 300 : 150;
+          for (const other of this.soldiers) if (other !== from && Math.hypot(other.x - from.x, other.y - from.y) < radius) other.hear(from.x, from.y);
+          if (voice === 'ALRM') this.onDanger?.(from.x, from.y);
+        },
         onShot: (from, shot) => {
           this.tracers.push({ ...shot, ttl: TRACER_CYCLES, enemy: true });
           this.onDanger?.(shot.fromX, shot.fromY);

@@ -93,6 +93,7 @@ export interface SoldierWorld {
   readonly packs?: Packs;
   /** Un disparo de un soldado: el mundo lo dibuja y avisa a los demás. */
   readonly onShot: (from: Soldier, shot: Shot) => void;
+  readonly onVoice?: (from: Soldier, voice: 'VMUE' | 'ALRM') => void;
 }
 
 export class Soldier implements Target, Claimant {
@@ -140,6 +141,7 @@ export class Soldier implements Target, Claimant {
   private followWait = 0;
   /** AcBap2/AcBanpe2: van a por la cajetilla y fuman; los de la base solo la anotan. */
   private readonly smokes: boolean;
+  private readonly brain: 'base' | 'route' | null;
   /** Radio del ruido de su disparo (fusil 400 `FUSL`; el nido `NIDO` 500). */
   readonly noiseRadius: number;
 
@@ -147,7 +149,7 @@ export class Soldier implements Target, Claimant {
     token: string,
     unit: Unit,
     route: Route | null,
-    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean; readonly follow?: Follow; readonly smokes?: boolean; readonly tobacco?: boolean } = {},
+    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean; readonly follow?: Follow; readonly smokes?: boolean; readonly tobacco?: boolean; readonly brain?: 'base' | 'route' } = {},
   ) {
     this.fixed = opts.fixed ?? false;
     this.sweepAmp = opts.sweep ?? SWEEP_AMP;
@@ -155,6 +157,7 @@ export class Soldier implements Target, Claimant {
     this.walks = opts.walks ?? true;
     this.follow = opts.follow ?? null;
     this.smokes = opts.smokes ?? false;
+    this.brain = opts.brain ?? null;
     this.tobacco = opts.tobacco ?? false;
     this.noiseRadius = opts.noise ?? GUNSHOT_RADIUS;
     this.token = token;
@@ -468,7 +471,7 @@ export class Soldier implements Target, Claimant {
 
   /**
    * Ve un cuerpo por primera vez (FUN_004326B0: anota su posición y mira hacia él) y va a verlo de cerca.
-   * shortcut: el exe además sube el nivel de alerta y puede dar la alarma por la cadena de reacciones (no portada); aquí solo investiga el sitio, una vez por cuerpo.
+   * shortcut: sin niveles de alerta ni REACTIVIDADES; BAP1 emite ALRM/VMUE y BAP2 VMUE al comenzar a investigar, una vez por posición. Mejorar al portar la cadena completa.
    */
   private lookForBodies(w: SoldierWorld): void {
     const b = this.unit.body;
@@ -478,6 +481,8 @@ export class Soldier implements Target, Claimant {
       if (this.seenBodies.has(key) || (body.x === b.x && body.y === b.y)) continue;
       if (!sees(viewer, { x: body.x, y: body.y, radius: 10, low: false }, w.sectors)) continue;
       this.seenBodies.add(key);
+      if (this.brain === 'base') w.onVoice?.(this, 'ALRM');
+      if (this.brain) w.onVoice?.(this, 'VMUE');
       this.investigate(body.x, body.y);
       return;
     }
