@@ -28,6 +28,21 @@ describe('parseHouses', () => {
 });
 
 describe('House', () => {
+  it('regenera un grupo completo o reducido, y no gasta reserva si falla su creación', () => {
+    const getHouse = () => parseHouses(flatten(loadWorld(MIS, { difficulty: 'FACIL', macro: (n) => ({ CASA: MAC_CASA, CUARTEL: MAC_CUARTEL })[n] })))[1];
+    const h = getHouse();
+    expect(h?.recruitPatrol(3, () => false)).toBe(false);
+    expect(h?.regen).toBe(8);
+    expect(h?.recruitPatrol(3, (n) => n === 3)).toBe(true);
+    expect(h?.regen).toBe(4);
+    expect(h?.recruitPatrol(9, (n) => n === 3)).toBe(true);
+    expect(h?.regen).toBe(0);
+    expect(h?.recruitPatrol(1, () => true)).toBe(false);
+    const h2 = getHouse();
+    for (let i = 0; i < 7; i++) h2?.recruit(() => true);
+    expect(h2?.recruitPatrol(0, () => true)).toBe(false);
+    expect(h2?.regen).toBe(1);
+  });
   it('descuenta una reserva únicamente al crear un patrullero; al destruirse no quedan reservas', () => {
     const cuartel = parseHouses(flatten(loadWorld(MIS, { difficulty: 'FACIL', macro: (n) => ({ CASA: MAC_CASA, CUARTEL: MAC_CUARTEL })[n] })))[1];
     expect(cuartel?.recruit(() => false)).toBe(false);

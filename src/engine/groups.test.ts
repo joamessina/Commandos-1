@@ -52,7 +52,7 @@ describe('groups', () => {
   it('lee los grupos de .PATRULLAS con sus valores por defecto', () => {
     const g = parseGroups(MIS, 'FACIL');
     expect(g).toHaveLength(2);
-    expect(g[0]).toMatchObject({ token: 'PAT1', n: 3, home: 'CASA_REACT_01', exitEvents: ['REAC'], columns: 1, animCabo: 'CABO', animSoldier: 'ALEGABAR', formX: 40, formY: 30 });
+    expect(g[0]).toMatchObject({ token: 'PAT1', n: 3, startAtHome: true, regeneratePatrol: false, home: 'CASA_REACT_01', exitEvents: ['REAC'], columns: 1, animCabo: 'CABO', animSoldier: 'ALEGABAR', formX: 40, formY: 30 });
     expect(g[0]?.route?.points.map((p) => [p.x, p.y, p.vel])).toEqual([[10, 20, 1.7], [30, 40, 1.7]]);
     expect(g[1]).toMatchObject({ token: 'PAT2', n: 4, home: null, exitEvents: ['REAC', 'ZOIN'], route: null, columns: 2 });
     expect(eventList('reac')).toEqual(['REAC']);
@@ -88,5 +88,6 @@ describe('groups', () => {
     expect(parseGroups(bad, 'FACIL').map((g) => [g.token, g.exitEvents])).toEqual([['OK', ['A']]]);
     expect(parseZoneSensors(bad)).toEqual([]);
     expect(parseGroups('', 'FACIL')).toEqual([]);
+    expect(parseGroups('.MISSION [ .PATRULLAS [ [ .TOKEN P .REGENERATEPATROL 1 ] ] ]', 'FACIL')[0]?.regeneratePatrol).toBe(true);
   });
 });

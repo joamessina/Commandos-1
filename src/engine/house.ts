@@ -67,6 +67,15 @@ export class House {
     return true;
   }
 
+  /** `FUN_005A2760`: reserva un cabo y hasta `desired` patrulleros si se creó el grupo. */
+  recruitPatrol(desired: number, create: (patrolmen: number) => boolean): boolean {
+    if (this.reserve < 2) return false;
+    const patrolmen = Math.min(desired, this.reserve - 1);
+    if (!create(patrolmen)) return false;
+    this.reserve -= patrolmen + 1;
+    return true;
+  }
+
   /** Un comando entra (si hay sitio): queda oculto. */
   enter(u: Unit): boolean {
     if (this.occupants.length >= CAPACITY || u.dead || this.occupants.includes(u)) return false;

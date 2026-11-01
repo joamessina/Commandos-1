@@ -437,6 +437,7 @@ async function load(): Promise<void> {
   // Grupos de `.PATRULLAS` (cabo + patrulleros) y eventos de zona de ruido (engine/groups.ts): los de casa salen con el evento, los libres empiezan en su ruta
   const groups = parseGroups(misText, diffSel.value as Difficulty);
   const spawned = new Set<string>();
+  const pendingGroups = new Map<string, GroupDef>();
   const groupTicks: (() => void)[] = [];
   const spawnGroup = (def: GroupDef): void => {
     if (spawned.has(def.token)) return;
@@ -461,12 +462,27 @@ async function load(): Promise<void> {
     // shortcut: la sucesión es inmediata, reinicia la ruta y excluye incapacitados o soldados dentro de casa; mejorar al portar SPECIALRUN y la migración completa.
     // shortcut: el cabo usa la orden de investigar para volver al cuartel; mejorar al portar AcpSargento completo.
     let returning = false;
+    let retired = false;
     groupTicks.push(() => {
+        if (retired) return;
         let leader = made[0];
         if (!leader) return;
         if (leader.dead) {
           const next = successor(made.slice(1));
-          if (!next) return;
+          if (!next) {
+            if (!made.every((s) => s.dead)) return;
+            retired = true;
+            if (house && def.regeneratePatrol) house.recruitPatrol(def.n, (n) => {
+              if (!asset(def.animCabo) || (n > 0 && !asset(def.animSoldier))) return false;
+              const replacement = { ...def, n };
+              spawned.delete(def.token);
+              // shortcut: STARTATHOME conserva el grupo como definición pendiente, sin instancias ocultas; mejorar al portar ocupantes alemanes.
+              if (def.startAtHome) pendingGroups.set(def.token, replacement);
+              else spawnGroup(replacement);
+              return true;
+            });
+            return;
+          }
           const index = made.indexOf(next);
           made[index] = leader;
           made[0] = next;
@@ -498,7 +514,13 @@ async function load(): Promise<void> {
     });
   };
   const raise = (event: string): void => {
-    for (const def of groups) if (def.home && def.exitEvents.includes(event)) spawnGroup(def);
+    for (const initial of groups) {
+      const def = pendingGroups.get(initial.token) ?? initial;
+      if (def.home && def.exitEvents.includes(event)) {
+        spawnGroup(def);
+        if (spawned.has(def.token)) pendingGroups.delete(def.token);
+      }
+    }
   };
   for (const def of groups) if (!def.home && def.exitEvents.length === 0) spawnGroup(def);
   if (sec && sectors) {
