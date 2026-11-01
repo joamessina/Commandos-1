@@ -1,7 +1,7 @@
 /**
  * Rutas de `acPatrulla` (docs/lectura/patrulla.md): lectura de `.PATRULLA [ [ .RUTA … .VEL … .TIPORUTA … .NOMBRE … ] ]` y el recorrido
  * punto a punto con las fases de llegada (girar a `ANGULO`, esperar `ESPERA` ciclos) y los tipos de ruta.
- * shortcut: sin contenedores (`CONT`/`CASA`), sin `EVENTO`/`ESPERAEVENTO`/`ENLAZAR` ni cambio de ruta por mensajes; el soldado usa la primera ruta
+ * shortcut: sin contenedores (`CONT`/`CASA`), sin `ESPERAEVENTO`/`ENLAZAR` ni cambio de ruta por mensajes; el soldado usa la primera ruta
  *           que pasa el filtro de dificultad. Cuándo mejorar: al portar casas/cuarteles y los eventos de misión.
  */
 import { asList, asNumber, asNumbers, asText, find, type Node } from '../formats/clave.ts';
@@ -21,6 +21,8 @@ export interface RoutePoint {
   readonly angle: number;
   /** Velocidad del tramo hacia este punto (hereda la de la ruta). */
   readonly vel: number;
+  /** Evento de misión emitido después de esperar en el punto. */
+  readonly event?: string;
 }
 
 export interface Route {
@@ -68,6 +70,7 @@ export function parseRoutes(params: readonly Node[], difficulty: Difficulty): Ro
       const pl = asList(p);
       const xyz = asNumbers(find(pl ?? [], '.XYZ'));
       if (!pl || xyz?.length !== 3) continue;
+      const event = asText(find(pl, '.EVENTO'));
       points.push({
         x: xyz[0] ?? 0,
         y: xyz[1] ?? 0,
@@ -75,6 +78,7 @@ export function parseRoutes(params: readonly Node[], difficulty: Difficulty): Ro
         wait: asNumber(find(pl, '.ESPERA')) ?? 0,
         angle: asNumber(find(pl, '.ANGULO')) ?? 0,
         vel: asNumber(find(pl, '.VELOCIDADTRAMO')) ?? vel,
+        ...(event ? { event: event.toUpperCase() } : {}),
       });
     }
     out.push({ name, type: routeType(asText(find(rt, '.TIPORUTA'))), points });
@@ -88,6 +92,7 @@ export type PatrolStep =
   | { readonly kind: 'face'; readonly angle: number }
   | { readonly kind: 'wait' }
   | { readonly kind: 'jump'; readonly point: RoutePoint }
+  | { readonly kind: 'event'; readonly event: string }
   | { readonly kind: 'idle' };
 
 /**
@@ -98,7 +103,7 @@ export class Patrol {
   private idx = 0;
   private previous = 0;
   private dir = 1;
-  private phase: 'go' | 'face' | 'wait' | 'done' = 'go';
+  private phase: 'go' | 'face' | 'wait' | 'event' | 'done' = 'go';
   private wait = 0;
   private sent = false;
   readonly route: Route;
@@ -130,6 +135,7 @@ export class Patrol {
   step(arrived: boolean): PatrolStep {
     const pt = this.target;
     if (!pt || this.phase === 'done') return { kind: 'idle' };
+    if (this.phase === 'event') return this.advance();
     if (this.phase === 'go') {
       if (!this.sent) {
         this.sent = true;
@@ -147,6 +153,10 @@ export class Patrol {
     if (this.wait > 0) {
       this.wait--;
       return { kind: 'wait' };
+    }
+    if (pt.event) {
+      this.phase = 'event';
+      return { kind: 'event', event: pt.event };
     }
     return this.advance();
   }

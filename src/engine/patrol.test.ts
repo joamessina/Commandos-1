@@ -17,6 +17,12 @@ describe('parseRoutes', () => {
     ]);
   });
 
+  it('lee EVENTO del punto en mayúsculas y no lo agrega cuando falta', () => {
+    const [r] = parseRoutes(params('.PATRULLA [ [ .RUTA [ [ .XYZ [ 1 2 3 ] .EVENTO reac ] [ .XYZ [ 4 5 6 ] ] ] ] ]'), 'FACIL');
+    expect(r?.points[0]?.event).toBe('REAC');
+    expect(r?.points[1]?.event).toBeUndefined();
+  });
+
   it('tipos: LOOP/JUMP/EXIT/STOPPED, otro = ida y vuelta, sin clave = LOOP; VEL por defecto 1.5', () => {
     const t = (s: string) => parseRoutes(params(`.PATRULLA [ [ .RUTA [ [ .XYZ [ 0 0 0 ] ] ] ${s} ] ]`), 'FACIL')[0];
     expect([t('.TIPORUTA loop'), t('.TIPORUTA JUMP'), t('.TIPORUTA EXIT'), t('.TIPORUTA STOPPED'), t('.TIPORUTA X'), t('')].map((r) => r?.type)).toEqual([0, 2, 3, 4, 1, 0]);
@@ -51,6 +57,15 @@ const walk = (p: Patrol, n: number): number[] => {
 };
 
 describe('Patrol', () => {
+  it('emite EVENTO una vez después de la espera y antes del siguiente punto', () => {
+    const points = route(RouteType.Loop, 2).points;
+    const p = new Patrol({ name: 'r', type: RouteType.Loop, points: [{ ...points[0], x: 0, y: 0, z: 0, wait: 2, angle: 0, vel: 2, event: 'REAC' }, { ...points[1], x: 10, y: 0, z: 0, wait: 0, angle: 0, vel: 2 }] });
+    expect(p.step(false).kind).toBe('goto');
+    expect(p.step(true).kind).toBe('wait');
+    expect(p.step(false).kind).toBe('wait');
+    expect(p.step(false)).toEqual({ kind: 'event', event: 'REAC' });
+    expect(p.step(false)).toMatchObject({ kind: 'goto', point: { x: 10 } });
+  });
   it('en PINGPONG usa la velocidad del punto anterior al regresar', () => {
     const r: Route = { name: 'r', type: RouteType.PingPong, points: [
       { x: 0, y: 0, z: 0, wait: 0, angle: 0, vel: 1 },

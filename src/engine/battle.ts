@@ -29,6 +29,7 @@ export class Battle {
   private readonly rng: () => number;
   /** Se avisa de cada ruido de peligro (disparo de pistola de un comando o de un soldado) en (x, y): lo usan los sensores de zona (engine/groups.ts). */
   onDanger: ((x: number, y: number) => void) | null = null;
+  onMissionEvent: ((event: string) => void) | null = null;
 
   constructor(soldiers: Soldier[], commandos: Unit[], sectors: SectorMap | null, rng: () => number = Math.random) {
     this.soldiers = soldiers;
@@ -93,6 +94,7 @@ export class Battle {
         bodies,
         sectors: this.sectors,
         rng: this.rng,
+        onEvent: (event) => this.onMissionEvent?.(event),
         onVoice: (from, voice) => {
           const radius = voice === 'ALRM' ? 300 : 150;
           for (const other of this.soldiers) if (other !== from && Math.hypot(other.x - from.x, other.y - from.y) < radius) other.hear(from.x, from.y);

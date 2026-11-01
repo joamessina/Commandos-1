@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseAnm } from '../formats/anm.ts';
 import { anmSeq, bnm } from '../testing/builders.ts';
 import { Battle } from './battle.ts';
+import { RouteType } from './patrol.ts';
 import { Order, Soldier } from './soldier.ts';
 import { Unit } from './unit.ts';
 
@@ -9,6 +10,14 @@ const anm = parseAnm(bnm([{ type: 0, slots: [5] }, ...anmSeq(1, 'ANDAR', 2, 30, 
 const mk = (x: number, y: number, ang = 0, token = 'X'): Unit => new Unit(token, anm, x, y, 0, ang);
 
 describe('Battle', () => {
+  it('difunde el evento de un punto de patrulla cuando el soldado llega', () => {
+    const s = new Soldier('S', mk(0, 0), { name: 'R', type: RouteType.Stopped, points: [{ x: 20, y: 0, z: 0, wait: 2, angle: 0, vel: 2, event: 'REAC' }] });
+    const b = new Battle([s], [], null);
+    const events: string[] = [];
+    b.onMissionEvent = (event) => { events.push(event); };
+    for (let i = 0; i < 60; i++) b.tick();
+    expect(events).toEqual(['REAC']);
+  });
   it('un BAP1 que descubre un cadáver alerta a 300 y activa el sensor de peligro', () => {
     const body = new Soldier('MUERTO', mk(100, 0), null);
     body.kill();

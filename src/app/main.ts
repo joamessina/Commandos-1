@@ -546,6 +546,7 @@ async function load(): Promise<void> {
       }
     }
   };
+  battle.onMissionEvent = raise; // shortcut: solo despacha salidas de grupos; mejorar al portar TRIGGER_REACT y escuchas de misión.
   for (const def of groups) if (!def.home && def.exitEvents.length === 0) spawnGroup(def);
   if (sec && sectors) {
     const zones = new ZoneEvents(sec, parseZoneSensors(misText));

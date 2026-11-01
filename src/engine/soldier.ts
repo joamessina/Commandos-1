@@ -94,6 +94,7 @@ export interface SoldierWorld {
   /** Un disparo de un soldado: el mundo lo dibuja y avisa a los demás. */
   readonly onShot: (from: Soldier, shot: Shot) => void;
   readonly onVoice?: (from: Soldier, voice: 'VMUE' | 'ALRM') => void;
+  readonly onEvent?: (event: string) => void;
 }
 
 export class Soldier implements Target, Claimant {
@@ -456,7 +457,7 @@ export class Soldier implements Target, Claimant {
         else if (this.order === Order.Patrol) {
           if (this.smokeIn === 0) this.startSmoke();
           else if (this.follow) this.followLeader(this.follow);
-          else this.walkRoute();
+          else this.walkRoute(w);
         }
         else if (this.order === Order.Investigate) this.investigating();
         else this.returning();
@@ -702,7 +703,7 @@ export class Soldier implements Target, Claimant {
   }
 
   /** Recorrido de `acPatrulla`: ir al punto, girar, esperar, siguiente. */
-  private walkRoute(): void {
+  private walkRoute(w: SoldierWorld): void {
     const u = this.unit;
     if (!this.patrol) return;
     const arrived = this.moving && u.target === null;
@@ -716,7 +717,8 @@ export class Soldier implements Target, Claimant {
       u.goTo({ x: s.point.x, y: s.point.y }, false);
       this.moving = true; // si ya estaba allí o no hay camino, target queda null y se da por llegado en el ciclo siguiente
       if (u.target !== null) u.anim.set('ANDAR');
-    } else if (s.kind === 'face') u.body.ang = norm360(s.angle);
+    } else if (s.kind === 'event') w.onEvent?.(s.event);
+    else if (s.kind === 'face') u.body.ang = norm360(s.angle);
     else if (s.kind === 'jump') {
       u.place(s.point.x, s.point.y, u.body.ang);
       this.idleAnim();
