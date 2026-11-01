@@ -43,6 +43,15 @@ describe('House', () => {
     expect(h2?.recruitPatrol(0, () => true)).toBe(false);
     expect(h2?.regen).toBe(1);
   });
+
+  it('los soldados de patrulla ocupan plazas que dejan de estar disponibles para comandos', () => {
+    const h = parseHouses(flatten(loadWorld(MIS, { difficulty: 'FACIL', macro: (n) => ({ CASA: MAC_CASA, CUARTEL: MAC_CUARTEL })[n] })))[1];
+    h?.addGarrison(CAPACITY - 1);
+    expect(h?.enter(cmd())).toBe(true);
+    expect(h?.enter(cmd())).toBe(false);
+    h?.leaveGarrison();
+    expect(h?.enter(cmd())).toBe(true);
+  });
   it('descuenta una reserva únicamente al crear un patrullero; al destruirse no quedan reservas', () => {
     const cuartel = parseHouses(flatten(loadWorld(MIS, { difficulty: 'FACIL', macro: (n) => ({ CASA: MAC_CASA, CUARTEL: MAC_CUARTEL })[n] })))[1];
     expect(cuartel?.recruit(() => false)).toBe(false);

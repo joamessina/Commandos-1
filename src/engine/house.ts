@@ -93,7 +93,7 @@ export class House {
 
   /** Un comando entra (si hay sitio): queda oculto. */
   enter(u: Unit): boolean {
-    if (this.occupants.length >= CAPACITY || u.dead || this.occupants.includes(u)) return false;
+    if (this.occupants.length + this.garrison >= CAPACITY || u.dead || this.occupants.includes(u)) return false;
     this.occupants.push(u);
     u.hidden = true;
     u.inHouse = this.token;
