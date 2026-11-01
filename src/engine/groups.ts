@@ -5,7 +5,7 @@
  *    con `.HOME` y `.EXITHOME_EVENTS` el grupo está dentro de la casa y sale al recibir uno de esos eventos; sin `.HOME` empieza en su ruta desde el principio.
  *  - `.SENSORES_SND_ZONA [ [ .ZONA nombre .MENSAJE ev ] ]`: la zona es un grupo con nombre del `.SEC` (lista de sectores); un ruido de peligro dentro de ella lanza el evento.
  *  - Formación en marcha: `n = max(1, min(NCOLUMNS, vivos))`; el patrullero `idx < n` sigue al cabo con lateral `FORMX·(idx − (n−1)/2)` y `FORMY` detrás; los demás siguen al patrullero `idx − n` con lateral 0.
- * shortcut: salen todos a la vez, sin posiciones de ataque o `NSOLDIERSATTACK`;
+ * shortcut: sin posiciones de ataque o `NSOLDIERSATTACK`;
  *           el evento sale de cualquier ruido de peligro dentro de la zona, no del sensor real; el cabo dispara como cualquier soldado. Mejorar al portar AcpSargento y el sensor.
  */
 import { asList, asNumber, asText, find, parseClave, type Node } from '../formats/clave.ts';
@@ -33,6 +33,24 @@ export interface GroupDef {
 /** La fábrica `FUN_005A2430` crea un cabo y después `NSOLDIERS` patrulleros. */
 export function groupSize(def: Pick<GroupDef, 'n'>): number {
   return def.n + 1;
+}
+
+/** `FUN_004D60A0`: como máximo un patrullero recibe la orden de salida cada 20 ciclos. */
+export class ExitSchedule {
+  private next = 1;
+  private lastCycle = -1;
+
+  constructor(private readonly count: number) {}
+
+  get done(): boolean {
+    return this.next > this.count;
+  }
+
+  step(cycle: number): number | null {
+    if (this.done || cycle % 20 !== 0 || cycle === this.lastCycle) return null;
+    this.lastCycle = cycle;
+    return this.next++;
+  }
 }
 
 /** `FUN_005A3500`: intenta reponer cada baja hasta agotar la reserva o fallar la creación. */

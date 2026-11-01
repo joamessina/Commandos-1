@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eventList, followPoint, formationOf, groupSize, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from './groups.ts';
+import { eventList, ExitSchedule, followPoint, formationOf, groupSize, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from './groups.ts';
 
 const MIS = `.MISSION [
   .SENSORES_SND_ZONA [ [ .ZONA CAMPAMENTO .MENSAJE REAC ] [ .ZONA OTRA .MENSAJE ZOIN ] ]
@@ -15,6 +15,19 @@ describe('groups', () => {
   it('cuenta el cabo además de los patrulleros, incluso si no hay patrulleros', () => {
     expect(groupSize({ n: 3 })).toBe(4);
     expect(groupSize({ n: 0 })).toBe(1);
+  });
+
+  it('ordena la salida de un patrullero por ciclo múltiplo de 20', () => {
+    const q = new ExitSchedule(2);
+    expect(q.done).toBe(false);
+    expect(q.step(19)).toBeNull();
+    expect(q.step(20)).toBe(1);
+    expect(q.step(20)).toBeNull();
+    expect(q.step(21)).toBeNull();
+    expect(q.step(40)).toBe(2);
+    expect(q.done).toBe(true);
+    expect(q.step(60)).toBeNull();
+    expect(new ExitSchedule(0).step(0)).toBeNull();
   });
 
   it('repone solo las bajas posibles y detiene el intento si falla la creación', () => {

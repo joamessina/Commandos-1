@@ -22,7 +22,7 @@ import { House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, Traps } from '../engine/traps.ts';
-import { formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
+import { ExitSchedule, formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
 import { canThrow, type Pack, type Throwable } from '../engine/throwing.ts';
 import { norm360 } from '../engine/walk.ts';
@@ -458,13 +458,21 @@ async function load(): Promise<void> {
       battle.soldiers.push(s);
       return true;
     };
-    for (let i = 0; i < groupSize(def); i++) if (!make(i, at)) break;
+    if (!make(0, at)) { spawned.delete(def.token); return; }
+    const exit = house && def.startAtHome ? new ExitSchedule(def.n) : null;
+    if (!exit) for (let i = 1; i < groupSize(def); i++) if (!make(i, at)) break;
+    // shortcut: el turno de salida usa el ciclo de misión; el exe usa el contador del sargento. Mejorar al portar su reloj y ocupantes ocultos.
     // shortcut: la sucesión es inmediata, reinicia la ruta y excluye incapacitados o soldados dentro de casa; mejorar al portar SPECIALRUN y la migración completa.
     // shortcut: el cabo usa la orden de investigar para volver al cuartel; mejorar al portar AcpSargento completo.
     let returning = false;
     let retired = false;
     groupTicks.push(() => {
         if (retired) return;
+        if (exit && !exit.done) {
+          const i = exit.step(game?.ticks ?? 0);
+          if (i !== null) make(i, at);
+          return;
+        }
         let leader = made[0];
         if (!leader) return;
         if (leader.dead) {
