@@ -15,7 +15,7 @@ import { parseSec, type Sector } from '../formats/sec.ts';
 import { parseVol, type Vol } from '../formats/vol.ts';
 import { parseWad, type Wad } from '../formats/wad.ts';
 import { Animator } from '../engine/anim.ts';
-import type { Weapon } from '../engine/attack.ts';
+import { RANGE, type Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
 import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
 import { House, parseHouses } from '../engine/house.ts';
@@ -35,7 +35,7 @@ import { cursorFor, type CursorMode } from '../engine/cursors.ts';
 import { Cursors } from '../render/cursors.ts';
 import { Hud, type HudUnit } from '../render/hud.ts';
 import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
-import { rayReach, vistaOf } from '../engine/vision.ts';
+import { lineClear, rayReach, vistaOf } from '../engine/vision.ts';
 import { asNumber, find } from '../formats/clave.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
@@ -690,14 +690,29 @@ function overTarget(g: Game): boolean {
   });
 }
 
+/** ¿Se puede disparar la mirilla al punto bajo el cursor? (alcance de la mirilla y línea libre; un soldado o barril apuntan a su posición). */
+function scopeInRange(g: Game): boolean {
+  const sel = g.units[g.selected]?.unit;
+  if (!sel || !stage) return true;
+  const z = zoom();
+  const v = vp(g);
+  const mx = g.camX - v.w / z / 2 + (cursor.x - v.x) / z;
+  const my = g.camY - v.h / z / 2 + (cursor.y - v.y) / z;
+  const near = (px: number, py: number): boolean => Math.abs(mx - px) < 14 && my > py - 40 && my < py + 8;
+  const foe = g.soldiers.find((s) => !s.soldier.dead && near(project(s.soldier.x, s.soldier.y, s.soldier.unit.z).px, project(s.soldier.x, s.soldier.y, s.soldier.unit.z).py));
+  const spot = foe ? { x: foe.soldier.x, y: foe.soldier.y } : g.sectors?.pick(mx, my);
+  if (!spot) return false;
+  return Math.hypot(spot.x - sel.body.x, spot.y - sel.body.y) <= RANGE.MIRILLA && lineClear(g.sectors, sel.body.x, sel.body.y, spot.x, spot.y);
+}
+
 /** Cursor del mouse según el arma elegida (engine/cursors.ts); en el HUD vuelve a la flecha. */
 function updateCursor(g: Game): void {
   if (!stage || !g.cursors) return;
   const hudOver = g.hud !== null && overHud(cursor.x, cursor.y, stage.width, g.hudLeft);
   const mode: CursorMode | null = hudOver ? null : g.planting === 'TABACO' ? 'TABACO' : g.use ?? g.mode;
   const planting = !hudOver && g.planting !== null && g.planting !== 'TABACO';
-  const spec = cursorFor(mode, planting, mode !== null && cursor.inside && overTarget(g));
-  const key = `${spec.sprite}|${spec.hot}`;
+  const spec = cursorFor(mode, planting, mode !== null && cursor.inside && overTarget(g), mode !== 'MIRILLA' || !cursor.inside || scopeInRange(g));
+  const key = `${spec.sprite}|${spec.hot}|${spec.tint ?? ''}`;
   if (key === cursorKey && stage.style.cursor) return;
   cursorKey = key;
   stage.style.cursor = g.cursors.cssFor(spec);
@@ -1000,10 +1015,16 @@ function onRightUp(e: MouseEvent): void {
       say('Soltaste al alemán: queda esposado donde está.');
       return;
     }
+    if (g.mode || g.planting || g.use) {
+      // el botón derecho también baja el arma o ítem en la mano (la mirilla, la piedra, el botiquín…), como Esc
+      g.mode = null;
+      g.planting = null;
+      g.use = null;
+      return;
+    }
     const u = g.units[g.selected]?.unit;
     if (!u || u.dead) return;
     g.battle.cancel(u);
-    g.use = null;
     if (u.diving) {
       say(u.toggleDive() ? `${u.token}: no se puede salir en agua profunda (acercate a la orilla).` : `${u.token} sale del agua.`);
       return;

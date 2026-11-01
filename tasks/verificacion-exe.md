@@ -44,3 +44,7 @@ Mapa general (2026-10-30): `docs/exe-mapa-general.md` enlaza 49 funciones con VA
 
 ## Francotirador desde el bote (2026-10-31)
 - `engine/attack.ts`: con el ítem MIRILLA activo en un vehículo el clic dispara al instante (`FUN_00502cb0` → `FUN_006780a0`/`00678110` prueban alcance, `0067AA30` dispara con el vehículo como origen del rayo, `FUN_004EF9D0` gasta la bala); fuera de alcance o sin línea se rechaza, sin caminar. shortcut: sin animación de disparo en el vehículo (no leída) y sin disparo a un punto sin blanco (`FUN_0067AC80`). Cuándo mejorar: al leer la animación de `FUN_00513210`/`FUN_0067AA30`.
+
+## Retícula roja y botón derecho (2026-10-31)
+- `render/cursors.ts`: la retícula `C_MIRILL.RLE` se tiñe de rojo (composición `rgba(255,0,0,0.6)` sobre los píxeles opacos) cuando el punto apuntado queda fuera del alcance de la mirilla (1000) o sin línea libre. Base [hecho]: `CUR_MIRA` (24) y `CUR_NMIRA` (25) encienden la misma retícula (`0069EF40`, hud-consumidores.md); el tono exacto y cómo la diferencia `005D6160` NO se leyó (el rojo es recuerdo del usuario). Cuándo mejorar: al leer `005CA590`/`005D6160`.
+- `main.ts`: el botón derecho (clic sin arrastre) baja el arma o ítem en la mano (`mode`/`planting`/`use`) además de Esc; la orden vigente solo se cancela si no había nada en la mano. shortcut: el exe no se leyó para esto, es lo que pidió el usuario.

@@ -16,4 +16,11 @@ describe('cursorFor', () => {
   it('plantar una bomba usa el cursor del explosivo, aunque haya un arma elegida', () => {
     expect(cursorFor('PISTOLA', true, false).sprite).toBe('C_PETA.RLE');
   });
+
+  it('la retícula de la mirilla se pone roja fuera de alcance; las demás armas no cambian', () => {
+    expect(cursorFor('MIRILLA', false, true, false)).toEqual({ sprite: 'C_MIRILL.RLE', hot: 'center', tint: 'red' });
+    expect(cursorFor('MIRILLA', false, true, true).tint).toBeUndefined();
+    expect(cursorFor('MIRILLA', false, false).tint).toBeUndefined();
+    expect(cursorFor('PISTOLA', false, true, false).tint).toBeUndefined();
+  });
 });

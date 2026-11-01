@@ -13,6 +13,8 @@ export interface CursorSpec {
   readonly sprite: string;
   /** Punto caliente: el centro del sprite o su esquina sup. izq. */
   readonly hot: 'center' | 'topleft';
+  /** Teñido: la retícula de la mirilla se pone roja cuando el punto apuntado no se puede disparar (fuera de alcance o sin línea). */
+  readonly tint?: 'red';
 }
 
 export const ARROW: CursorSpec = { sprite: 'C_FLECHA.RLE', hot: 'topleft' };
@@ -36,9 +38,10 @@ const WEAPON_CURSOR: Readonly<Record<CursorMode, { readonly idle: string; readon
 };
 
 /** Cursor para el arma elegida (`mode`), el modo de plantar una bomba o, sin nada, la flecha; `overTarget` = el cursor está sobre un blanco válido. */
-export function cursorFor(mode: CursorMode | null, planting: boolean, overTarget: boolean): CursorSpec {
+export function cursorFor(mode: CursorMode | null, planting: boolean, overTarget: boolean, inRange = true): CursorSpec {
   if (planting) return { sprite: 'C_PETA.RLE', hot: 'center' };
   if (!mode) return ARROW;
   const c = WEAPON_CURSOR[mode];
-  return { sprite: overTarget ? c.target : c.idle, hot: 'center' };
+  // `CUR_NMIRA` (25) enciende la misma retícula que `CUR_MIRA` (24) (docs/lectura/hud-consumidores.md): fuera de alcance sigue visible pero roja
+  return { sprite: overTarget ? c.target : c.idle, hot: 'center', ...(mode === 'MIRILLA' && !inRange ? { tint: 'red' as const } : {}) };
 }
