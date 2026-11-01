@@ -12,9 +12,18 @@ export class Cursors {
     this.banks = wads.map((wad) => ({ wad, cache: new SpriteCache(wad) }));
   }
 
+  /** Imagen de un sprite de los bancos de cursores (la retícula se dibuja a mano sobre la escena), o null si falta. */
+  canvasOf(name: string): HTMLCanvasElement | null {
+    for (const b of this.banks) {
+      const s = b.wad.byName.get(name);
+      if (s) return b.cache.canvasFor(s);
+    }
+    return null;
+  }
+
   /** Valor de la propiedad CSS `cursor` (con la flecha del sistema de reserva si falta el sprite). */
   cssFor(spec: CursorSpec): string {
-    const key = `${spec.sprite}|${spec.hot}|${spec.tint ?? ''}`;
+    const key = `${spec.sprite}|${spec.hot}`;
     const hit = this.css.get(key);
     if (hit !== undefined) return hit;
     let found: { s: Sprite; canvas: HTMLCanvasElement } | null = null;
@@ -29,21 +38,7 @@ export class Cursors {
     if (found) {
       const x = spec.hot === 'center' ? Math.floor(found.s.width / 2) : 0;
       const y = spec.hot === 'center' ? Math.floor(found.s.height / 2) : 0;
-      let canvas = found.canvas;
-      if (spec.tint) {
-        // shortcut: teñido por composición (rojo sobre los píxeles opacos); el tono exacto del original (`005D6160`) no se leyó
-        canvas = document.createElement('canvas');
-        canvas.width = found.s.width;
-        canvas.height = found.s.height;
-        const c = canvas.getContext('2d');
-        if (c) {
-          c.drawImage(found.canvas, 0, 0);
-          c.globalCompositeOperation = 'source-atop';
-          c.fillStyle = 'rgba(255, 0, 0, 0.6)';
-          c.fillRect(0, 0, canvas.width, canvas.height);
-        }
-      }
-      value = `url(${canvas.toDataURL()}) ${x.toString()} ${y.toString()}, default`;
+      value = `url(${found.canvas.toDataURL()}) ${x.toString()} ${y.toString()}, default`;
     }
     this.css.set(key, value);
     return value;

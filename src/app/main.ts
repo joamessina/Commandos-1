@@ -690,6 +690,42 @@ function overTarget(g: Game): boolean {
   });
 }
 
+const SCOPE = 'C_MIRILL.RLE';
+
+/**
+ * Retícula de la mirilla (`FUN_005CA590` → `FUN_005D6160`, docs/lectura/hud-consumidores.md): el exe la dibuja sobre la escena y el círculo de su interior se redibuja; con el cursor
+ * `CUR_MIRA` (24, `DAT_008405bc = 1`) se copia entero y con `CUR_NMIRA` (25, fuera de alcance, `= 0`) se copia con `& 0xF800` (solo el canal rojo del RGB565), que deja la escena
+ * en un rojo suave donde todavía se ve adónde se apunta. shortcut: el radio del círculo es el de la retícula (47) y falta la deformación de lente (la tabla `DAT_00853a98` no se leyó).
+ */
+function drawScope(ctx: CanvasRenderingContext2D, g: Game): void {
+  if (g.mode !== 'MIRILLA' || !cursor.inside || !stage || !g.cursors) return;
+  if (g.hud && overHud(cursor.x, cursor.y, stage.width, g.hudLeft)) return;
+  const sprite = g.cursors.canvasOf(SCOPE);
+  if (!sprite) return;
+  const cx = Math.round(cursor.x);
+  const cy = Math.round(cursor.y);
+  const r = Math.floor(sprite.width / 2);
+  const x0 = Math.max(0, cx - r);
+  const y0 = Math.max(0, cy - r);
+  const w = Math.min(stage.width, cx + r + 1) - x0;
+  const h = Math.min(stage.height, cy + r + 1) - y0;
+  if (w > 0 && h > 0 && !scopeInRange(g)) {
+    const img = ctx.getImageData(x0, y0, w, h);
+    const d = img.data;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if ((x0 + x - cx) ** 2 + (y0 + y - cy) ** 2 > r * r) continue;
+        const i = (y * w + x) * 4;
+        d[i] = (d[i] ?? 0) & 0xf8; // canal rojo de RGB565
+        d[i + 1] = 0;
+        d[i + 2] = 0;
+      }
+    }
+    ctx.putImageData(img, x0, y0);
+  }
+  ctx.drawImage(sprite, cx - r, cy - r);
+}
+
 /** ¿Se puede disparar la mirilla al punto bajo el cursor? (alcance de la mirilla y línea libre; un soldado o barril apuntan a su posición). */
 function scopeInRange(g: Game): boolean {
   const sel = g.units[g.selected]?.unit;
@@ -711,11 +747,12 @@ function updateCursor(g: Game): void {
   const hudOver = g.hud !== null && overHud(cursor.x, cursor.y, stage.width, g.hudLeft);
   const mode: CursorMode | null = hudOver ? null : g.planting === 'TABACO' ? 'TABACO' : g.use ?? g.mode;
   const planting = !hudOver && g.planting !== null && g.planting !== 'TABACO';
-  const spec = cursorFor(mode, planting, mode !== null && cursor.inside && overTarget(g), mode !== 'MIRILLA' || !cursor.inside || scopeInRange(g));
-  const key = `${spec.sprite}|${spec.hot}|${spec.tint ?? ''}`;
+  const spec = cursorFor(mode, planting, mode !== null && cursor.inside && overTarget(g));
+  const scope = spec.sprite === SCOPE; // la retícula la dibuja `drawScope` sobre la escena (efecto de lente del exe), no el cursor del sistema
+  const key = scope ? 'scope' : `${spec.sprite}|${spec.hot}`;
   if (key === cursorKey && stage.style.cursor) return;
   cursorKey = key;
-  stage.style.cursor = g.cursors.cssFor(spec);
+  stage.style.cursor = scope ? 'none' : g.cursors.cssFor(spec);
 }
 
 function draw(g: Game): void {
@@ -855,6 +892,7 @@ function draw(g: Game): void {
   g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => hudUnit(u, g.bag)), g.selected, (i) => g.faces.of(i), g.hudLeft, litItems(g));
   updateCursor(g);
   drawHud(ctx, g);
+  drawScope(ctx, g);
   if (t) {
     ctx.fillStyle = '#d9dde3';
     ctx.font = '12px system-ui';
