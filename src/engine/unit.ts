@@ -265,7 +265,7 @@ export class Unit {
       const p = boat.slotPoint(slot.exit);
       const s = this.sectors.atZ(p.x, p.y, boat.z) ?? this.sectors.at(p.x, p.y);
       if (!isWater(s)) continue;
-      this.boat = null;
+      this.leave();
       this.body.x = p.x;
       this.body.y = p.y;
       this.land();
@@ -328,9 +328,16 @@ export class Unit {
     this.land();
   }
 
+  /** Libera la plaza del bote (`FUN_004B85E0`). */
+  private leave(): void {
+    if (this.boat) this.boat.riders.splice(this.boat.riders.indexOf(this), 1);
+    this.boat = null;
+  }
+
   /** Sube a una plaza del bote (animación EMBARCADO). */
   board(boat: Boat, seat: number): void {
     this.boat = boat;
+    boat.riders.push(this);
     this.seat = seat;
     this.path = [];
     this.target = null;
@@ -364,7 +371,7 @@ export class Unit {
       const p = boat.slotPoint(slot.exit);
       const s = this.sectors.atZ(p.x, p.y, boat.z) ?? this.sectors.at(p.x, p.y);
       if (!validTarget(s)) continue;
-      this.boat = null;
+      this.leave();
       this.body.x = p.x;
       this.body.y = p.y;
       this.land();
@@ -380,6 +387,16 @@ export class Unit {
    */
   hit(damage: number): boolean {
     if (this.dead || this.invulnerable) return false;
+    if (this.boat) {
+      this.boat.impact(damage); // un tiro al que va a bordo le pega al vehículo, que reparte el daño (Boat.impact)
+      return this.dead;
+    }
+    return this.wound(damage);
+  }
+
+  /** Daño directo al cuerpo (explosiones y reparto de impacto): `AcMuerte` sin pasar por el vehículo. */
+  wound(damage: number): boolean {
+    if (this.dead || this.invulnerable) return false;
     if (this.energy > damage) {
       this.energy -= damage;
       return false;
@@ -389,7 +406,7 @@ export class Unit {
     this.path = [];
     this.target = null;
     this.body.vx = this.body.vy = 0;
-    this.boat = null;
+    this.leave(); // el muerto sale de su plaza (`FUN_004BA1F0`)
     if (this.anim.has('MUERTE1')) this.anim.set('MUERTE1');
     return true;
   }

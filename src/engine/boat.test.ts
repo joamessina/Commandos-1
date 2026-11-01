@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Sector } from '../formats/sec.ts';
-import { Boat, freeSeat } from './boat.ts';
+import { parseAnm } from '../formats/anm.ts';
+import { anmSeq, bnm } from '../testing/builders.ts';
+import { Boat, boatShares, freeSeat } from './boat.ts';
+import type { Elem } from './world.ts';
+import { Unit } from './unit.ts';
 
 const water = { type: 1 } as Sector;
 const land = { type: 0 } as Sector;
@@ -96,5 +100,79 @@ describe('Boat: límites del Sim', () => {
     expect(freeSeat(4, new Set([1, 2]), false)).toBe(3);
     expect(freeSeat(3, new Set([1, 2]), false)).toBeNull();
     expect(freeSeat(0, new Set(), true)).toBeNull();
+  });
+
+  describe('impacto y pinchado', () => {
+    const anm = parseAnm(bnm([{ type: 0, slots: [3] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8), ...anmSeq(2, 'MUERTE1', 2, 0, 20, 8)]));
+    const slot = { entry: [0, 0], exit: [0, 0], angle: 0 } as const;
+    const crew = (n: number, share = true): { boat: Boat; units: Unit[] } => {
+      const boat = new Boat(0, 0, 0, 0, Array.from({ length: n }, () => slot), null);
+      boat.share = share;
+      const units = Array.from({ length: n }, (_, i) => {
+        const u = new Unit(`U${i.toString()}`, anm, 0, 0, 0, 0);
+        u.pilot = i === 0;
+        u.board(boat, i);
+        return u;
+      });
+      return { boat, units };
+    };
+
+    it('un tiro a bordo reparte el daño entero entre los ocupantes, piloto incluido (30/4 = 7)', () => {
+      const { units } = crew(4);
+      units[1]?.hit(30);
+      expect(units.map((u) => u.energy)).toEqual([93, 93, 93, 93]);
+    });
+
+    it('sin REPARTEIMPACTO el vehículo absorbe el tiro y nadie pierde energía', () => {
+      const { units } = crew(2, false);
+      units[1]?.hit(30);
+      expect(units.map((u) => u.energy)).toEqual([100, 100]);
+    });
+
+    it('el piloto no muere por su parte mientras haya otro vivo, pero sí si es el último', () => {
+      const { boat, units } = crew(2);
+      const [pilot, other] = units;
+      if (!pilot || !other) throw new Error('faltan ocupantes');
+      pilot.energy = 5;
+      other.hit(40); // parte 20: el pasajero la recibe; el piloto (5 de energía, parte 20 ≥ 5) se salva porque queda otro vivo
+      expect([pilot.energy, other.energy, pilot.dead, boat.riders.length]).toEqual([5, 80, false, 2]);
+      other.energy = 5;
+      other.hit(40); // el pasajero muere y sale de su plaza; el piloto es el último y ya recibe su parte completa (40/2 = 20 ≥ 5)
+      expect([other.dead, pilot.dead, boat.riders.length]).toEqual([true, true, 0]);
+      boat.tick();
+      expect(boat.punctured).toBe(true);
+    });
+
+    it('con la tripulación muerta la balsa se pincha al ciclo siguiente y deja de obedecer', () => {
+      const { boat, units } = crew(1);
+      units[0]?.hit(1e9);
+      expect(boat.punctured).toBe(false);
+      boat.tick();
+      expect(boat.punctured).toBe(true);
+      boat.goTo({ x: 100, y: 0 });
+      expect(boat.dest).toBeNull();
+    });
+
+    it('un impacto con la balsa vacía la pincha; con ocupantes y sin reparto no', () => {
+      const vacia = new Boat(0, 0, 0, 0, [], null);
+      vacia.impact(10);
+      vacia.tick();
+      expect(vacia.punctured).toBe(true);
+      const { boat } = crew(1, false);
+      boat.impact(10);
+      boat.tick();
+      expect(boat.punctured).toBe(false);
+    });
+
+    it('las explosiones (wound) matan sin pasar por el reparto; bajar libera la plaza', () => {
+      const { boat, units } = crew(2);
+      units[1]?.wound(1e9);
+      expect([units[1]?.dead, boat.riders.length]).toEqual([true, 1]);
+    });
+
+    it('boatShares lee .REPARTEIMPACTO del acPilotaje', () => {
+      const e = (p: string[]): Elem => ({ actions: [{ name: 'acPilotaje', params: p }] }) as unknown as Elem;
+      expect([boatShares(e(['.REPARTEIMPACTO', '1'])), boatShares(e(['.REPARTEIMPACTO', '0'])), boatShares(e([]))]).toEqual([true, false, false]);
+    });
   });
 });

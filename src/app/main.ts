@@ -20,7 +20,7 @@ import { Battle } from '../engine/battle.ts';
 import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
 import { destroyLinkedHouses, House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
-import { Boat, boatSlots, freeSeat } from '../engine/boat.ts';
+import { Boat, boatShares, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, Traps } from '../engine/traps.ts';
 import { eventList, ExitSchedule, formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
@@ -341,6 +341,7 @@ async function load(): Promise<void> {
     const a = asset(e.anim);
     if (!a) continue;
     const boat = new Boat(e.x, e.y, e.z, e.angle, slots, sectors);
+    boat.share = boatShares(e);
     const prop = { elem: e, anim: new Animator(a.anm, a.anm.sequences.has('ANDAR') ? 'ANDAR' : defaultSeq(a.anm)), sprites: a.sprites, x: e.x, y: e.y, z: e.z, ang: e.angle };
     boats.set(e, { boat, prop });
     props.push(prop);
@@ -715,7 +716,7 @@ function setupStage(): void {
         g.battle.noise(x, y, r);
       });
       for (const c of g.traps.cepos) if (!c.armed) g.trapProps.get(c)?.anim.advance(0, 1); // PILLAR: el cepo se cierra
-      if (g.demo.boatSunk && g.boat?.prop.anim.has('PINCHAR')) g.boat.prop.anim.set('PINCHAR');
+      if (g.boat?.boat.punctured && g.boat.prop.anim.has('PINCHAR')) g.boat.prop.anim.set('PINCHAR');
       if (g.demo.dirty) recompose(g);
       checkWin(g);
       g.boat?.boat.tick();
@@ -1720,7 +1721,8 @@ window.addEventListener('keydown', (e) => {
   if (k === 'e' && cur && !cur.dead && !cur.boat && g.boat) {
     const bt = g.boat.boat;
     const seat = freeSeat(bt.slots.length, new Set(g.units.filter((u) => u.unit.boat === bt).map((u) => u.unit.seatIndex)), cur.pilot);
-    if (Math.hypot(bt.x - cur.body.x, bt.y - cur.body.y) > 120 || bt.speed >= 0.01) say('Acercate al bote (a menos de 120) y con el bote parado.');
+    if (bt.punctured) say('La balsa está pinchada: no se puede subir.');
+    else if (Math.hypot(bt.x - cur.body.x, bt.y - cur.body.y) > 120 || bt.speed >= 0.01) say('Acercate al bote (a menos de 120) y con el bote parado.');
     else if (seat === null) say(cur.pilot ? 'La plaza del piloto está ocupada.' : 'No hay plaza de pasajero libre.');
     else {
       g.battle.cancel(cur);

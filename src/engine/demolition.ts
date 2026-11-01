@@ -216,7 +216,7 @@ export class Demolition {
         // un buzo que la toca recibe el impacto EXPLOSIONMENOR de 10000 (muere en el acto) y la mina explota 20 ciclos después
         for (const u of riders) {
           if (u.diving && !u.dead && Math.hypot(u.body.x - m.x, u.body.y - m.y) < MINE_R + 10) {
-            u.hit(1e9);
+            u.wound(1e9);
             m.fuse = MINE_FUSE;
           }
         }
@@ -227,8 +227,8 @@ export class Demolition {
       this.explode(m.x, m.y, MINE_BLAST);
       if (boat && !this.boatSunk && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_BLAST + boat.radius + 20) {
         this.boatSunk = true;
-        boat.stop();
-        for (const u of riders) if (u.boat === boat) u.hit(1e9);
+        boat.puncture();
+        for (const u of riders) if (u.boat === boat) u.wound(1e9);
       }
     }
   }
@@ -272,7 +272,7 @@ export class Demolition {
   private blast(x: number, y: number, r: number): void {
     this.blasts.push({ x, y, radius: r, ttl: BLAST_CYCLES });
     for (const s of this.people.soldiers) if (!s.dead && Math.hypot(s.x - x, s.y - y) <= r) s.kill();
-    for (const c of this.people.commandos) if (!c.dead && Math.hypot(c.body.x - x, c.body.y - y) <= r) c.hit(1e9);
+    for (const c of this.people.commandos) if (!c.dead && Math.hypot(c.body.x - x, c.body.y - y) <= r) c.wound(1e9);
     for (const b of this.barrels) {
       if (b.dead || Math.hypot(b.x - x, b.y - y) > r) continue;
       b.dead = true;
