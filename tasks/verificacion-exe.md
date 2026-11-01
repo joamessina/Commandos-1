@@ -41,3 +41,6 @@ Mapa general (2026-10-30): `docs/exe-mapa-general.md` enlaza 49 funciones con VA
 - `engine/unit.ts` `treat`: sin prueba de distancia/ángulo de `FUN_0050A380`; JERINGA no existe en FRANCO.ANM (la cura sale al ciclo siguiente).
 - `engine/cursors.ts`: ARPON usa el cursor de la pistola; BOTIQUIN/CONTROL emparejados por nombre (C_MEDIC, C_GORRA1), sin leer la tabla.
 - Sin implementar: granada del jugador (nadie la tiene en M0) y la mano (AuCoger).
+
+## Francotirador desde el bote (2026-10-31)
+- `engine/attack.ts`: con el ítem MIRILLA activo en un vehículo el clic dispara al instante (`FUN_00502cb0` → `FUN_006780a0`/`00678110` prueban alcance, `0067AA30` dispara con el vehículo como origen del rayo, `FUN_004EF9D0` gasta la bala); fuera de alcance o sin línea se rechaza, sin caminar. shortcut: sin animación de disparo en el vehículo (no leída) y sin disparo a un punto sin blanco (`FUN_0067AC80`). Cuándo mejorar: al leer la animación de `FUN_00513210`/`FUN_0067AA30`.

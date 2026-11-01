@@ -4,6 +4,8 @@
  * y daño 40, MIRILLA (rifle del francotirador) 1000 y 100, con sonido solo la pistola (`DISPAROPISTOLA`; la tabla no trae sonido de la mirilla);
  * cuchillo = `FUN_005986A0(.., tipo 7 CUCHILLADA, 120)` al cuadro 6 de la animación, sin ruido (au-jugador.md §0b).
  * Arpón (LANCHERO): alcance 200, un tiro mata (tipo 13, cantidad 100), recarga 60, munición 1 que no baja, sin ruido para la IA (docs/lectura/armas-restantes.md §2).
+ * Desde un vehículo (solo MIRILLA, `FUN_00502cb0` con el ítem 0xF activo): el clic dispara al instante un tiro (`FUN_00678110/006780a0` prueban alcance, `0067AA30` dispara con el vehículo como origen del rayo),
+ * sin caminar ni apuntar; fuera de alcance o sin línea el disparo se rechaza. shortcut: sin animación de disparo en el vehículo (no leída) y sin disparo a un punto sin blanco.
  * La piedra y la cajetilla no pasan por aquí: caen en un punto (engine/throwing.ts).
  * shortcut: el apuntado tarda `AIM_CYCLES` fijos y entre tiros `SHOT_GAP` (no la duración de las animaciones); el cuchillo golpea tras `KNIFE_CYCLES`;
  *           sin munición limitada salvo la mirilla. Cuándo mejorar: al leer AUDisparar completo.
@@ -81,6 +83,10 @@ export class Attack {
     const reach = RANGE[this.weapon];
     const clear = MELEE.has(this.weapon) || lineClear(w.sectors, b.x, b.y, tg.x, tg.y);
     if (d > reach || !clear) {
+      if (u.boat) {
+        this.done = true; // en el vehículo no camina: el disparo se rechaza
+        return;
+      }
       this.aim = 0;
       if (this.t++ % REPATH_EVERY === 0) {
         const near = MELEE.has(this.weapon) ? 0 : 0.8;
@@ -91,8 +97,8 @@ export class Attack {
     }
     u.stop();
     b.ang = norm360((Math.atan2(tg.y - b.y, tg.x - b.x) * 180) / Math.PI);
-    const need = MELEE.has(this.weapon) ? KNIFE_CYCLES : AIM_CYCLES;
-    if (this.aim === 0) {
+    const need = MELEE.has(this.weapon) ? KNIFE_CYCLES : u.boat ? 1 : AIM_CYCLES;
+    if (this.aim === 0 && !u.boat) {
       // PUNO: LANZARPIEDRA (AuCachiporra con el arma 0 del comando, docs/lectura/au-jugador.md §4); ESPOSAS: el comando no trae animación de esposar (shortcut: se queda quieto)
       const a = this.weapon === 'CUCHILLO' ? 'SACACUCHILLO' : this.weapon === 'PUNO' ? 'LANZARPIEDRA' : this.weapon === 'ESPOSAS' ? '' : this.weapon === 'MIRILLA' ? 'APUNTARIFLE' : this.weapon === 'ARPON' ? 'APUNTAARPON' : 'APUNTAPISTOLA';
       if (u.anim.has(a)) u.anim.set(a);
@@ -100,14 +106,14 @@ export class Attack {
     if (++this.aim < need) return;
     if (!MELEE.has(this.weapon)) {
       const a = this.weapon === 'MIRILLA' ? 'DISPARARIFLE' : this.weapon === 'ARPON' ? 'DISPARAARPON' : 'DISPARAPISTOLA';
-      if (u.anim.has(a)) u.anim.set(a);
+      if (u.anim.has(a) && !u.boat) u.anim.set(a);
       w.onShot(b.x, b.y, tg.x, tg.y);
       if (this.weapon === 'PISTOLA') w.noise(b.x, b.y, PISTOL_NOISE);
       if (this.weapon === 'ARPON') u.coolDown = ARPON_RELOAD;
     }
     if (u.ammo[this.weapon] !== undefined) u.ammo[this.weapon] = (u.ammo[this.weapon] ?? 0) - 1; // gasta 1 por disparo (tabla +0x78)
     tg.hurt(this.weapon, u);
-    if (isDead(tg) || this.weapon === 'PUNO' || this.weapon === 'ESPOSAS') this.done = true; // hurt() cambia `dead`; el puño y las esposas son de un solo golpe
+    if (isDead(tg) || u.boat || this.weapon === 'PUNO' || this.weapon === 'ESPOSAS') this.done = true; // hurt() cambia `dead`; el puño y las esposas son de un solo golpe
     else this.aim = need - SHOT_GAP;
   }
 }

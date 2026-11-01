@@ -1449,8 +1449,9 @@ function onMouse(e: MouseEvent): void {
     g.battle.cancel(sel);
     if (!spot || !(kind === 'BOMBA' ? plantBomb(g, sel, spot) : placeTrap(g, sel, spot, kind))) say('No hay camino a pie hasta ese punto.');
   } else if (e.button === 0 && hit >= 0) g.selected = hit;
-  else if (e.button === 0 && (g.mode === 'PISTOLA' || g.mode === 'MIRILLA') && barrel && sel && !sel.dead && !sel.boat && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, barrel, g.mode);
-  else if (e.button === 0 && g.mode && foe && sel && !sel.dead && !sel.boat && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, foe.soldier, g.mode);
+  else if (e.button === 0 && (g.mode === 'PISTOLA' || g.mode === 'MIRILLA') && barrel && sel && !sel.dead && (!sel.boat || g.mode === 'MIRILLA') && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, barrel, g.mode);
+  else if (e.button === 0 && g.mode && foe && sel && !sel.dead && (!sel.boat || g.mode === 'MIRILLA') && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, foe.soldier, g.mode); // en el vehículo solo la mirilla (MSG_ITEM_ACTIVADO 0xF)
+  else if (e.button === 0 && g.mode === 'MIRILLA' && sel?.boat) say(`${sel.token}: con la mirilla activa el clic dispara a un soldado o barril a la vista (Esc la baja y vuelve a mover el bote).`);
   else if (sel && !sel.dead && e.button === 0) {
     g.battle.cancel(sel);
     const run = e.detail >= 2 || e.shiftKey; // doble clic izquierdo = BOTON1DBLCLK: AuGoTo corre (FUN_004F68A0); Mayús queda como atajo extra

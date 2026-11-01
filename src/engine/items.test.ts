@@ -4,6 +4,7 @@ import { parseSec } from '../formats/sec.ts';
 import { anmSeq, bnm, secBytes } from '../testing/builders.ts';
 import { Attack, type AttackWorld, ARPON_RELOAD } from './attack.ts';
 import { Battle } from './battle.ts';
+import { Boat } from './boat.ts';
 import { SectorMap } from './sectors.ts';
 import { CONTROL_RADIUS, Order, Soldier, type SoldierWorld } from './soldier.ts';
 import { canThrow, Packs, STONE_NOISE } from './throwing.ts';
@@ -289,5 +290,33 @@ describe('Arpón y botiquín', () => {
     patient.energy = 10;
     patient.hit(1e9);
     expect(healer.treat(patient, 200)).toBe(false); // muerto
+  });
+});
+
+describe('Francotirador en el bote', () => {
+  const seated = (): Unit => {
+    const u = mk(0, 0, 'FRANCOT');
+    u.board(new Boat(0, 0, 0, 0, [{ entry: [0, 0], exit: [10, 0], angle: 0 }], null), 0);
+    return u;
+  };
+  const shots: number[] = [];
+  const w: AttackWorld = { sectors: null, noise: () => undefined, onShot: () => shots.push(1) };
+
+  it('la mirilla dispara al instante desde el bote, un tiro por clic, sin caminar ni animar', () => {
+    const sniper = seated();
+    const s = new Soldier('S', mk(800, 0, 'S'), null);
+    const a = new Attack(sniper, s, 'MIRILLA');
+    const pose = sniper.anim.name;
+    a.tick(w);
+    expect([a.done, s.dead, shots.length, sniper.boat !== null, sniper.anim.name]).toEqual([true, true, 1, true, pose]);
+    expect(sniper.target).toBeNull();
+  });
+
+  it('fuera de alcance (1000) el disparo se rechaza sin acercarse', () => {
+    const sniper = seated();
+    const s = new Soldier('S', mk(1500, 0, 'S'), null);
+    const a = new Attack(sniper, s, 'MIRILLA');
+    a.tick(w);
+    expect([a.done, s.dead, sniper.target]).toEqual([true, false, null]);
   });
 });
