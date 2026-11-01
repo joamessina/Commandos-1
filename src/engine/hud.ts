@@ -192,6 +192,7 @@ export const BAG_POS: Readonly<Record<string, Readonly<Record<string, { readonly
     SENUELO: { sprite: 'SENUEL.RLE', x: 63, y: 66 },
     ESPOSAS: { sprite: 'ESPOSAS.RLE', x: 24, y: 91 },
     CONTROLA: { sprite: 'CONTROLA.RLE', x: -20, y: 79 },
+    TABACO: { sprite: 'TABACO.RLE', x: 25, y: 36 },
   },
   LANCHERO: {
     CUCHILLO: { sprite: 'MACHETE.RLE', x: -9, y: 1 },
@@ -200,6 +201,7 @@ export const BAG_POS: Readonly<Record<string, Readonly<Record<string, { readonly
     PIEDRA: { sprite: 'PIEDRA.RLE', x: 81, y: 19 },
     ARPON: { sprite: 'ARPON.RLE', x: 67, y: 5 },
     TRAJEBU: { sprite: 'BOMBONA.RLE', x: 56, y: 86 },
+    TABACO: { sprite: 'TABACO.RLE', x: 29, y: 17 },
     CONTROLA: { sprite: 'CONTROLA.RLE', x: -26, y: 79 },
   },
   FRANCOT: {
@@ -208,6 +210,7 @@ export const BAG_POS: Readonly<Record<string, Readonly<Record<string, { readonly
     PIEDRA: { sprite: 'PIEDRA.RLE', x: 82, y: 75 },
     MIRILLA: { sprite: 'MIRATELE.RLE', x: 11, y: -1 },
     BOTIQUIN: { sprite: 'BOTIQUIN.RLE', x: 2, y: 34 },
+    TABACO: { sprite: 'TABACO.RLE', x: 30, y: 58 },
     CONTROLA: { sprite: 'CONTROLA.RLE', x: -26, y: 79 },
   },
   ARTIFIC: {
@@ -217,6 +220,7 @@ export const BAG_POS: Readonly<Record<string, Readonly<Record<string, { readonly
     CEPO: { sprite: 'CEPO.RLE', x: -16, y: -14 },
     CARTUCHO: { sprite: 'CARTUCH2.RLE', x: -15, y: 32 },
     ACTIVADO: { sprite: 'DETONADO.RLE', x: -8, y: 79 },
+    TABACO: { sprite: 'TABACO.RLE', x: 79, y: -3 },
     CONTROLA: { sprite: 'CONTROLA.RLE', x: -26, y: 79 },
   },
 };

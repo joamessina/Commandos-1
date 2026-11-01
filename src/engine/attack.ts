@@ -3,16 +3,17 @@
  * Datos del exe: tabla de armas `0x8143C0` (docs/lectura/au-disparar.md) y rutinas de bala del jugador (docs/engine/armas-danio.md §3): PISTOLA alcance 300
  * y daño 40, MIRILLA (rifle del francotirador) 1000 y 100, con sonido solo la pistola (`DISPAROPISTOLA`; la tabla no trae sonido de la mirilla);
  * cuchillo = `FUN_005986A0(.., tipo 7 CUCHILLADA, 120)` al cuadro 6 de la animación, sin ruido (au-jugador.md §0b).
- * Piedra (`AuDisparar` arma 7: alcance 300, 0 de daño, `AcPiedra` manda `MSGA_PEDRADA` que aturde sin daño): `.PIEDRAS` del MIS = cuántas lleva.
- * shortcut: la pedrada atonta igual que el puño (la duración del aturdimiento por piedra no se leyó), llega al instante y no hace ruido; el apuntado tarda `AIM_CYCLES` fijos y entre tiros `SHOT_GAP` (no la duración de las animaciones); el cuchillo golpea tras `KNIFE_CYCLES`;
- *           sin munición, ni piedras/granadas. Cuándo mejorar: al leer AUDisparar completo.
+ * Arpón (LANCHERO): alcance 200, un tiro mata (tipo 13, cantidad 100), recarga 60, munición 1 que no baja, sin ruido para la IA (docs/lectura/armas-restantes.md §2).
+ * La piedra y la cajetilla no pasan por aquí: caen en un punto (engine/throwing.ts).
+ * shortcut: el apuntado tarda `AIM_CYCLES` fijos y entre tiros `SHOT_GAP` (no la duración de las animaciones); el cuchillo golpea tras `KNIFE_CYCLES`;
+ *           sin munición limitada salvo la mirilla. Cuándo mejorar: al leer AUDisparar completo.
  */
 import { lineClear } from './vision.ts';
 import type { SectorMap } from './sectors.ts';
 import type { Unit } from './unit.ts';
 import { norm360 } from './walk.ts';
 
-export type Weapon = 'PISTOLA' | 'MIRILLA' | 'CUCHILLO' | 'PUNO' | 'ESPOSAS' | 'PIEDRA';
+export type Weapon = 'PISTOLA' | 'MIRILLA' | 'CUCHILLO' | 'PUNO' | 'ESPOSAS' | 'PIEDRA' | 'ARPON';
 
 /** Armas de contacto: caminan hasta el blanco (sin línea de tiro) y golpean a `KNIFE_CYCLES`. PUNO = `AuCachiporra` (`MSGA_CACHIPORRAZO` al cuadro 6), ESPOSAS = `AuEsposas` (`MSGA_HAS_SIDO_ESPOSADO`). */
 const MELEE: ReadonlySet<Weapon> = new Set<Weapon>(['CUCHILLO', 'PUNO', 'ESPOSAS']);
@@ -20,8 +21,10 @@ const MELEE: ReadonlySet<Weapon> = new Set<Weapon>(['CUCHILLO', 'PUNO', 'ESPOSAS
 /** Radio del ruido del disparo de la pistola (`PIPA` en la tabla de ruidos 0x821DE0, docs/engine/percepcion.md §4.3). */
 export const PISTOL_NOISE = 600;
 
-export const RANGE: Readonly<Record<Weapon, number>> = { PISTOLA: 300, MIRILLA: 1000, CUCHILLO: 28, PUNO: 28, ESPOSAS: 28, PIEDRA: 300 };
-export const DAMAGE: Readonly<Record<Weapon, number>> = { PISTOLA: 40, MIRILLA: 100, CUCHILLO: 120, PUNO: 0, ESPOSAS: 0, PIEDRA: 0 };
+export const RANGE: Readonly<Record<Weapon, number>> = { PISTOLA: 300, MIRILLA: 1000, CUCHILLO: 28, PUNO: 28, ESPOSAS: 28, PIEDRA: 300, ARPON: 200 };
+export const DAMAGE: Readonly<Record<Weapon, number>> = { PISTOLA: 40, MIRILLA: 100, CUCHILLO: 120, PUNO: 0, ESPOSAS: 0, PIEDRA: 0, ARPON: 100 };
+/** Recarga del arpón: 60 ciclos (tabla de recargas, docs/lectura/armas-restantes.md); el resto de las armas no tiene espera propia aquí. */
+export const ARPON_RELOAD = 60;
 const AIM_CYCLES = 8;
 const SHOT_GAP = 6;
 const KNIFE_CYCLES = 12;
@@ -74,6 +77,7 @@ export class Attack {
       this.done = true; // sin munición (estado 1 de AUDisparar: munición 0 → termina)
       return;
     }
+    if (u.coolDown > 0) return; // recarga del arma anterior
     const reach = RANGE[this.weapon];
     const clear = MELEE.has(this.weapon) || lineClear(w.sectors, b.x, b.y, tg.x, tg.y);
     if (d > reach || !clear) {
@@ -90,19 +94,20 @@ export class Attack {
     const need = MELEE.has(this.weapon) ? KNIFE_CYCLES : AIM_CYCLES;
     if (this.aim === 0) {
       // PUNO: LANZARPIEDRA (AuCachiporra con el arma 0 del comando, docs/lectura/au-jugador.md §4); ESPOSAS: el comando no trae animación de esposar (shortcut: se queda quieto)
-      const a = this.weapon === 'CUCHILLO' ? 'SACACUCHILLO' : this.weapon === 'PUNO' || this.weapon === 'PIEDRA' ? 'LANZARPIEDRA' : this.weapon === 'ESPOSAS' ? '' : this.weapon === 'MIRILLA' ? 'APUNTARIFLE' : 'APUNTAPISTOLA';
+      const a = this.weapon === 'CUCHILLO' ? 'SACACUCHILLO' : this.weapon === 'PUNO' ? 'LANZARPIEDRA' : this.weapon === 'ESPOSAS' ? '' : this.weapon === 'MIRILLA' ? 'APUNTARIFLE' : this.weapon === 'ARPON' ? 'APUNTAARPON' : 'APUNTAPISTOLA';
       if (u.anim.has(a)) u.anim.set(a);
     }
     if (++this.aim < need) return;
     if (!MELEE.has(this.weapon)) {
-      const a = this.weapon === 'PIEDRA' ? 'LANZARPIEDRA' : this.weapon === 'MIRILLA' ? 'DISPARARIFLE' : 'DISPARAPISTOLA';
+      const a = this.weapon === 'MIRILLA' ? 'DISPARARIFLE' : this.weapon === 'ARPON' ? 'DISPARAARPON' : 'DISPARAPISTOLA';
       if (u.anim.has(a)) u.anim.set(a);
-      if (this.weapon !== 'PIEDRA') w.onShot(b.x, b.y, tg.x, tg.y);
+      w.onShot(b.x, b.y, tg.x, tg.y);
       if (this.weapon === 'PISTOLA') w.noise(b.x, b.y, PISTOL_NOISE);
+      if (this.weapon === 'ARPON') u.coolDown = ARPON_RELOAD;
     }
     if (u.ammo[this.weapon] !== undefined) u.ammo[this.weapon] = (u.ammo[this.weapon] ?? 0) - 1; // gasta 1 por disparo (tabla +0x78)
     tg.hurt(this.weapon, u);
-    if (isDead(tg) || this.weapon === 'PUNO' || this.weapon === 'ESPOSAS' || this.weapon === 'PIEDRA') this.done = true; // hurt() cambia `dead`; el puño, las esposas y la piedra son de un solo golpe
+    if (isDead(tg) || this.weapon === 'PUNO' || this.weapon === 'ESPOSAS') this.done = true; // hurt() cambia `dead`; el puño y las esposas son de un solo golpe
     else this.aim = need - SHOT_GAP;
   }
 }

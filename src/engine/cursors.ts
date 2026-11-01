@@ -17,7 +17,15 @@ export interface CursorSpec {
 
 export const ARROW: CursorSpec = { sprite: 'C_FLECHA.RLE', hot: 'topleft' };
 
-const WEAPON_CURSOR: Readonly<Record<Weapon, { readonly idle: string; readonly target: string }>> = {
+/** Lo que el cursor puede llevar: un arma o un ítem que se usa sobre un blanco (cajetilla, botiquín, control alemán). */
+export type CursorMode = Weapon | 'TABACO' | 'BOTIQUIN' | 'CONTROL';
+
+const WEAPON_CURSOR: Readonly<Record<CursorMode, { readonly idle: string; readonly target: string }>> = {
+  // shortcut: ARPON no tiene CUR_ propio en la tabla del exe (usa el de la pistola); BOTIQUIN (`CUR_BOTIQUIN`, id 46) y CONTROL (`CUR_CONTROLA_ALEMAN`) se emparejaron por nombre con C_MEDIC / C_GORRA1, sin leer la tabla.
+  ARPON: { idle: 'C_PIPA.RLE', target: 'C_PIPA.RLE' },
+  TABACO: { idle: 'C_TABACO.RLE', target: 'C_TABACO.RLE' },
+  BOTIQUIN: { idle: 'C_MEDIC.RLE', target: 'C_MEDIC.RLE' },
+  CONTROL: { idle: 'C_GORRA1.RLE', target: 'C_GORRA1.RLE' },
   PISTOLA: { idle: 'C_PIPA.RLE', target: 'C_PIPA.RLE' },
   // la retícula del francotirador: `C_MIRILL.RLE` (95×95 de `OPCIONES/MIRILLA.WAD`), que el exe carga con el motor (`FUN_005BFE20`) con el punto caliente en (47, 47) = el centro
   MIRILLA: { idle: 'C_MIRILL.RLE', target: 'C_MIRILL.RLE' },
@@ -28,7 +36,7 @@ const WEAPON_CURSOR: Readonly<Record<Weapon, { readonly idle: string; readonly t
 };
 
 /** Cursor para el arma elegida (`mode`), el modo de plantar una bomba o, sin nada, la flecha; `overTarget` = el cursor está sobre un blanco válido. */
-export function cursorFor(mode: Weapon | null, planting: boolean, overTarget: boolean): CursorSpec {
+export function cursorFor(mode: CursorMode | null, planting: boolean, overTarget: boolean): CursorSpec {
   if (planting) return { sprite: 'C_PETA.RLE', hot: 'center' };
   if (!mode) return ARROW;
   const c = WEAPON_CURSOR[mode];

@@ -34,3 +34,10 @@ Mapa general (2026-10-30): `docs/exe-mapa-general.md` enlaza 49 funciones con VA
 | Refuerzos por evento `REAC` (zona CAMPAMENTO) y patrulla libre | grupos y formación leídos (`policia.md`); zona leída del `.SEC` | `NSOLDIERS` con o sin cabo, regeneración, posiciones de ataque, sensor de sonido real |
 | Sensor de zona de sonido (`.SENSORES_SND_ZONA`) | leído y verificado | `cierre-70.md` §4: recibe sector (`sonido+0x28`) y categoría del emisor; máscaras en sector+0x2C, no dentro del sonido. Falta completar emisores/pisadas. |
 | Evento de zona → grupos que salen (`FUN_0059A2A0` tipo6 → `FUN_0059A060`) | **cadena cerrada** | slot7 de todas las intendencias:0x409016 → `FUN_0059CEA0` → `FUN_0059A060`; activa alarma y combina zonas. Falta portar cadena completa. |
+
+## Atajos de piedra, tabaco, arpón, botiquín y control alemán (2026-10-31)
+- `engine/throwing.ts`: la prueba del rayo usa `lineClear`, no el callback 675810; sin el enfriamiento de 20 ciclos de la piedra; el giro del lanzador es instantáneo.
+- `engine/soldier.ts`: sin los pasos finos de la cajetilla (mirar al lanzador 30 ciclos, voces AL01/AL07); la 1.ª pedrada de BAP2 (orden 0xE) mira como BAP1; el rango de charla del control (120) y que el que charla no vigila son hip; al soltar el control el alemán queda esposado donde está.
+- `engine/unit.ts` `treat`: sin prueba de distancia/ángulo de `FUN_0050A380`; JERINGA no existe en FRANCO.ANM (la cura sale al ciclo siguiente).
+- `engine/cursors.ts`: ARPON usa el cursor de la pistola; BOTIQUIN/CONTROL emparejados por nombre (C_MEDIC, C_GORRA1), sin leer la tabla.
+- Sin implementar: granada del jugador (nadie la tiene en M0) y la mano (AuCoger).

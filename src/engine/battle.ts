@@ -4,7 +4,8 @@
  */
 import { Attack, type Target, type Weapon } from './attack.ts';
 import type { SectorMap } from './sectors.ts';
-import type { Shot, Soldier } from './soldier.ts';
+import { CHAT_CYCLES, CHAT_RANGE, type Shot, type Soldier } from './soldier.ts';
+import { Packs, STONE_NOISE } from './throwing.ts';
 import type { Unit } from './unit.ts';
 
 /** Rastro de un disparo (se dibuja unos ciclos). */
@@ -14,11 +15,15 @@ export interface Tracer extends Shot {
 }
 
 const TRACER_CYCLES = 4;
+/** Distancia a la que la piedra alcanza a un soldado como víctima (cilindro de R10 del bicho). */
+const STONE_HIT = 14;
 
 export class Battle {
   readonly soldiers: Soldier[];
   readonly commandos: Unit[];
   readonly tracers: Tracer[] = [];
+  /** Cajetillas de tabaco en el suelo. */
+  readonly packs = new Packs();
   private readonly attacks = new Map<Unit, Attack>();
   private readonly sectors: SectorMap | null;
   private readonly rng: () => number;
@@ -56,6 +61,12 @@ export class Battle {
     for (const s of this.soldiers) if (Math.hypot(s.unit.body.x - x, s.unit.body.y - y) < radius) s.hear(x, y);
   }
 
+  /** La piedra cae en (x,y) (`CAcPiedra`): ruido de atención `PEDL` y, si cae sobre un soldado, le manda `MSGA_PEDRADA` (sin daño). */
+  stone(x: number, y: number, from: Unit): void {
+    this.noise(x, y, STONE_NOISE);
+    this.soldiers.find((s) => !s.dead && Math.hypot(s.x - x, s.y - y) < STONE_HIT)?.pedrada(from);
+  }
+
   /** Un ciclo lógico (los movimientos de los comandos los hace `Unit.tick` fuera). */
   tick(): void {
     for (const [u, a] of this.attacks) {
@@ -70,8 +81,14 @@ export class Battle {
       if (a.done) this.attacks.delete(u);
     }
     const bodies = [...this.soldiers.filter((s) => s.dead && !s.unit.hidden).map((s) => ({ x: s.x, y: s.y })), ...this.commandos.filter((c) => c.dead && !c.hidden).map((c) => ({ x: c.body.x, y: c.body.y }))];
+    // control alemán: el que anda cerca de un controlado se pone a charlar (ECHAR_CHARLA)
+    for (const c of this.soldiers) {
+      if (!c.controlled || c.dead) continue;
+      for (const s of this.soldiers) if (s !== c && Math.hypot(s.x - c.x, s.y - c.y) < CHAT_RANGE) s.chat(c.x, c.y, CHAT_CYCLES);
+    }
     for (const s of this.soldiers) {
       s.tick({
+        packs: this.packs,
         commandos: this.commandos,
         bodies,
         sectors: this.sectors,

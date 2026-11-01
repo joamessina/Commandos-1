@@ -125,14 +125,4 @@ describe('Attack: munición', () => {
     s.hurt('MIRILLA', mk(0));
     expect(s.dead).toBe(true);
   });
-
-  it('piedra: desde 250 u (alcance 300) atonta al soldado sin dañarlo, gasta una de las 100 y no hace ruido ni rastro', () => {
-    const s = new Soldier('S', mk(250, 0, 'S'), null);
-    const log = { noise: 0, shots: 0 };
-    const c = mk(0);
-    c.ammo['PIEDRA'] = 100;
-    const a = new Attack(c, s, 'PIEDRA');
-    run(a, world(log));
-    expect([a.done, s.stun > 0, s.unit.energy, c.ammo['PIEDRA'], log.shots, log.noise]).toEqual([true, true, 100, 99, 0, 0]);
-  });
 });

@@ -21,6 +21,8 @@ import { newBody, norm360, runSpeed, stepBody, WALK_SPEED, type Body, type Vec }
 export { COS50, SIN50 };
 
 /** Energía inicial de los comandos (tabla `0x815198`). */
+/** Energía que da una cura del botiquín (`0x22`, `FUN_004E8C30`). */
+export const MEDKIT_HEAL = 34;
 export const COMMANDO_ENERGY: Readonly<Record<string, number>> = { COMANDO: 200, FRANCOT: 100, LANCHERO: 160, ARTIFIC: 130, CONDUC: 130, ESPIA: 160 };
 
 /** Mundo (x,y,z) -> píxel de mapa. Verificado con 19 edificios del mapa 0 (mediana 0,3 px): docs/research/q1-render.md. */
@@ -64,6 +66,12 @@ export class Unit {
    *           (¿un solo tiro?); solo se limita lo que el MIS fija (MUNMIRILLA 6). Cuándo mejorar: al leer FUN_004F1680 / el uso real de la columna +0x74.
    */
   readonly ammo: Record<string, number> = {};
+  /** Ciclos que faltan para poder disparar de nuevo (recarga del arpón). */
+  coolDown = 0;
+  /** Cigarrillos que lleva (`ficha+0x8E0`: 0 o 1; en la misión 0 todos empiezan en 0 y los roban a cadáveres). */
+  tobacco = 0;
+  /** Curas que le quedan del botiquín (`AUBotiquin .USOS n` → contador `n·2`, una cura +34 por unidad, `FUN_004E8B50`). */
+  medkits = 0;
   /** Trepada en curso (escalera); null si no trepa. */
   climb: Climb | null = null;
   /** Altura del cuerpo (`.VOLCOLISION .H` = `bicho+0x58`). shortcut: 29 (la de los soldados) si el elemento no la trae. */
@@ -386,8 +394,20 @@ export class Unit {
     return true;
   }
 
+  /**
+   * Una cura del botiquín (`FUN_004E8C30`): +34 de energía al paciente con tope en `max`, y gasta una del contador. Falso si no hay curas o el paciente está muerto o completo.
+   * shortcut: no comprueba la distancia ni el ángulo de `FUN_0050A380` (≤ `bicho+0x180`, |Δ| < 15°): el llamador camina hasta el paciente; JERINGA no existe en FRANCO.ANM.
+   */
+  treat(patient: Unit, max: number): boolean {
+    if (this.medkits <= 0 || patient.dead || patient.energy >= max) return false;
+    patient.energy = Math.min(max, patient.energy + MEDKIT_HEAL);
+    this.medkits--;
+    return true;
+  }
+
   /** Un ciclo de lógica (1/20 s). */
   tick(): void {
+    if (this.coolDown > 0) this.coolDown--;
     if (this.dead) {
       this.anim.advance(0, 1);
       return;
