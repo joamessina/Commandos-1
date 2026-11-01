@@ -153,7 +153,7 @@ export class Soldier implements Target, Claimant {
     token: string,
     unit: Unit,
     route: Route | null,
-    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean; readonly follow?: Follow; readonly smokes?: boolean; readonly tobacco?: boolean; readonly brain?: 'base' | 'route'; readonly investigateSpeed?: number } = {},
+    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean; readonly follow?: Follow; readonly smokes?: boolean; readonly tobacco?: boolean; readonly brain?: 'base' | 'route'; readonly investigateSpeed?: number; readonly alternateRoutes?: readonly Route[]; readonly waitRouteEvent?: boolean } = {},
   ) {
     this.fixed = opts.fixed ?? false;
     this.sweepAmp = opts.sweep ?? SWEEP_AMP;
@@ -167,7 +167,7 @@ export class Soldier implements Target, Claimant {
     this.noiseRadius = opts.noise ?? GUNSHOT_RADIUS;
     this.token = token;
     this.unit = unit;
-    this.patrol = route && route.points.length > 0 ? new Patrol(route) : null;
+    this.patrol = route && route.points.length > 0 ? new Patrol(route, opts.alternateRoutes, opts.waitRouteEvent) : null;
     this.post = { x: unit.body.x, y: unit.body.y, ang: unit.body.ang };
     this.range = opts.range ?? DEFAULT_RANGE;
     this.reach = this.range;
@@ -191,14 +191,19 @@ export class Soldier implements Target, Claimant {
   }
 
   /** El patrullero elegido deja de seguir y toma el recorrido del jefe (`FUN_004D4680`). */
-  promote(route: Route | null): void {
+  promote(route: Route | null, alternatives: readonly Route[] = []): void {
     this.releasePack();
     this.follow = null;
-    this.patrol = route && route.points.length > 0 ? new Patrol(route) : null;
+    this.patrol = route && route.points.length > 0 ? new Patrol(route, alternatives) : null;
     this.target = null;
     this.order = Order.Patrol;
     this.moving = false;
     this.unit.stop();
+  }
+
+  /** Solicitud de ruta recibida por `MSGA_TRIGGER_REACT`. */
+  triggerRoute(event: string): boolean {
+    return this.patrol?.trigger(event) ?? false;
   }
 
   /** Golpe de un comando (daño de `DAMAGE`): si sobrevive se vuelve hacia quien lo hirió. */

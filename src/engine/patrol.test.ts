@@ -18,9 +18,11 @@ describe('parseRoutes', () => {
   });
 
   it('lee EVENTO del punto en mayúsculas y no lo agrega cuando falta', () => {
-    const [r] = parseRoutes(params('.PATRULLA [ [ .RUTA [ [ .XYZ [ 1 2 3 ] .EVENTO reac ] [ .XYZ [ 4 5 6 ] ] ] ] ]'), 'FACIL');
+    const [r] = parseRoutes(params('.PATRULLA [ [ .RUTA [ [ .XYZ [ 1 2 3 ] .EVENTO reac .ENLAZAR 1 ] [ .XYZ [ 4 5 6 ] .ENLAZAR 0 ] ] ] ]'), 'FACIL');
     expect(r?.points[0]?.event).toBe('REAC');
+    expect(r?.points[0]?.link).toBe(true);
     expect(r?.points[1]?.event).toBeUndefined();
+    expect(r?.points[1]?.link).toBeUndefined();
   });
 
   it('tipos: LOOP/JUMP/EXIT/STOPPED, otro = ida y vuelta, sin clave = LOOP; VEL por defecto 1.5', () => {
@@ -57,6 +59,30 @@ const walk = (p: Patrol, n: number): number[] => {
 };
 
 describe('Patrol', () => {
+  it('ESPERAEVENTO espera una ruta de ese nombre, incluso si ya era la actual', () => {
+    const a = { ...route(RouteType.Loop, 1), name: 'REAC' };
+    const p = new Patrol(a, [], true);
+    expect(p.step(false)).toEqual({ kind: 'idle' });
+    expect(p.trigger('OTRO')).toBe(false);
+    expect(p.trigger('reac')).toBe(true);
+    expect(p.step(false)).toMatchObject({ kind: 'goto', point: { x: 0 } });
+    expect(p.trigger('REAC')).toBe(false);
+  });
+
+  it('retiene el cambio pedido hasta llegar a un punto ENLAZAR', () => {
+    const a: Route = { name: 'A', type: RouteType.Loop, points: [
+      { x: 0, y: 0, z: 0, wait: 0, angle: 0, vel: 1 },
+      { x: 10, y: 0, z: 0, wait: 0, angle: 0, vel: 1, link: true },
+    ] };
+    const b: Route = { ...route(RouteType.Loop, 1), name: 'B', points: [{ x: 90, y: 0, z: 0, wait: 0, angle: 0, vel: 1 }] };
+    const p = new Patrol(a, [b]);
+    expect(p.trigger('B')).toBe(true);
+    expect(p.step(false)).toMatchObject({ kind: 'goto', point: { x: 0 } });
+    expect(p.step(true)).toMatchObject({ kind: 'goto', point: { x: 10 } });
+    expect(p.step(false).kind).toBe('wait');
+    expect(p.step(true)).toMatchObject({ kind: 'goto', point: { x: 90 } });
+    expect(p.route.name).toBe('B');
+  });
   it('emite EVENTO una vez después de la espera y antes del siguiente punto', () => {
     const points = route(RouteType.Loop, 2).points;
     const p = new Patrol({ name: 'r', type: RouteType.Loop, points: [{ ...points[0], x: 0, y: 0, z: 0, wait: 2, angle: 0, vel: 2, event: 'REAC' }, { ...points[1], x: 10, y: 0, z: 0, wait: 0, angle: 0, vel: 2 }] });

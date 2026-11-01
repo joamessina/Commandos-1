@@ -1,8 +1,7 @@
 /**
  * Rutas de `acPatrulla` (docs/lectura/patrulla.md): lectura de `.PATRULLA [ [ .RUTA … .VEL … .TIPORUTA … .NOMBRE … ] ]` y el recorrido
  * punto a punto con las fases de llegada (girar a `ANGULO`, esperar `ESPERA` ciclos) y los tipos de ruta.
- * shortcut: sin contenedores (`CONT`/`CASA`), sin `ESPERAEVENTO`/`ENLAZAR` ni cambio de ruta por mensajes; el soldado usa la primera ruta
- *           que pasa el filtro de dificultad. Cuándo mejorar: al portar casas/cuarteles y los eventos de misión.
+ * shortcut: sin contenedores (`CONT`/`CASA`) ni su espera de salida al cambiar de ruta. Cuándo mejorar: al portar habitáculos completos.
  */
 import { asList, asNumber, asNumbers, asText, find, type Node } from '../formats/clave.ts';
 import type { Difficulty } from './world.ts';
@@ -23,6 +22,8 @@ export interface RoutePoint {
   readonly vel: number;
   /** Evento de misión emitido después de esperar en el punto. */
   readonly event?: string;
+  /** Punto donde se admite un cambio de ruta pendiente. */
+  readonly link?: boolean;
 }
 
 export interface Route {
@@ -71,6 +72,7 @@ export function parseRoutes(params: readonly Node[], difficulty: Difficulty): Ro
       const xyz = asNumbers(find(pl ?? [], '.XYZ'));
       if (!pl || xyz?.length !== 3) continue;
       const event = asText(find(pl, '.EVENTO'));
+      const link = asNumber(find(pl, '.ENLAZAR'));
       points.push({
         x: xyz[0] ?? 0,
         y: xyz[1] ?? 0,
@@ -79,6 +81,7 @@ export function parseRoutes(params: readonly Node[], difficulty: Difficulty): Ro
         angle: asNumber(find(pl, '.ANGULO')) ?? 0,
         vel: asNumber(find(pl, '.VELOCIDADTRAMO')) ?? vel,
         ...(event ? { event: event.toUpperCase() } : {}),
+        ...(link ? { link: true } : {}),
       });
     }
     out.push({ name, type: routeType(asText(find(rt, '.TIPORUTA'))), points });
@@ -106,11 +109,26 @@ export class Patrol {
   private phase: 'go' | 'face' | 'wait' | 'event' | 'done' = 'go';
   private wait = 0;
   private sent = false;
-  readonly route: Route;
+  route: Route;
+  private readonly routes: readonly Route[];
+  private waitingForEvent: boolean;
+  private requested: Route | null = null;
 
-  constructor(route: Route) {
+  constructor(route: Route, alternatives: readonly Route[] = [], waitEvent = false) {
     this.route = route;
+    this.routes = [route, ...alternatives];
+    this.waitingForEvent = waitEvent;
     if (route.points.length === 0) this.phase = 'done';
+  }
+
+  /** `MSGA_TRIGGER_REACT`: solicita la ruta cuyo nombre coincide con el evento. */
+  trigger(event: string): boolean {
+    if (this.phase === 'done' && this.route.type === RouteType.Exit) return false;
+    const candidates = this.routes.filter((r) => r.name.toUpperCase() === event.toUpperCase());
+    const next = candidates[candidates.length - 1];
+    if (!next || (next === this.route && !this.waitingForEvent)) return false;
+    this.requested = next;
+    return true;
   }
 
   get target(): RoutePoint | null {
@@ -133,6 +151,17 @@ export class Patrol {
 
   /** Un ciclo: devuelve lo que hay que hacer. `arrived` = el motor llegó al destino. */
   step(arrived: boolean): PatrolStep {
+    if (this.requested && (this.waitingForEvent || (this.target?.link && (arrived || this.phase !== 'go')))) {
+      this.route = this.requested;
+      this.requested = null;
+      this.waitingForEvent = false;
+      this.idx = 0;
+      this.previous = 0;
+      this.dir = 1;
+      this.phase = 'go';
+      this.sent = false;
+    }
+    if (this.waitingForEvent) return { kind: 'idle' };
     const pt = this.target;
     if (!pt || this.phase === 'done') return { kind: 'idle' };
     if (this.phase === 'event') return this.advance();

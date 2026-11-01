@@ -22,7 +22,7 @@ import { destroyLinkedHouses, House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, Traps } from '../engine/traps.ts';
-import { ExitSchedule, formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
+import { eventList, ExitSchedule, formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
 import { canThrow, type Pack, type Throwable } from '../engine/throwing.ts';
 import { norm360 } from '../engine/walk.ts';
@@ -329,6 +329,7 @@ async function load(): Promise<void> {
   };
   const props: Prop[] = [];
   const soldiers: SoldierView[] = [];
+  const routeListeners: { soldier: Soldier; events: readonly string[] }[] = [];
   const nestOf = new Map<Soldier, Elem>();
   let bombCount = 0;
   const barrelProps: { elem: Elem; prop: Prop }[] = [];
@@ -382,7 +383,8 @@ async function load(): Promise<void> {
       const unit = new Unit(e.token, a.anm, e.x, e.y, e.z, e.angle, sectors);
       if (e.height > 0) unit.height = e.height;
       const pat = e.actions.find((x) => x.name.toUpperCase() === 'ACPATRULLA');
-      const route = pat ? (parseRoutes(pat.params, diffSel.value as Difficulty)[0] ?? null) : null;
+      const routes = pat ? parseRoutes(pat.params, diffSel.value as Difficulty) : [];
+      const route = routes[0] ?? null;
       const nest = e.actions.some((x) => x.name.toUpperCase() === 'ACMETRALLERO');
       const vig = e.actions.find((x) => x.name.toUpperCase() === 'ACVIGILAR')?.params ?? [];
       const sweep = asNumber(find(vig, '.ANGBARRIDO'));
@@ -390,6 +392,8 @@ async function load(): Promise<void> {
       const investigateSpeed = asNumber(find(bap2?.params ?? [], '.VELDEJARPATRULLA'));
       const soldier = new Soldier(e.token, unit, route, {
         ...vistaOf(e.block),
+        alternateRoutes: routes.slice(1),
+        waitRouteEvent: (asNumber(find(pat?.params ?? [], '.ESPERAEVENTO')) ?? 0) !== 0,
         ...(e.actions.some((x) => /^ac(bap|banpe)1$/i.test(x.name)) ? { brain: 'base' as const } : {}),
         ...(bap2 ? { brain: 'route' as const } : {}),
         ...(investigateSpeed === undefined ? {} : { investigateSpeed }),
@@ -402,6 +406,8 @@ async function load(): Promise<void> {
         elliptical: asNumber(find(vig, '.VISTAELIPTICA')) !== 0,
       });
       soldiers.push({ soldier, sprites: a.sprites });
+      const events = eventList(find(e.block, '.REACTIVIDADES'));
+      if (events.length) routeListeners.push({ soldier, events });
       if (nest && e.parent?.anim) nestOf.set(soldier, e.parent);
     } else if (e.parent?.cls === 'BICHOALIADO') {
       // lo que cuelga de un comando es su inventario (las 4 bombas del ARTIFIC), no un objeto del mapa
@@ -447,6 +453,7 @@ async function load(): Promise<void> {
   }
   const spawned = new Set<string>();
   const pendingGroups = new Map<string, GroupDef>();
+  const groupLeaders = new Map<string, Soldier>();
   const groupTicks: (() => void)[] = [];
   const spawnGroup = (def: GroupDef): void => {
     if (spawned.has(def.token)) return;
@@ -463,8 +470,9 @@ async function load(): Promise<void> {
       if (!a) return false;
       const f = i === 0 ? null : formationOf(i - 1, def.columns, def.n, def.formX);
       const follow = f ? { leader: () => { const lead = made[f.leader + 1]; return !lead || lead.dead ? null : { x: lead.x, y: lead.y, ang: lead.unit.body.ang, speed: lead.unit.speed }; }, lateral: f.lateral, back: def.formY } : undefined;
-      const s = new Soldier(`${def.token}_${i.toString()}_${soldiers.length.toString()}`, new Unit(`${def.token}_${i.toString()}`, a.anm, pos.x, pos.y, pos.z, def.angle, sectors), i === 0 ? def.route : null, follow ? { follow } : {});
+      const s = new Soldier(`${def.token}_${i.toString()}_${soldiers.length.toString()}`, new Unit(`${def.token}_${i.toString()}`, a.anm, pos.x, pos.y, pos.z, def.angle, sectors), i === 0 ? def.route : null, follow ? { follow } : { alternateRoutes: def.routes.slice(1) });
       made[i] = s;
+      if (i === 0) groupLeaders.set(def.token, s);
       soldiers.push({ soldier: s, sprites: a.sprites });
       battle.soldiers.push(s);
       return true;
@@ -493,6 +501,7 @@ async function load(): Promise<void> {
           if (!next) {
             if (!made.every((s) => s.dead)) return;
             retired = true;
+            groupLeaders.delete(def.token);
             if (house && def.regeneratePatrol) house.recruitPatrol(def.n, (n) => {
               if (!asset(def.animCabo) || (n > 0 && !asset(def.animSoldier))) return false;
               const replacement = { ...def, n };
@@ -510,7 +519,8 @@ async function load(): Promise<void> {
           const index = made.indexOf(next);
           made[index] = leader;
           made[0] = next;
-          next.promote(def.route);
+          next.promote(def.route, def.routes.slice(1));
+          groupLeaders.set(def.token, next);
           leader = next;
           returning = false;
         }
@@ -538,15 +548,17 @@ async function load(): Promise<void> {
     });
   };
   const raise = (event: string): void => {
+    for (const listener of routeListeners) if (listener.events.includes(event)) listener.soldier.triggerRoute(event);
     for (const initial of groups) {
       const def = pendingGroups.get(initial.token) ?? initial;
+      if (def.reactEvents.includes(event)) groupLeaders.get(def.token)?.triggerRoute(event);
       if (def.home && def.exitEvents.includes(event)) {
         spawnGroup(def);
         if (spawned.has(def.token)) pendingGroups.delete(def.token);
       }
     }
   };
-  battle.onMissionEvent = raise; // shortcut: solo despacha salidas de grupos; mejorar al portar TRIGGER_REACT y escuchas de misión.
+  battle.onMissionEvent = raise; // shortcut: solo entrega a rutas y salidas de grupos; mejorar al portar otros receptores de misión.
   for (const def of groups) if (!def.home && def.exitEvents.length === 0) spawnGroup(def);
   if (sec && sectors) {
     const zones = new ZoneEvents(sec, parseZoneSensors(misText));

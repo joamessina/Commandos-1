@@ -24,7 +24,9 @@ export interface GroupDef {
   /** Casa de la que sale (null = empieza en la ruta). */
   readonly home: string | null;
   readonly exitEvents: readonly string[];
+  readonly reactEvents: readonly string[];
   readonly route: Route | null;
+  readonly routes: readonly Route[];
   readonly animCabo: string;
   readonly animSoldier: string;
   readonly columns: number;
@@ -85,7 +87,7 @@ export function parseGroups(misText: string, difficulty: Difficulty): GroupDef[]
     const l = asList(g);
     const token = l ? asText(find(l, '.TOKEN')) : undefined;
     if (!l || !token) continue;
-    const route = parseRoutes(['.PATRULLA', asList(find(l, '.RUTADEF')) ?? []], difficulty)[0] ?? null;
+    const routes = parseRoutes(['.PATRULLA', asList(find(l, '.RUTADEF')) ?? []], difficulty);
     const xyz = asNumbers(find(l, '.XYZ'));
     out.push({
       token,
@@ -96,7 +98,9 @@ export function parseGroups(misText: string, difficulty: Difficulty): GroupDef[]
       angle: asNumber(find(l, '.ANGULO')) ?? 0,
       home: asText(find(l, '.HOME')) ?? null,
       exitEvents: eventList(find(l, '.EXITHOME_EVENTS')),
-      route,
+      reactEvents: eventList(find(l, '.REACT_EVENTS')),
+      route: routes[0] ?? null,
+      routes,
       animCabo: asText(find(l, '.ANIMCABO')) ?? 'CABO',
       animSoldier: asText(find(l, '.ANIMSOLDADO')) ?? 'ALEGABAR',
       columns: asNumber(find(l, '.NCOLUMNS')) ?? 2,

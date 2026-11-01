@@ -16,4 +16,7 @@ for (const entry of parseContainer(bytes).filter((e) => /MISIONES[\\/].*\.MIS$/i
   };
   walk(parseClave(data));
   if (events.length) console.log(entry.path, events.join(','));
+  const waits = [...data.matchAll(/\.ESPERAEVENTO\s+([^\s\]]+)/gi)].filter((m) => m[1] !== '0');
+  const links = [...data.matchAll(/\.ENLAZAR\s+([^\s\]]+)/gi)].filter((m) => m[1] !== '0');
+  if (waits.length || links.length) console.log(entry.path, 'ESPERAEVENTO', waits.length, 'ENLAZAR', links.length);
 }

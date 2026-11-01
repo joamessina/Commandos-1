@@ -87,6 +87,19 @@ const run = (s: Soldier, w: SoldierWorld, n: number): void => {
 };
 
 describe('Soldier', () => {
+  it('una patrulla que espera evento empieza la ruta que recibe por TRIGGER_REACT', () => {
+    const a = { ...route(100), name: 'A' };
+    const b = { ...route(200), name: 'B' };
+    const s = new Soldier('S', unit(0, 0), a, { alternateRoutes: [b], waitRouteEvent: true });
+    const w = mkWorld([]).world;
+    s.tick(w);
+    expect(s.unit.target).toBeNull();
+    expect(s.triggerRoute('OTRA')).toBe(false);
+    expect(s.triggerRoute('b')).toBe(true);
+    s.tick(w);
+    expect(s.unit.target?.x).toBe(200);
+    expect(new Soldier('SIN_RUTA', unit(0, 0), null).triggerRoute('B')).toBe(false);
+  });
   it('BAP2 avisa al interrumpir la búsqueda alrededor de un cadáver', () => {
     const commandos: Unit[] = [];
     const voices: string[] = [];
