@@ -29,7 +29,8 @@ export class House {
   readonly entry: { x: number; y: number; z: number };
   readonly exit: { x: number; y: number; z: number };
   /** `NUMREGENSOLDIERS` (cuartel si > 0). */
-  readonly regen: number;
+  private reserve: number;
+  private readonly barracksKind: boolean;
   readonly jail: boolean;
   readonly box: HouseBox;
   readonly occupants: Unit[] = [];
@@ -44,14 +45,26 @@ export class House {
     const ex = asNumbers(find(params, '.XYZSALIDA'));
     this.entry = en?.length === 3 ? { x: en[0] ?? 0, y: en[1] ?? 0, z: en[2] ?? 0 } : { x: e.x, y: e.y, z: e.z };
     this.exit = ex?.length === 3 ? { x: ex[0] ?? 0, y: ex[1] ?? 0, z: ex[2] ?? 0 } : this.entry;
-    this.regen = Number(String(find(params, '.NUMREGENSOLDIERS') ?? 0)) || 0;
+    this.reserve = Number(String(find(params, '.NUMREGENSOLDIERS') ?? 0)) || 0;
+    this.barracksKind = this.reserve > 0;
     this.jail = Number(String(find(params, '.CARCEL') ?? 0)) > 0;
     const b = asNumbers(find(e.block, '.BOXSELECCIONREL'));
     this.box = b?.length === 4 ? { x: b[0] ?? 0, y: b[1] ?? 0, w: b[2] ?? 0, h: b[3] ?? 0 } : { x: -20, y: -50, w: 40, h: 50 };
   }
 
   get barracks(): boolean {
-    return this.regen > 0;
+    return this.barracksKind;
+  }
+
+  get regen(): number {
+    return this.reserve;
+  }
+
+  /** `FUN_005A2AD0`: solo descuenta una reserva cuando se creó el patrullero. */
+  recruit(create: () => boolean): boolean {
+    if (this.reserve <= 0 || !create()) return false;
+    this.reserve--;
+    return true;
   }
 
   /** Un comando entra (si hay sitio): queda oculto. */
@@ -77,6 +90,7 @@ export class House {
 
   /** Muere la casa: los de dentro mueren (BOMBA 100). */
   destroy(): void {
+    this.reserve = 0;
     for (const u of this.occupants.splice(0)) {
       u.inHouse = null;
       u.hit(1e9);

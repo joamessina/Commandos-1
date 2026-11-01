@@ -5,11 +5,12 @@
  *    con `.HOME` y `.EXITHOME_EVENTS` el grupo está dentro de la casa y sale al recibir uno de esos eventos; sin `.HOME` empieza en su ruta desde el principio.
  *  - `.SENSORES_SND_ZONA [ [ .ZONA nombre .MENSAJE ev ] ]`: la zona es un grupo con nombre del `.SEC` (lista de sectores); un ruido de peligro dentro de ella lanza el evento.
  *  - Formación en marcha: `n = max(1, min(NCOLUMNS, vivos))`; el patrullero `idx < n` sigue al cabo con lateral `FORMX·(idx − (n−1)/2)` y `FORMY` detrás; los demás siguen al patrullero `idx − n` con lateral 0.
- * shortcut: NSOLDIERS cuenta al cabo (el exe no se comprobó); salen todos a la vez; sin regeneración (`NUMREGENSOLDIERS` de la casa), sin posiciones de ataque ni `NSOLDIERSATTACK`;
- *           el evento sale de cualquier ruido de peligro (disparo de pistola o de soldado) dentro de la zona, no del sensor de sonido real (`FUN_006FFDD0`, no leído); el cabo dispara como cualquier soldado.
+ * shortcut: salen todos a la vez, sin regenerar grupos enteros ni posiciones de ataque o `NSOLDIERSATTACK`;
+ *           el evento sale de cualquier ruido de peligro dentro de la zona, no del sensor real; el cabo dispara como cualquier soldado. Mejorar al portar AcpSargento y el sensor.
  */
 import { asList, asNumber, asText, find, parseClave, type Node } from '../formats/clave.ts';
 import type { Sec } from '../formats/sec.ts';
+import type { House } from './house.ts';
 import { parseRoutes, type Route } from './patrol.ts';
 import type { Difficulty } from './world.ts';
 
@@ -25,6 +26,18 @@ export interface GroupDef {
   readonly columns: number;
   readonly formX: number;
   readonly formY: number;
+}
+
+/** La fábrica `FUN_005A2430` crea un cabo y después `NSOLDIERS` patrulleros. */
+export function groupSize(def: Pick<GroupDef, 'n'>): number {
+  return def.n + 1;
+}
+
+/** `FUN_005A3500`: intenta reponer cada baja hasta agotar la reserva o fallar la creación. */
+export function recruitMissing(house: Pick<House, 'recruit'>, missing: number, create: () => boolean): number {
+  let recruited = 0;
+  while (recruited < missing && house.recruit(create)) recruited++;
+  return recruited;
 }
 
 /** `ev` o `[ ev ev ]` -> lista de códigos de evento. */

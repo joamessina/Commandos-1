@@ -22,7 +22,7 @@ import { House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, Traps } from '../engine/traps.ts';
-import { formationOf, type GroupDef, parseGroups, parseZoneSensors, ZoneEvents } from '../engine/groups.ts';
+import { formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, ZoneEvents } from '../engine/groups.ts';
 import { isWater, SectorMap } from '../engine/sectors.ts';
 import { canThrow, type Pack, type Throwable } from '../engine/throwing.ts';
 import { norm360 } from '../engine/walk.ts';
@@ -111,6 +111,7 @@ interface Prop {
 }
 interface Game {
   readonly houses: House[];
+  readonly tickGroups: () => void;
   /** Nido de ametralladora: su gráfico dispara cuando el artillero dispara. */
   readonly nests: { readonly soldier: Soldier; readonly prop: Prop }[];
   readonly ladders: Ladder[];
@@ -436,6 +437,7 @@ async function load(): Promise<void> {
   // Grupos de `.PATRULLAS` (cabo + patrulleros) y eventos de zona de ruido (engine/groups.ts): los de casa salen con el evento, los libres empiezan en su ruta
   const groups = parseGroups(misText, diffSel.value as Difficulty);
   const spawned = new Set<string>();
+  const groupTicks: (() => void)[] = [];
   const spawnGroup = (def: GroupDef): void => {
     if (spawned.has(def.token)) return;
     const house = def.home ? houses.find((h) => h.token.toUpperCase() === def.home?.toUpperCase()) : undefined;
@@ -444,16 +446,45 @@ async function load(): Promise<void> {
     if (!at) return;
     spawned.add(def.token);
     const made: Soldier[] = [];
-    for (let i = 0; i < def.n; i++) {
+    const make = (i: number, pos: { x: number; y: number; z: number }): boolean => {
       const a = asset(i === 0 ? def.animCabo : def.animSoldier);
-      if (!a) break;
-      const f = i === 0 ? null : formationOf(i - 1, def.columns, def.n - 1, def.formX);
-      const lead = f ? made[f.leader + 1] : undefined;
-      const follow = f && lead ? { leader: () => (lead.dead ? null : { x: lead.x, y: lead.y, ang: lead.unit.body.ang, speed: lead.unit.speed }), lateral: f.lateral, back: def.formY } : undefined;
-      const s = new Soldier(`${def.token}_${i.toString()}`, new Unit(`${def.token}_${i.toString()}`, a.anm, at.x, at.y, at.z, 0, sectors), i === 0 ? def.route : null, follow ? { follow } : {});
-      made.push(s);
+      if (!a) return false;
+      const f = i === 0 ? null : formationOf(i - 1, def.columns, def.n, def.formX);
+      const follow = f ? { leader: () => { const lead = made[f.leader + 1]; return !lead || lead.dead ? null : { x: lead.x, y: lead.y, ang: lead.unit.body.ang, speed: lead.unit.speed }; }, lateral: f.lateral, back: def.formY } : undefined;
+      const s = new Soldier(`${def.token}_${i.toString()}_${soldiers.length.toString()}`, new Unit(`${def.token}_${i.toString()}`, a.anm, pos.x, pos.y, pos.z, 0, sectors), i === 0 ? def.route : null, follow ? { follow } : {});
+      made[i] = s;
       soldiers.push({ soldier: s, sprites: a.sprites });
       battle.soldiers.push(s);
+      return true;
+    };
+    for (let i = 0; i < groupSize(def); i++) if (!make(i, at)) break;
+    if (house) {
+      // shortcut: el cabo usa la orden de investigar para volver al cuartel y no hereda el mando; mejorar al portar AcpSargento completo.
+      let returning = false;
+      groupTicks.push(() => {
+        const leader = made[0];
+        if (!leader || leader.dead || leader.down || leader.controlled || house.regen <= 0) return;
+        const alive = made.slice(1).filter((s) => !s.dead).length;
+        const missing = def.n - alive;
+        if (missing <= 0) { returning = false; return; }
+        if (leader.target || leader.order === Order.Aim || leader.order === Order.Shoot) { returning = false; return; }
+        if (returning && leader.order !== Order.Investigate) returning = false;
+        if (!returning) {
+          if (alive !== 0 && alive >= missing) return;
+          if (leader.order !== Order.Patrol && leader.order !== Order.Return) return;
+          leader.hear(house.entry.x, house.entry.y);
+          returning = true;
+        }
+        if (Math.hypot(leader.x - house.entry.x, leader.y - house.entry.y) >= 2) {
+          if (!leader.unit.target) returning = false;
+          return;
+        }
+        recruitMissing(house, missing, () => {
+          const i = made.findIndex((s, index) => index > 0 && s.dead);
+          return i > 0 && make(i, house.entry);
+        });
+        returning = false;
+      });
     }
   };
   const raise = (event: string): void => {
@@ -467,7 +498,7 @@ async function load(): Promise<void> {
       if (s) for (const ev of zones.at(sec.sectors.indexOf(s))) raise(ev);
     };
   }
-  game = { houses, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
@@ -594,6 +625,7 @@ function setupStage(): void {
     last = now;
     while (acc >= TICK) {
       if (!g.battle.lost && !g.won) g.battle.tick();
+      if (!g.battle.lost && !g.won) g.tickGroups();
       g.demo.tick();
       tickWorld(g);
       for (const h of g.houses) h.tick();

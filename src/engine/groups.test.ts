@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eventList, followPoint, formationOf, parseGroups, parseZoneSensors, ZoneEvents } from './groups.ts';
+import { eventList, followPoint, formationOf, groupSize, parseGroups, parseZoneSensors, recruitMissing, ZoneEvents } from './groups.ts';
 
 const MIS = `.MISSION [
   .SENSORES_SND_ZONA [ [ .ZONA CAMPAMENTO .MENSAJE REAC ] [ .ZONA OTRA .MENSAJE ZOIN ] ]
@@ -12,6 +12,26 @@ const MIS = `.MISSION [
 ]`;
 
 describe('groups', () => {
+  it('cuenta el cabo además de los patrulleros, incluso si no hay patrulleros', () => {
+    expect(groupSize({ n: 3 })).toBe(4);
+    expect(groupSize({ n: 0 })).toBe(1);
+  });
+
+  it('repone solo las bajas posibles y detiene el intento si falla la creación', () => {
+    let reserve = 2;
+    const house = { recruit: (create: () => boolean): boolean => {
+      if (!reserve || !create()) return false;
+      reserve--;
+      return true;
+    } };
+    let made = 0;
+    expect(recruitMissing(house, 0, () => { made++; return true; })).toBe(0);
+    expect(recruitMissing(house, 4, () => { made++; return true; })).toBe(2);
+    expect([reserve, made]).toEqual([0, 2]);
+    reserve = 2;
+    expect(recruitMissing(house, 2, () => false)).toBe(0);
+    expect(reserve).toBe(2);
+  });
   it('lee los grupos de .PATRULLAS con sus valores por defecto', () => {
     const g = parseGroups(MIS, 'FACIL');
     expect(g).toHaveLength(2);

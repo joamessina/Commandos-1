@@ -28,6 +28,21 @@ describe('parseHouses', () => {
 });
 
 describe('House', () => {
+  it('descuenta una reserva únicamente al crear un patrullero; al destruirse no quedan reservas', () => {
+    const cuartel = parseHouses(flatten(loadWorld(MIS, { difficulty: 'FACIL', macro: (n) => ({ CASA: MAC_CASA, CUARTEL: MAC_CUARTEL })[n] })))[1];
+    expect(cuartel?.recruit(() => false)).toBe(false);
+    expect(cuartel?.regen).toBe(8);
+    for (let i = 0; i < 8; i++) expect(cuartel?.recruit(() => true)).toBe(true);
+    expect(cuartel?.regen).toBe(0);
+    expect(cuartel?.barracks).toBe(true);
+    let called = false;
+    expect(cuartel?.recruit(() => { called = true; return true; })).toBe(false);
+    expect(called).toBe(false);
+    const otro = parseHouses(flatten(loadWorld(MIS, { difficulty: 'FACIL', macro: (n) => ({ CASA: MAC_CASA, CUARTEL: MAC_CUARTEL })[n] })))[1];
+    otro?.destroy();
+    expect(otro?.regen).toBe(0);
+    expect(otro?.recruit(() => true)).toBe(false);
+  });
   it('entrar oculta al comando (los soldados no lo ven) y salir lo deja en el punto de salida', () => {
     const [casa] = houses;
     const u = cmd();
