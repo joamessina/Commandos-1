@@ -54,7 +54,7 @@ export interface AttackWorld {
   /** Ruido de un disparo en (x,y) con su radio: los soldados a menos de ese radio lo oyen. */
   readonly noise: (x: number, y: number, radius: number) => void;
   /** Rastro visual de un disparo. */
-  readonly onShot: (fromX: number, fromY: number, toX: number, toY: number) => void;
+  readonly onShot: (fromX: number, fromY: number, toX: number, toY: number, weapon: Weapon) => void;
 }
 
 export class Attack {
@@ -113,7 +113,7 @@ export class Attack {
     if (!MELEE.has(this.weapon)) {
       const a = this.weapon === 'MIRILLA' ? 'DISPARARIFLE' : this.weapon === 'ARPON' ? 'DISPARAARPON' : 'DISPARAPISTOLA';
       if (u.anim.has(a) && !u.boat) u.anim.set(a);
-      w.onShot(b.x, b.y, tg.x, tg.y);
+      w.onShot(b.x, b.y, tg.x, tg.y, this.weapon);
       if (this.weapon === 'PISTOLA') w.noise(b.x, b.y, PISTOL_NOISE);
       if (this.weapon === 'ARPON') u.coolDown = ARPON_RELOAD;
     }

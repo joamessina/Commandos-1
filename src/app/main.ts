@@ -40,7 +40,9 @@ import { asNumber, find } from '../formats/clave.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
 import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
+import { Sfx } from '../render/audio.ts';
 import { SpriteCache } from '../render/sprites.ts';
+import { GameSound } from './gamesound.ts';
 import type { AnmFrame } from '../formats/anm.ts';
 
 const byId = (id: string): HTMLElement => {
@@ -49,6 +51,8 @@ const byId = (id: string): HTMLElement => {
   return el;
 };
 const dirInput = byId('dir') as HTMLInputElement;
+const sfx = new Sfx();
+let sound: GameSound | null = null;
 const mapSel = byId('map') as HTMLSelectElement;
 const waterBox = byId('water') as HTMLInputElement;
 const zoomSel = byId('zoom') as HTMLSelectElement;
@@ -61,6 +65,8 @@ interface Loaded {
   readonly entries: ReadonlyMap<string, DirEntry>;
   /** FASE000N -> lector de los bytes del WAD (File del usuario o, en desarrollo, /__game). */
   readonly wads: ReadonlyMap<string, () => Promise<ArrayBuffer>>;
+  /** Archivos sueltos de `DATOS/MUSICA/` (en minúsculas) -> lector de sus bytes. */
+  readonly music: ReadonlyMap<string, () => Promise<ArrayBuffer>>;
 }
 interface UnitView {
   readonly unit: Unit;
@@ -174,6 +180,7 @@ interface Game {
   result: { score: Score; text: string; victory: boolean; kills: number } | null;
   /** Ciclo en que murieron todos (el fin se muestra `DEFEAT_DELAY` ciclos después). */
   lostAt: number | null;
+  readonly sound: GameSound;
 }
 
 let loaded: Loaded | null = null;
@@ -224,17 +231,20 @@ async function onFolder(): Promise<void> {
   say('Leyendo WAR_MP.DIR…');
   const dir = new Uint8Array(await dirFile.arrayBuffer());
   const wads = new Map<string, () => Promise<ArrayBuffer>>();
+  const music = new Map<string, () => Promise<ArrayBuffer>>();
   for (const f of files) {
     const m = /map_mp\/(FASE\d{4})\.WAD$/i.exec(f.webkitRelativePath);
     if (m?.[1]) wads.set(m[1].toUpperCase(), () => f.arrayBuffer());
+    const mu = /DATOS\/musica\/([^/]+)$/i.exec(f.webkitRelativePath);
+    if (mu?.[1]) music.set(mu[1].toLowerCase(), () => f.arrayBuffer());
   }
-  await start(dir, wads);
+  await start(dir, wads, music);
 }
 
-async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffer>>): Promise<void> {
+async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffer>>, music: Map<string, () => Promise<ArrayBuffer>>): Promise<void> {
   const entries = new Map<string, DirEntry>();
   for (const e of parseContainer(dir)) entries.set(e.path.toUpperCase(), e);
-  loaded = { dir, entries, wads };
+  loaded = { dir, entries, wads, music };
   const maps = [...wads.keys()].sort().map((k) => k.slice(4)).filter((n) => entries.has(`DATOS/MISIONES/MAPA${n}.VOL`));
   mapSel.replaceChildren(...maps.map((n) => new Option(`Mapa ${n}`, n)));
   mapSel.disabled = maps.length === 0;
@@ -568,11 +578,14 @@ async function load(): Promise<void> {
       if (s) for (const ev of zones.at(sec.sectors.indexOf(s))) raise(ev);
     };
   }
-  game = { houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  sound?.stop();
+  sound = new GameSound(sfx, { effect: (name) => bytes(`DATOS/RECURSOS/SONIDO/WAVE/${name.toUpperCase()}`), music: async (name) => { const r = loaded?.music.get(name.toLowerCase()); return r ? new Uint8Array(await r()) : undefined; } }, project);
+  game = { houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
+  sound.init(misText).catch(() => undefined); // sin ambiente ni música si algo falla (no frena la misión)
   say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.${import.meta.env.DEV ? ' Comandos invencibles (Alt+I), Ctrl+X teletransporta, Ctrl+Alt+N termina la misión.' : ''}`);
 }
 
@@ -697,6 +710,7 @@ function setupStage(): void {
       if (!g.battle.lost && !g.won) g.battle.tick();
       if (!g.battle.lost && !g.won) g.tickGroups();
       g.demo.tick();
+      g.sound.tick({ camX: g.camX, camY: g.camY, tracers: g.battle.tracers, blasts: g.demo.blasts, end: g.result ? (g.result.victory ? 'win' : 'lose') : null });
       destroyLinkedHouses(g.houses, g.demo.destroyed);
       tickWorld(g);
       for (const h of g.houses) h.tick();
@@ -1657,7 +1671,9 @@ if (import.meta.env.DEV) {
       const m = /(FASE\d{4})\.WAD$/i.exec(f);
       if (m?.[1]) wads.set(m[1].toUpperCase(), async () => (await fetch(`/__game/DATOS/recursos/bmps/map_mp/${f}`)).arrayBuffer());
     }
-    await start(dir, wads);
+    const music = new Map<string, () => Promise<ArrayBuffer>>();
+    for (const f of ['fases.wav', 'fases02.wav', 'mcomplet.wav', 'muerte.wav']) music.set(f, async () => (await fetch(`/__game/DATOS/musica/${f}`)).arrayBuffer());
+    await start(dir, wads, music);
   }));
 }
 dirInput.addEventListener('change', guarded(onFolder));
@@ -1668,6 +1684,12 @@ zoomSel.addEventListener('change', () => {
   setZoom(Number(zoomSel.value));
 });
 window.addEventListener('resize', resize);
+window.addEventListener('pointerdown', () => {
+  sfx.unlock(); // el navegador solo deja sonar tras un gesto
+});
+window.addEventListener('keydown', () => {
+  sfx.unlock();
+});
 window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   keys.add(k);

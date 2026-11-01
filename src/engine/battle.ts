@@ -12,9 +12,14 @@ import type { Unit } from './unit.ts';
 export interface Tracer extends Shot {
   ttl: number;
   readonly enemy: boolean;
+  /** Código de sonido del disparo (tabla del exe, engine/sound-table.ts): `PIPA` pistola, `MIRI` mirilla y arpón, `FUSL` fusil alemán, `NIDO` nido. */
+  readonly tag?: string;
 }
 
+const SHOT_TAG: Readonly<Partial<Record<Weapon, string>>> = { PISTOLA: 'PIPA', MIRILLA: 'MIRI', ARPON: 'MIRI' };
+
 const TRACER_CYCLES = 4;
+const NEST_NOISE = 500;
 /** Distancia a la que la piedra alcanza a un soldado como víctima (cilindro de R10 del bicho). */
 const STONE_HIT = 14;
 
@@ -77,7 +82,7 @@ export class Battle {
           this.noise(x, y, r);
           this.onDanger?.(x, y);
         },
-        onShot: (fx, fy, tx, ty) => this.tracers.push({ fromX: fx, fromY: fy, toX: tx, toY: ty, hit: true, ttl: TRACER_CYCLES, enemy: false }),
+        onShot: (fx, fy, tx, ty, weapon) => this.tracers.push({ fromX: fx, fromY: fy, toX: tx, toY: ty, hit: true, ttl: TRACER_CYCLES, enemy: false, ...(SHOT_TAG[weapon] ? { tag: SHOT_TAG[weapon] } : {}) }),
       });
       if (a.done) this.attacks.delete(u);
     }
@@ -101,7 +106,7 @@ export class Battle {
           if (voice === 'ALRM') this.onDanger?.(from.x, from.y);
         },
         onShot: (from, shot) => {
-          this.tracers.push({ ...shot, ttl: TRACER_CYCLES, enemy: true });
+          this.tracers.push({ ...shot, ttl: TRACER_CYCLES, enemy: true, tag: from.noiseRadius === NEST_NOISE ? 'NIDO' : 'FUSL' }); // radio 500 = nido, 400 = fusil (tabla de ruidos 0x821DE0)
           this.onDanger?.(shot.fromX, shot.fromY);
           for (const o of this.soldiers) if (o !== from && Math.hypot(o.unit.body.x - shot.fromX, o.unit.body.y - shot.fromY) < from.noiseRadius) o.hear(shot.fromX, shot.fromY);
         },
