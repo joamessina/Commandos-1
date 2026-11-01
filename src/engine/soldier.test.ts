@@ -309,6 +309,18 @@ describe('artillero de nido (soldado fijo)', () => {
     expect(look.order).not.toBe(Order.Investigate);
   });
 
+  it('BAP2 investiga a velocidad 3 por defecto o a la velocidad definida en su acción', () => {
+    const a = new Soldier('A', unit(0, 0), null, { brain: 'route' });
+    const b = new Soldier('B', unit(0, 0), null, { brain: 'route', investigateSpeed: 4 });
+    a.hear(200, 0);
+    b.hear(200, 0);
+    expect(a.unit.speed).toBe(3);
+    expect(b.unit.speed).toBe(4);
+    a.tick(mkWorld([]).world);
+    b.tick(mkWorld([]).world);
+    expect(b.x).toBeGreaterThan(a.x);
+  });
+
   it('patrullero de un grupo: va al puesto detrás de su líder con lateral y se queda quieto si el líder ya no está', () => {
     const w: SoldierWorld = { commandos: [], sectors: null, rng: () => 0, onShot: () => undefined };
     let lead: { x: number; y: number; ang: number; speed: number | null } | null = { x: 400, y: 0, ang: 0, speed: 1.7 };

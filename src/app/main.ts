@@ -386,10 +386,13 @@ async function load(): Promise<void> {
       const nest = e.actions.some((x) => x.name.toUpperCase() === 'ACMETRALLERO');
       const vig = e.actions.find((x) => x.name.toUpperCase() === 'ACVIGILAR')?.params ?? [];
       const sweep = asNumber(find(vig, '.ANGBARRIDO'));
+      const bap2 = e.actions.find((x) => /^ac(bap|banpe)2$/i.test(x.name));
+      const investigateSpeed = asNumber(find(bap2?.params ?? [], '.VELDEJARPATRULLA'));
       const soldier = new Soldier(e.token, unit, route, {
         ...vistaOf(e.block),
         ...(e.actions.some((x) => /^ac(bap|banpe)1$/i.test(x.name)) ? { brain: 'base' as const } : {}),
-        ...(e.actions.some((x) => /^ac(bap|banpe)2$/i.test(x.name)) ? { brain: 'route' as const } : {}),
+        ...(bap2 ? { brain: 'route' as const } : {}),
+        ...(investigateSpeed === undefined ? {} : { investigateSpeed }),
         smokes: e.actions.some((x) => /^ac(bap2|banpe2)$/i.test(x.name)), // solo AcBap2/AcBanpe2 van a por la cajetilla
         tobacco: (asNumber(find(e.block, '.TENGOTABACO')) ?? 1) !== 0,
         ...(nest ? { fixed: true, noise: 500 } : {}),

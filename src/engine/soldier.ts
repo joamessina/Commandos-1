@@ -144,6 +144,7 @@ export class Soldier implements Target, Claimant {
   /** AcBap2/AcBanpe2: van a por la cajetilla y fuman; los de la base solo la anotan. */
   private readonly smokes: boolean;
   private readonly brain: 'base' | 'route' | null;
+  private readonly investigateSpeed: number | null;
   /** Radio del ruido de su disparo (fusil 400 `FUSL`; el nido `NIDO` 500). */
   readonly noiseRadius: number;
 
@@ -151,7 +152,7 @@ export class Soldier implements Target, Claimant {
     token: string,
     unit: Unit,
     route: Route | null,
-    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean; readonly follow?: Follow; readonly smokes?: boolean; readonly tobacco?: boolean; readonly brain?: 'base' | 'route' } = {},
+    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean; readonly follow?: Follow; readonly smokes?: boolean; readonly tobacco?: boolean; readonly brain?: 'base' | 'route'; readonly investigateSpeed?: number } = {},
   ) {
     this.fixed = opts.fixed ?? false;
     this.sweepAmp = opts.sweep ?? SWEEP_AMP;
@@ -160,6 +161,7 @@ export class Soldier implements Target, Claimant {
     this.follow = opts.follow ?? null;
     this.smokes = opts.smokes ?? false;
     this.brain = opts.brain ?? null;
+    this.investigateSpeed = this.brain === 'route' ? (opts.investigateSpeed ?? 3) : null;
     this.tobacco = opts.tobacco ?? false;
     this.noiseRadius = opts.noise ?? GUNSHOT_RADIUS;
     this.token = token;
@@ -367,7 +369,7 @@ export class Soldier implements Target, Claimant {
     this.order = Order.Investigate;
     this.spot = { x, y };
     this.timer = INVESTIGATE_WAIT;
-    this.unit.speed = null;
+    this.unit.speed = this.investigateSpeed;
     this.unit.goTo({ x, y }, false);
     this.moving = this.unit.target !== null;
     if (this.moving) this.unit.anim.set('ANDAR');
