@@ -7,7 +7,7 @@ const MIS = `.MISSION [
     [ .TOKEN PAT1 .NSOLDIERS 3 .HOME CASA_REACT_01 .EXITHOME_EVENTS REAC .STARTATHOME 1 .NCOLUMNS 1
       .RUTADEF [ [ .NOMBRE RUTA1 .TIPORUTA LOOP .RUTA [ [ .XYZ [ 10 20 0 ] ] [ .XYZ [ 30 40 0 ] ] ] .VEL 1.7 ] ]
       .ANIMCABO CABO .ANIMSOLDADO ALEGABAR ]
-    [ .TOKEN PAT2 .EXITHOME_EVENTS [ REAC ZOIN ] ]
+    [ .TOKEN PAT2 .XYZ [ 7 8 9 ] .ANGULO 90 .EXITHOME_EVENTS [ REAC ZOIN ] ]
   ]
 ]`;
 
@@ -67,7 +67,8 @@ describe('groups', () => {
     expect(g).toHaveLength(2);
     expect(g[0]).toMatchObject({ token: 'PAT1', n: 3, startAtHome: true, regeneratePatrol: false, home: 'CASA_REACT_01', exitEvents: ['REAC'], columns: 1, animCabo: 'CABO', animSoldier: 'ALEGABAR', formX: 40, formY: 30 });
     expect(g[0]?.route?.points.map((p) => [p.x, p.y, p.vel])).toEqual([[10, 20, 1.7], [30, 40, 1.7]]);
-    expect(g[1]).toMatchObject({ token: 'PAT2', n: 4, home: null, exitEvents: ['REAC', 'ZOIN'], route: null, columns: 2 });
+    expect(g[1]).toMatchObject({ token: 'PAT2', n: 4, home: null, position: { x: 7, y: 8, z: 9 }, angle: 90, exitEvents: ['REAC', 'ZOIN'], route: null, columns: 2 });
+    expect(g[0]).toMatchObject({ position: null, angle: 0 });
     expect(eventList('reac')).toEqual(['REAC']);
     expect(eventList(undefined)).toEqual([]);
   });

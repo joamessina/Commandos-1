@@ -8,7 +8,7 @@
  * shortcut: sin posiciones de ataque o `NSOLDIERSATTACK`;
  *           el evento sale de cualquier ruido de peligro dentro de la zona, no del sensor real; el cabo dispara como cualquier soldado. Mejorar al portar AcpSargento y el sensor.
  */
-import { asList, asNumber, asText, find, parseClave, type Node } from '../formats/clave.ts';
+import { asList, asNumber, asNumbers, asText, find, parseClave, type Node } from '../formats/clave.ts';
 import type { Sec } from '../formats/sec.ts';
 import type { House } from './house.ts';
 import { parseRoutes, type Route } from './patrol.ts';
@@ -19,6 +19,8 @@ export interface GroupDef {
   readonly n: number;
   readonly regeneratePatrol: boolean;
   readonly startAtHome: boolean;
+  readonly position: { readonly x: number; readonly y: number; readonly z: number } | null;
+  readonly angle: number;
   /** Casa de la que sale (null = empieza en la ruta). */
   readonly home: string | null;
   readonly exitEvents: readonly string[];
@@ -84,11 +86,14 @@ export function parseGroups(misText: string, difficulty: Difficulty): GroupDef[]
     const token = l ? asText(find(l, '.TOKEN')) : undefined;
     if (!l || !token) continue;
     const route = parseRoutes(['.PATRULLA', asList(find(l, '.RUTADEF')) ?? []], difficulty)[0] ?? null;
+    const xyz = asNumbers(find(l, '.XYZ'));
     out.push({
       token,
       n: asNumber(find(l, '.NSOLDIERS')) ?? 4,
       regeneratePatrol: (asNumber(find(l, '.REGENERATEPATROL')) ?? 0) !== 0,
       startAtHome: (asNumber(find(l, '.STARTATHOME')) ?? 0) !== 0,
+      position: xyz?.length === 3 ? { x: xyz[0] ?? 0, y: xyz[1] ?? 0, z: xyz[2] ?? 0 } : null,
+      angle: asNumber(find(l, '.ANGULO')) ?? 0,
       home: asText(find(l, '.HOME')) ?? null,
       exitEvents: eventList(find(l, '.EXITHOME_EVENTS')),
       route,

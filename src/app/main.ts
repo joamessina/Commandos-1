@@ -448,7 +448,8 @@ async function load(): Promise<void> {
     const house = def.home ? houses.find((h) => h.token.toUpperCase() === def.home?.toUpperCase()) : undefined;
     if (house?.destroyed) return;
     const p0 = def.route?.points[0];
-    const at = house ? house.exit : p0 ? { x: p0.x, y: p0.y, z: p0.z } : null;
+    // shortcut: sin XYZ usa el primer punto de ruta; mejorar al confirmar el valor inicial de la definición en el exe.
+    const at = house ? house.exit : def.position ?? (p0 ? { x: p0.x, y: p0.y, z: p0.z } : null);
     if (!at) return;
     spawned.add(def.token);
     const made: Soldier[] = [];
@@ -457,7 +458,7 @@ async function load(): Promise<void> {
       if (!a) return false;
       const f = i === 0 ? null : formationOf(i - 1, def.columns, def.n, def.formX);
       const follow = f ? { leader: () => { const lead = made[f.leader + 1]; return !lead || lead.dead ? null : { x: lead.x, y: lead.y, ang: lead.unit.body.ang, speed: lead.unit.speed }; }, lateral: f.lateral, back: def.formY } : undefined;
-      const s = new Soldier(`${def.token}_${i.toString()}_${soldiers.length.toString()}`, new Unit(`${def.token}_${i.toString()}`, a.anm, pos.x, pos.y, pos.z, 0, sectors), i === 0 ? def.route : null, follow ? { follow } : {});
+      const s = new Soldier(`${def.token}_${i.toString()}_${soldiers.length.toString()}`, new Unit(`${def.token}_${i.toString()}`, a.anm, pos.x, pos.y, pos.z, def.angle, sectors), i === 0 ? def.route : null, follow ? { follow } : {});
       made[i] = s;
       soldiers.push({ soldier: s, sprites: a.sprites });
       battle.soldiers.push(s);
