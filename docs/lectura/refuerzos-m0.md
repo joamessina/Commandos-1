@@ -12,6 +12,8 @@ El port cuenta el cabo por separado y repone patrulleros con una reserva compart
 
 También se colocó al jefe en `[1389,1656]`, separado de la entrada `[1392,1513]`, y se provocaron dos bajas: durante la ejecución en Chrome se repusieron ambas y la reserva bajó de 8 a 6. La posición se fijó desde desarrollo; no reemplaza la prueba completa jugando.
 
+Con un comando situado desde desarrollo cerca de un soldado y una orden de pistola del port, el blanco pasó de 100 a 60 de energía y la patrulla 1 salió mediante la alarma. La orden se emitió por el estado de desarrollo, no por clics del jugador.
+
 Al eliminar dos veces seguidas la patrulla 1 completa, el port creó dos reemplazos de cuatro integrantes y la reserva pasó de 8 a 4 y a 0; con reserva agotada no se creó un tercero. Con `STARTATHOME`, cada reemplazo esperó un nuevo evento `REAC`. Esto se contrastó en M0 con bajas provocadas desde el estado de desarrollo.
 
 `FUN_004D60A0` (`fn_004c0000.c:12625–12710`) envía como máximo una orden `PATROL_EXIT` a un patrullero aún dentro cuando el contador del sargento es múltiplo de 20. En M0, tras activar `REAC`, se observaron 1, 2, 3 y 4 integrantes en los ciclos 11, 21, 41 y 62 del port; un grupo de reemplazo también terminó de salir. El port usa el ciclo de misión en vez del reloj del sargento, y crea los soldados al salir en vez de mantenerlos dentro como instancias ocultas.
