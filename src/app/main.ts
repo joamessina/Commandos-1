@@ -15,7 +15,7 @@ import { parseSec, type Sector } from '../formats/sec.ts';
 import { parseVol, type Vol } from '../formats/vol.ts';
 import { parseWad, type Wad } from '../formats/wad.ts';
 import { Animator } from '../engine/anim.ts';
-import { RANGE, type Weapon } from '../engine/attack.ts';
+import { groundTarget, RANGE, type Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
 import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
 import { House, parseHouses } from '../engine/house.ts';
@@ -1510,7 +1510,12 @@ function onMouse(e: MouseEvent): void {
   } else if (e.button === 0 && hit >= 0) g.selected = hit;
   else if (e.button === 0 && (g.mode === 'PISTOLA' || g.mode === 'MIRILLA') && barrel && sel && !sel.dead && (!sel.boat || g.mode === 'MIRILLA') && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, barrel, g.mode);
   else if (e.button === 0 && g.mode && foe && sel && !sel.dead && (!sel.boat || g.mode === 'MIRILLA') && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, foe.soldier, g.mode); // en el vehículo solo la mirilla (MSG_ITEM_ACTIVADO 0xF)
-  else if (e.button === 0 && g.mode === 'MIRILLA' && sel?.boat) say(`${sel.token}: con la mirilla activa el clic dispara a un soldado o barril a la vista (Esc la baja y vuelve a mover el bote).`);
+  else if (e.button === 0 && g.mode === 'MIRILLA' && sel && !sel.dead && g.units[g.selected]?.weapons.includes('MIRILLA')) {
+    // sin nadie bajo el cursor el francotirador dispara igual al punto del suelo si hay alcance y línea
+    const spot = g.sectors?.pick(mx, my);
+    if (!spot) say('Ese punto está fuera de los sectores del mapa.');
+    else g.battle.attack(sel, groundTarget(spot.x, spot.y), 'MIRILLA');
+  }
   else if (sel && !sel.dead && e.button === 0) {
     g.battle.cancel(sel);
     const run = e.detail >= 2 || e.shiftKey; // doble clic izquierdo = BOTON1DBLCLK: AuGoTo corre (FUN_004F68A0); Mayús queda como atajo extra

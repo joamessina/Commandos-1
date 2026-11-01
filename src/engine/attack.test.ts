@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseAnm } from '../formats/anm.ts';
 import { anmSeq, bnm } from '../testing/builders.ts';
-import { Attack, type AttackWorld } from './attack.ts';
+import { Attack, groundTarget, type AttackWorld } from './attack.ts';
 import { Soldier } from './soldier.ts';
 import { Unit } from './unit.ts';
 
@@ -50,6 +50,16 @@ describe('Attack', () => {
     expect(s.dead).toBe(true);
     expect(log).toEqual({ noise: 0, shots: 1 });
     expect(a.unit.body.x).toBe(0);
+  });
+
+  it('mirilla a un punto sin nadie: dispara un solo tiro sin ruido y sin moverse; fuera de alcance se rechaza sin disparar ni caminar', () => {
+    const log = { noise: 0, shots: 0 };
+    const near = new Attack(mk(0), groundTarget(900, 0), 'MIRILLA');
+    run(near, world(log));
+    expect([near.done, log, near.unit.body.x]).toEqual([true, { noise: 0, shots: 1 }, 0]);
+    const far = new Attack(mk(0), groundTarget(1500, 0), 'MIRILLA');
+    run(far, world(log));
+    expect([far.done, log.shots, far.unit.body.x]).toEqual([true, 1, 0]);
   });
 
   it('cuchillo: camina hasta pegarse, tarda unos ciclos y mata en silencio', () => {

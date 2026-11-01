@@ -5,7 +5,8 @@
  * cuchillo = `FUN_005986A0(.., tipo 7 CUCHILLADA, 120)` al cuadro 6 de la animación, sin ruido (au-jugador.md §0b).
  * Arpón (LANCHERO): alcance 200, un tiro mata (tipo 13, cantidad 100), recarga 60, munición 1 que no baja, sin ruido para la IA (docs/lectura/armas-restantes.md §2).
  * Desde un vehículo (solo MIRILLA, `FUN_00502cb0` con el ítem 0xF activo): el clic dispara al instante un tiro (`FUN_00678110/006780a0` prueban alcance, `0067AA30` dispara con el vehículo como origen del rayo),
- * sin caminar ni apuntar; fuera de alcance o sin línea el disparo se rechaza. shortcut: sin animación de disparo en el vehículo (no leída) y sin disparo a un punto sin blanco.
+ * sin caminar ni apuntar; fuera de alcance o sin línea el disparo se rechaza. shortcut: sin animación de disparo en el vehículo (no leída).
+ * Con la mirilla el clic en un punto sin nadie también dispara (`groundTarget`), sin ruido para la IA (`MIRI`, +0x34 = 0).
  * La piedra y la cajetilla no pasan por aquí: caen en un punto (engine/throwing.ts).
  * shortcut: el apuntado tarda `AIM_CYCLES` fijos y entre tiros `SHOT_GAP` (no la duración de las animaciones); el cuchillo golpea tras `KNIFE_CYCLES`;
  *           sin munición limitada salvo la mirilla. Cuándo mejorar: al leer AUDisparar completo.
@@ -39,7 +40,12 @@ export interface Target {
   readonly dead: boolean;
   /** Recibe el golpe de `from` con `weapon`. */
   hurt(weapon: Weapon, from: Unit): void;
+  /** Punto del suelo sin nadie: el tiro sale igual si hay alcance y línea (`FUN_00502cb0` con `*param_2 == 0` → `FUN_00678110` + `FUN_0067AC80`); se rechaza sin caminar y es de un solo tiro. */
+  readonly ground?: true;
 }
+
+/** Punto del suelo como blanco del francotirador. shortcut: la bala no daña a quien cruce el rayo (el trazado `FUN_006771a0` no se leyó); cuándo mejorar: al leerlo. */
+export const groundTarget = (x: number, y: number): Target => ({ x, y, dead: false, ground: true, hurt: () => undefined });
 
 const isDead = (t: Target): boolean => t.dead;
 
@@ -83,8 +89,8 @@ export class Attack {
     const reach = RANGE[this.weapon];
     const clear = MELEE.has(this.weapon) || lineClear(w.sectors, b.x, b.y, tg.x, tg.y);
     if (d > reach || !clear) {
-      if (u.boat) {
-        this.done = true; // en el vehículo no camina: el disparo se rechaza
+      if (u.boat || tg.ground) {
+        this.done = true; // en el vehículo y a un punto del suelo no camina: el disparo se rechaza
         return;
       }
       this.aim = 0;
@@ -113,7 +119,7 @@ export class Attack {
     }
     if (u.ammo[this.weapon] !== undefined) u.ammo[this.weapon] = (u.ammo[this.weapon] ?? 0) - 1; // gasta 1 por disparo (tabla +0x78)
     tg.hurt(this.weapon, u);
-    if (isDead(tg) || u.boat || this.weapon === 'PUNO' || this.weapon === 'ESPOSAS') this.done = true; // hurt() cambia `dead`; el puño y las esposas son de un solo golpe
+    if (isDead(tg) || u.boat || tg.ground || this.weapon === 'PUNO' || this.weapon === 'ESPOSAS') this.done = true; // hurt() cambia `dead`; el puño y las esposas son de un solo golpe
     else this.aim = need - SHOT_GAP;
   }
 }
