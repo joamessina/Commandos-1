@@ -13,5 +13,11 @@ describe('color de los sprites', () => {
       0, 255, 0, 255,
       0, 0, 0, 0,
     ]);
+    expect(Array.from(spriteRgba(must(wad.sprites[0]), wad.palettes[0], true))).toEqual([
+      255, 0, 0, 255,
+      0, 0, 0, 255,
+      0, 255, 0, 255,
+      0, 0, 0, 0,
+    ]);
   });
 });

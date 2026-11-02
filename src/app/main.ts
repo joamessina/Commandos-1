@@ -990,7 +990,8 @@ function draw(g: Game): void {
     const q = project(bl.x, bl.y, sector ? groundZ(sector, bl.x, bl.y) : 0);
     const anim = new Animator(g.blastArt.anm, 'EXPLOSION1');
     anim.advance(0, BLAST_CYCLES - bl.ttl);
-    g.blastArt.sprites.draw(ctx, anim.frame(0), q.px, q.py);
+    // shortcut: mezcla aditiva del exe para recuperar el brillo; falta confirmar la bandera del emisor de la explosión.
+    g.blastArt.sprites.draw(ctx, { ...anim.frame(0), mirror: false }, q.px, q.py, true);
   }
   for (const tr of g.battle.tracers) {
     const a = project(tr.fromX, tr.fromY, 25);

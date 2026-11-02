@@ -7,7 +7,7 @@ import type { AnmFrame } from '../formats/anm.ts';
 import { BLEND, rgb565, TRANSPARENT, type Sprite, type Wad } from '../formats/wad.ts';
 
 /** Colores sin premultiplicar para el canvas: FE conserva el color y lo mezcla con el fondo. */
-export function spriteRgba(s: Sprite, pal: Uint8Array | undefined): Uint8ClampedArray {
+export function spriteRgba(s: Sprite, pal: Uint8Array | undefined, additive = false): Uint8ClampedArray {
   const rgba = new Uint8ClampedArray(s.width * s.height * 4);
   for (let i = 0; i < s.mode.length; i++) {
     const m = s.mode[i] ?? TRANSPARENT;
@@ -18,23 +18,24 @@ export function spriteRgba(s: Sprite, pal: Uint8Array | undefined): Uint8Clamped
     rgba[o] = r;
     rgba[o + 1] = g;
     rgba[o + 2] = b;
-    rgba[o + 3] = m === BLEND ? 128 : 255;
+    rgba[o + 3] = m === BLEND && !additive ? 128 : 255;
   }
   return rgba;
 }
 
 export class SpriteCache {
   private readonly cache = new Map<Sprite, HTMLCanvasElement>();
+  private readonly additiveCache = new Map<Sprite, HTMLCanvasElement>();
 
   constructor(private readonly wad: Wad) {}
 
-  private build(s: Sprite): HTMLCanvasElement {
+  private build(s: Sprite, additive = false): HTMLCanvasElement {
     const c = document.createElement('canvas');
     c.width = s.width;
     c.height = s.height;
     const pal = this.wad.palettes[s.palette];
     const img = new ImageData(s.width, s.height);
-    img.data.set(spriteRgba(s, pal));
+    img.data.set(spriteRgba(s, pal, additive));
     c.getContext('2d')?.putImageData(img, 0, 0);
     return c;
   }
@@ -59,23 +60,25 @@ export class SpriteCache {
   }
 
   /** Dibuja el fotograma con su punto del mundo ya proyectado a píxel de mapa. Devuelve false si el sprite no existe en el WAD. */
-  draw(ctx: CanvasRenderingContext2D, f: AnmFrame, px: number, py: number): boolean {
+  draw(ctx: CanvasRenderingContext2D, f: AnmFrame, px: number, py: number, additive = false): boolean {
     const s = this.wad.byName.get(f.sprite.toUpperCase());
     if (!s) return false;
-    let c = this.cache.get(s);
+    const cache = additive ? this.additiveCache : this.cache;
+    let c = cache.get(s);
     if (!c) {
-      c = this.build(s);
-      this.cache.set(s, c);
+      c = this.build(s, additive);
+      cache.set(s, c);
     }
     const left = Math.round(px + f.hx);
     const top = Math.round(py + f.hy);
+    if (f.mirror || additive) ctx.save();
+    if (additive) ctx.globalCompositeOperation = 'lighter';
     if (f.mirror) {
-      ctx.save();
       ctx.translate(left + s.width, top);
       ctx.scale(-1, 1);
       ctx.drawImage(c, 0, 0);
-      ctx.restore();
     } else ctx.drawImage(c, left, top);
+    if (f.mirror || additive) ctx.restore();
     return true;
   }
 }
