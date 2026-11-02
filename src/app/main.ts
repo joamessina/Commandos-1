@@ -42,6 +42,7 @@ import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.
 import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
 import { Sfx } from '../render/audio.ts';
 import { SpriteCache } from '../render/sprites.ts';
+import { waterSplash } from '../render/splash.ts';
 import { GameSound } from './gamesound.ts';
 import type { AnmFrame } from '../formats/anm.ts';
 
@@ -992,6 +993,10 @@ function draw(g: Game): void {
     anim.advance(0, BLAST_CYCLES - bl.ttl);
     // shortcut: mezcla aditiva del exe para recuperar el brillo; falta confirmar la bandera del emisor de la explosión.
     g.blastArt.sprites.draw(ctx, { ...anim.frame(0), mirror: false }, q.px, q.py, true);
+    if (isWater(sector ?? null)) for (const drop of waterSplash(bl.x, bl.y, BLAST_CYCLES - bl.ttl)) {
+      ctx.fillStyle = drop.color;
+      ctx.fillRect(Math.round(q.px + drop.x), Math.round(q.py + drop.y), 1, 1);
+    }
   }
   for (const tr of g.battle.tracers) {
     const a = project(tr.fromX, tr.fromY, 25);
