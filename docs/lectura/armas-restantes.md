@@ -59,6 +59,7 @@ Los guardias de M0 son `BAP1`×5, `BAP2`×6, `BANPE1`×13, `BANPE2`×4 (`cierre-
 - **Ruido** [hecho]: `MIRI` suena (WAV `FRANCO`), con `estructura+0x34 = 0` → **no se registra ruido para la IA** (`cierre-mision-0.md:56`); el impacto puede generar otros estímulos.
 - **¿Solo en agua / buceando?** NO hay condición de agua ni de buceo en el despachador ni en las pruebas de alcance (leídos `4F05B0`, `677560`, `677710`, `67AEB0`, `67B0C0`); lo único que lo bloquea es estar dentro de un contenedor (`bicho+0x134`, `FUN_004F0830`). Si el original lo ocultaba al estar en tierra es una regla del HUD (`IT_ARPON` flags de la tabla, no leídos): **NO LEÍDO**.
 - Cursor: `CUR_PTOMIRA`/`CUR_NPTOMIRA` (30/31) con la retícula (item `_DAT_00879d18/1c`).
+- **Corrección del port (2026-11-02):** parte del icono de la mochila quedaba sobre la columna del HUD, que capturaba primero el clic; ahora se prueba el ítem antes que la columna. Corregidos también el impacto letal independientemente de la energía, la munición no consumida y la recarga independiente. Selección desde el icono e impacto comprobados en navegador con la misión y recursos reales.
 
 ## 3. BOTIQUÍN (`ClassAUBotiquin`)
 

@@ -225,7 +225,7 @@ export class Soldier implements Target, Claimant {
       this.handcuff();
       return;
     }
-    if (this.unit.hit(DAMAGE[weapon])) {
+    if (this.unit.hit(weapon === 'ARPON' ? Number.POSITIVE_INFINITY : DAMAGE[weapon])) {
       this.order = Order.Dead;
       this.target = null;
     } else if (!this.down && (this.order === Order.Patrol || this.order === Order.Return || this.order === Order.Investigate)) this.startAim(from);

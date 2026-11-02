@@ -262,16 +262,40 @@ describe('Arpón y botiquín', () => {
   it('arpón: alcance 200, un tiro mata sin ruido y deja 60 ciclos de recarga', () => {
     const s = new Soldier('S', mk(150, 0, 'S'), null);
     const c = mk(0);
+    c.ammo['ARPON'] = 1;
+    s.unit.energy = 300;
     const a = new Attack(c, s, 'ARPON');
     for (let i = 0; i < 100 && !a.done; i++) {
       a.tick(quiet);
       c.tick();
     }
     expect([a.done, s.dead, c.coolDown > 0 && c.coolDown <= ARPON_RELOAD]).toEqual([true, true, true]);
+    expect(c.ammo['ARPON']).toBe(1);
     const s2 = new Soldier('S2', mk(150, 20, 'S2'), null);
     const a2 = new Attack(c, s2, 'ARPON');
     a2.tick(quiet); // recargando: no dispara
     expect(s2.dead).toBe(false);
+    const pistol = new Attack(c, s2, 'PISTOLA');
+    pistol.tick({ sectors: null, noise: () => undefined, onShot: () => undefined });
+    expect(pistol.done).toBe(true);
+    expect(s2.unit.energy).toBe(60);
+    c.coolDown = 0;
+    a2.tick(quiet);
+    expect(s2.dead).toBe(true);
+    expect(c.ammo['ARPON']).toBe(1);
+  });
+
+  it('el arpón respeta falta de munición e invulnerabilidad', () => {
+    const s = new Soldier('S', mk(100), null);
+    const c = mk(0);
+    c.ammo['ARPON'] = 0;
+    const empty = new Attack(c, s, 'ARPON');
+    empty.tick(quiet);
+    expect([empty.done, s.dead, c.coolDown]).toEqual([true, false, 0]);
+    c.ammo['ARPON'] = 1;
+    s.unit.invulnerable = true;
+    new Attack(c, s, 'ARPON').tick(quiet);
+    expect([s.dead, s.unit.energy, c.ammo['ARPON']]).toEqual([false, 100, 1]);
   });
 
   it('botiquín: +34 con tope en el máximo, gasta una cura; sin curas, muerto o completo no cura', () => {

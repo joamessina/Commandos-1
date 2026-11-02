@@ -52,7 +52,7 @@ Mapa general (2026-10-30): `docs/exe-mapa-general.md` enlaza 49 funciones con VA
 - Fondo de salpicadura: los cuadros reales `AGUA*.RLE` contienen fondo negro en píxeles FE; con mezcla normal oscurecen un rectángulo completo. shortcut: se usa la mezcla aditiva disponible en el exe (`FUN_00658C80`) para que el negro no oscurezca el agua; falta confirmar qué bandera activa el efecto original y compararlo jugando.
 - Por indicación de Joaquín, en agua se dibujan únicamente las partículas, sin el sprite de fuego; la lectura de `FUN_00679120` aún requiere contrastarse visualmente contra el original.
 - `engine/unit.ts` `treat`: sin prueba de distancia/ángulo de `FUN_0050A380`; JERINGA no existe en FRANCO.ANM (la cura sale al ciclo siguiente).
-- `engine/cursors.ts`: ARPON usa el cursor de la pistola; BOTIQUIN/CONTROL emparejados por nombre (C_MEDIC, C_GORRA1), sin leer la tabla.
+- `engine/cursors.ts`: el arpón usa `CUR_PTOMIRA/NPTOMIRA` y sus puntos calientes; faltan variantes y animaciones de otros cursores.
 - Sin implementar: granada del jugador (nadie la tiene en M0) y las categorías de AuCoger distintas del tabaco de cadáveres. El cursor de la mano está implementado; sus demás receptores siguen pendientes (`armas-restantes.md` §5).
 
 - Ojo: seleccionar un punto usa el cono y la oclusión disponibles en `vision.ts`; el testigo original tiene su propia altura y comunicación, aún sin portar. Las reglas actuales de oclusión conservan las limitaciones documentadas en ese módulo. La linterna avanza por pintado del navegador, que puede tener otra frecuencia que el original.

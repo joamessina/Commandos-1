@@ -81,7 +81,7 @@ export class Attack {
       this.done = true; // sin munición (estado 1 de AUDisparar: munición 0 → termina)
       return;
     }
-    if (u.coolDown > 0) return; // recarga del arma anterior
+    if (this.weapon === 'ARPON' && u.coolDown > 0) return; // recarga propia del arpón
     const reach = RANGE[this.weapon];
     const clear = MELEE.has(this.weapon) || lineClear(w.sectors, b.x, b.y, tg.x, tg.y);
     if (d > reach || !clear) {
@@ -113,7 +113,7 @@ export class Attack {
       if (this.weapon === 'PISTOLA') w.noise(b.x, b.y, PISTOL_NOISE);
       if (this.weapon === 'ARPON') u.coolDown = ARPON_RELOAD;
     }
-    if (u.ammo[this.weapon] !== undefined) u.ammo[this.weapon] = (u.ammo[this.weapon] ?? 0) - 1; // gasta 1 por disparo (tabla +0x78)
+    if (this.weapon === 'MIRILLA' && u.ammo[this.weapon] !== undefined) u.ammo[this.weapon] = (u.ammo[this.weapon] ?? 0) - 1;
     tg.hurt(this.weapon, u);
     this.done = true;
   }

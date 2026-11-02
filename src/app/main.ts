@@ -460,6 +460,8 @@ async function load(introduction = false): Promise<void> {
       const aud = e.actions.find((x) => x.name.toUpperCase() === 'AUDISPARAR')?.params ?? [];
       const mun = asNumber(find(aud, '.MUNMIRILLA'));
       if (mun !== undefined) unit.ammo['MIRILLA'] = mun;
+      const harpoons = asNumber(find(aud, '.MUNARPON'));
+      if (harpoons !== undefined) unit.ammo['ARPON'] = harpoons;
       const rocks = asNumber(find(aud, '.PIEDRAS'));
       if (rocks !== undefined) unit.ammo['PIEDRA'] = rocks;
       const uses = asNumber(find(e.actions.find((x) => x.name.toUpperCase() === 'AUBOTIQUIN')?.params ?? [], '.USOS'));
@@ -1298,7 +1300,8 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   const sel = g.units[g.selected];
   ctx.fillStyle = '#d9dde3';
   const shortcuts = sel ? ([['PISTOLA', 'F pistola'], ['MIRILLA', 'R fusil'], ['CUCHILLO', 'C cuchillo']] as const).filter(([w]) => weaponAvailable(sel, w)).map(([, label]) => label) : [];
-  ctx.fillText(`Arma: ${g.planting ? `${g.planting.toLowerCase()} (clic donde ponerlo)` : (g.mode ?? 'ninguna (clic = mover)')} · ${[...shortcuts, 'G agacharse', ...(sel?.canDive ? ['N bucear'] : []), 'Esc cancelar', 'E bote', 'V ojo'].join(' · ')}`, 10, top + 14 + rows * 34);
+  const modeText = g.mode === 'ARPON' && sel && sel.unit.coolDown > 0 ? `ARPON (recargando ${(sel.unit.coolDown / 20).toFixed(1)} s)` : (g.mode ?? 'ninguna (clic = mover)');
+  ctx.fillText(`Arma: ${g.planting ? `${g.planting.toLowerCase()} (clic donde ponerlo)` : modeText} · ${[...shortcuts, 'G agacharse', ...(sel?.canDive ? ['N bucear'] : []), 'Esc cancelar', 'E bote', 'V ojo'].join(' · ')}`, 10, top + 14 + rows * 34);
   if (sel) {
     const hud = hudUnit(sel, g.bag);
     ctx.fillText(`Disponibles: ${sel.weapons.filter((w) => weaponAvailable(sel, w)).map((w) => (sel.unit.ammo[w] === undefined ? w : `${w} (${Math.max(0, sel.unit.ammo[w] ?? 0).toString()})`)).join(', ') || '—'} · Objetos: ${visibleItems(hud.items, hud.inVehicle, hud.diving).map((i) => i.wad).join(', ') || '—'}`, 10, top + 30 + rows * 34);
@@ -1747,13 +1750,13 @@ function onMouse(e: MouseEvent): void {
   const v = vp(g);
   const sx = point.x;
   const sy = point.y;
+  if (e.button === 0 && bagClick(g, sx, sy)) return;
   if (g.hud && overHud(sx, sy, stage.width, g.hudLeft)) {
     // clic sobre el HUD: la cara de un comando lo selecciona; el resto de la tira y la columna aún no hacen nada
     const slot = e.button === 0 ? slotAt(sx, sy, g.units.length) : -1;
     if (slot >= 0) g.selected = slot;
     return;
   }
-  if (e.button === 0 && bagClick(g, sx, sy)) return;
   const mx = g.camX - v.w / z / 2 + (sx - v.x) / z;
   const my = g.camY - v.h / z / 2 + (sy - v.y) / z;
   const hit = g.units.findIndex((u) => {
