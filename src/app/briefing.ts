@@ -56,6 +56,7 @@ export async function showBriefing(view: HTMLElement, width: number, height: num
   const values = strings(missionStrings);
   const canvas = document.createElement('canvas');
   canvas.width = width; canvas.height = height;
+  canvas.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;margin:auto';
   const ctx = canvas.getContext('2d');
   if (!ctx) { background.close(); throw new Error('No se pudo crear la ficha de misión'); }
   view.replaceChildren(canvas);

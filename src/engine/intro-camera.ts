@@ -3,6 +3,7 @@ type Speed = 'L' | 'M' | 'N' | 'R';
 const moveSpeeds: Record<Speed, readonly [number, number]> = { L: [25, 1.75], M: [10, 0.7], N: [50, 3.5], R: [90, 6.3] };
 const zoomSpeeds: Record<Speed, readonly [number, number]> = { L: [0.0075, 0.015], M: [0.00325, 0.0075], N: [0.015, 0.03], R: [0.03, 0.06] };
 const speed = (s: string): Speed => s === 'L' || s === 'M' || s === 'R' ? s : 'N';
+export interface IntroViewport { readonly width: number; readonly height: number; readonly mapWidth: number; readonly mapHeight: number }
 
 export class IntroCamera {
   private moveTarget: { x: number; y: number; max: number; acceleration: number; velocity: number } | null = null;
@@ -22,7 +23,16 @@ export class IntroCamera {
   get moving(): boolean { return this.moveTarget !== null; }
   get zooming(): boolean { return this.zoomTarget !== null; }
   stop(): void { this.moveTarget = null; this.zoomTarget = null; }
-  tick(): void {
+  tick(viewport?: IntroViewport): void {
+    const z = this.zoomTarget;
+    if (z) {
+      const step = this.scale <= 1 ? z.low : z.high;
+      const delta = z.value - this.scale;
+      if (Math.abs(delta) <= step) { this.scale = z.value; this.zoomTarget = null; }
+      else this.scale += Math.sign(delta) * step;
+    }
+    const previousX = this.x;
+    const previousY = this.y;
     const m = this.moveTarget;
     if (m) {
       const dx = m.x - this.x;
@@ -36,12 +46,13 @@ export class IntroCamera {
         this.y += dy / distance * step;
       }
     }
-    const z = this.zoomTarget;
-    if (z) {
-      const step = this.scale <= 1 ? z.low : z.high;
-      const delta = z.value - this.scale;
-      if (Math.abs(delta) <= step) { this.scale = z.value; this.zoomTarget = null; }
-      else this.scale += Math.sign(delta) * step;
+    if (viewport) {
+      const halfW = viewport.width / (2 * this.scale);
+      const halfH = viewport.height / (2 * this.scale);
+      this.x = Math.max(halfW, Math.min(viewport.mapWidth - halfW, this.x));
+      this.y = Math.max(halfH, Math.min(viewport.mapHeight - halfH, this.y));
+      // FUN_005C9BC0 termina el movimiento si el centro limitado avanzó como máximo 0,1.
+      if (this.moveTarget && Math.hypot(this.x - previousX, this.y - previousY) <= 0.1) this.moveTarget = null;
     }
   }
 }

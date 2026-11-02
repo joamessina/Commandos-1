@@ -36,7 +36,7 @@ import { Cursors } from '../render/cursors.ts';
 import { Hud, type HudUnit } from '../render/hud.ts';
 import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
 import { lineClear, rayReach, vistaOf } from '../engine/vision.ts';
-import { asList, asNumber, asText, find, parseClave } from '../formats/clave.ts';
+import { asList, asNumber, asNumbers, asText, find, parseClave } from '../formats/clave.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
 import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
@@ -49,6 +49,7 @@ import { showMenu } from './menu.ts';
 import { playIntro, type TacticalIntro } from './intro.ts';
 import { showBriefing } from './briefing.ts';
 import { IntroCamera } from '../engine/intro-camera.ts';
+import { canvasPoint, type Resolution } from './viewport.ts';
 import type { AnmFrame } from '../formats/anm.ts';
 
 const byId = (id: string): HTMLElement => {
@@ -201,6 +202,7 @@ let stage: HTMLCanvasElement | null = null;
 let loopId = 0;
 let closeMenu: (() => void) | null = null;
 let presenting = false;
+let screenSize: Resolution = [640, 480];
 function lockControls(): () => void {
   const inputs = [dirInput, mapSel, waterBox, diffSel, zoomSel, byId('dev') as HTMLButtonElement];
   const disabled = inputs.map((input) => input.disabled);
@@ -306,10 +308,11 @@ async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffe
     return;
   }
   say('Menú: mouse o flechas y Enter. Las opciones oscuras todavía no están implementadas.');
-  closeMenu = await showMenu(view, bytes, (difficulty) => {
+  closeMenu = await showMenu(view, bytes, (difficulty, resolution) => {
     closeMenu = null;
     sfx.stopMusic();
     diffSel.value = difficulty;
+    screenSize = resolution;
     mapSel.value = campaign[0] ?? maps[0] ?? '';
     guarded(() => load(true))();
   });
@@ -673,9 +676,15 @@ async function load(introduction = false): Promise<void> {
       try {
         setupStage();
         cancelAnimationFrame(loopId);
-        const previousZoom = zoomLevel;
-        try { await playIntro(view, new TextDecoder('windows-1252').decode(scriptBytes), bytes, loadedGame.loose, introCamera(game, elems), say); }
-        finally { zoomLevel = previousZoom; }
+        const start = asNumbers(find(mission, '.XY'));
+        const startX = start?.[0] ?? p.px;
+        const startY = start?.[1] ?? p.py;
+        try { await playIntro(view, new TextDecoder('windows-1252').decode(scriptBytes), bytes, loadedGame.loose, introCamera(game, elems, screenSize), say, screenSize); }
+        finally {
+          zoomLevel = 1; zoomSel.value = '1';
+          game.camX = startX; game.camY = startY;
+          camV.x = 0; camV.y = 0; cursor.inside = false; keys.clear();
+        }
       } finally {
         presenting = false;
         unlock();
@@ -767,7 +776,7 @@ function stepWater(g: Game, w: WaterView): void {
 function setupStage(): void {
   if (!stage) {
     stage = document.createElement('canvas');
-    stage.style.display = 'block';
+    stage.style.cssText = 'display:block;max-width:100%;max-height:100%;width:auto;height:auto;margin:auto';
     stage.addEventListener('contextmenu', (e) => {
       e.preventDefault();
     });
@@ -783,9 +792,10 @@ function setupStage(): void {
       { passive: false },
     );
     stage.addEventListener('mousemove', (e) => {
-      const r = stage?.getBoundingClientRect();
-      cursor.x = e.clientX - (r?.left ?? 0);
-      cursor.y = e.clientY - (r?.top ?? 0);
+      if (!stage) return;
+      const point = canvasPoint(e.clientX, e.clientY, stage.getBoundingClientRect(), [stage.width, stage.height]);
+      cursor.x = point.x;
+      cursor.y = point.y;
       cursor.inside = true;
     });
     stage.addEventListener('mouseleave', () => {
@@ -892,12 +902,12 @@ function scrollCamera(g: Game, cycles: number): void {
 
 function resize(): void {
   if (!stage) return;
-  stage.width = Math.max(320, view.clientWidth);
-  stage.height = Math.max(240, view.clientHeight);
+  if (stage.width !== screenSize[0]) stage.width = screenSize[0];
+  if (stage.height !== screenSize[1]) stage.height = screenSize[1];
 }
 
 /** Cámara del recorrido táctico: posiciones y aceleración de FUN_005B0540 / FUN_005C9BC0. */
-function introCamera(g: Game, elems: readonly Elem[]): TacticalIntro {
+function introCamera(g: Game, elems: readonly Elem[], resolution: Resolution): TacticalIntro {
   const camera = new IntroCamera(g.camX, g.camY);
   const target = (arg: string): { x: number; y: number } | null => {
     // shortcut: [x y] se toma como píxel de mapa; falta portar la resolución por sector de FUN_004E1E70.
@@ -910,8 +920,8 @@ function introCamera(g: Game, elems: readonly Elem[]): TacticalIntro {
     return { x: p.px, y: p.py };
   };
   const clamp = (p: { x: number; y: number }): { x: number; y: number } => {
-    const halfW = 320 / camera.scale;
-    const halfH = 240 / camera.scale;
+    const halfW = resolution[0] / (2 * camera.scale);
+    const halfH = resolution[1] / (2 * camera.scale);
     return { x: Math.max(halfW, Math.min(g.map.width - halfW, p.x)), y: Math.max(halfH, Math.min(g.map.height - halfH, p.y)) };
   };
   return {
@@ -931,7 +941,7 @@ function introCamera(g: Game, elems: readonly Elem[]): TacticalIntro {
     moving: () => camera.moving,
     zooming: () => camera.zooming,
     // shortcut: durante el briefing no avanzan la simulación ni el agua; verificar los receptores de FUN_0056D790.
-    tick: () => { camera.tick(); },
+    tick: () => { camera.tick({ width: resolution[0], height: resolution[1], mapWidth: g.map.width, mapHeight: g.map.height }); },
     stop: () => { camera.stop(); },
   };
 }
@@ -1339,9 +1349,9 @@ function onRightUp(e: MouseEvent): void {
   const d = rightDown;
   rightDown = null;
   if (!g || !stage || !d || e.button !== 2) return;
-  const r = stage.getBoundingClientRect();
-  const x1 = e.clientX - r.left;
-  const y1 = e.clientY - r.top;
+  const point = canvasPoint(e.clientX, e.clientY, stage.getBoundingClientRect(), [stage.width, stage.height]);
+  const x1 = point.x;
+  const y1 = point.y;
   if (Math.hypot(x1 - d.x, y1 - d.y) < 3) {
     if (g.control) {
       endControl(g);
@@ -1698,11 +1708,11 @@ function bagClick(g: Game, sx: number, sy: number): boolean {
 function onMouse(e: MouseEvent): void {
   const g = game;
   if (!g || !stage) return;
-  const r = stage.getBoundingClientRect();
+  const point = canvasPoint(e.clientX, e.clientY, stage.getBoundingClientRect(), [stage.width, stage.height]);
   const z = zoom();
   const v = vp(g);
-  const sx = e.clientX - r.left;
-  const sy = e.clientY - r.top;
+  const sx = point.x;
+  const sy = point.y;
   if (g.hud && overHud(sx, sy, stage.width, g.hudLeft)) {
     // clic sobre el HUD: la cara de un comando lo selecciona; el resto de la tira y la columna aún no hacen nada
     const slot = e.button === 0 ? slotAt(sx, sy, g.units.length) : -1;
@@ -1725,7 +1735,7 @@ function onMouse(e: MouseEvent): void {
   });
   const barrel = [...g.barrelProps].find(([b, pr]) => !b.dead && Math.abs(mx - project(pr.x, pr.y, pr.z).px) < 14 && Math.abs(my - project(pr.x, pr.y, pr.z).py + 10) < 20)?.[0];
   if (e.button === 2) {
-    rightDown = { x: e.clientX - r.left, y: e.clientY - r.top };
+    rightDown = { x: sx, y: sy };
     return;
   }
   const ladder = pickLadder(g.ladders, mx, my);

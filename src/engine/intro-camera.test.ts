@@ -19,3 +19,14 @@ it('usa pasos de zoom distintos encima de uno y respeta parada e inválidos', ()
   c.zoom(0, 'N'); expect(c.zooming).toBe(false);
   c.setPos(7, 8); expect([c.x, c.y]).toEqual([7, 8]);
 });
+
+it('termina un desplazamiento cuyo destino quedó fuera del mapa al cambiar el zoom', () => {
+  const c = new IntroCamera(450, 700, 1.5);
+  c.zoom(0.85, 'M');
+  c.goto(305, 850, 'L');
+  const view = { width: 640, height: 480, mapWidth: 1000, mapHeight: 1000 };
+  for (let i = 0; i < 500 && (c.moving || c.zooming); i++) c.tick(view);
+  expect(c.moving).toBe(false);
+  expect(c.zooming).toBe(false);
+  expect(c.x).toBeGreaterThanOrEqual(320 / 0.85);
+});

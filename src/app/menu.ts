@@ -1,6 +1,7 @@
 /** Menú y fuentes del exe: docs/lectura/menu-principal.md, FUN_006015C0 y FUN_00600090. */
 import { parseWad, type Sprite, type Wad } from '../formats/wad.ts';
 import { SpriteCache } from '../render/sprites.ts';
+import type { Resolution } from './viewport.ts';
 
 type Page = 'main' | 'new' | 'skill' | 'options' | 'video';
 interface Row { key: string; action: string; enabled?: boolean; label?: string }
@@ -31,7 +32,7 @@ function drawText(ctx: CanvasRenderingContext2D, wad: Wad, cache: SpriteCache, t
   }
 }
 
-export async function showMenu(view: HTMLElement, read: (path: string) => Uint8Array | undefined, begin: (difficulty: 'FACIL' | 'DIFICIL') => void): Promise<() => void> {
+export async function showMenu(view: HTMLElement, read: (path: string) => Uint8Array | undefined, begin: (difficulty: 'FACIL' | 'DIFICIL', resolution: Resolution) => void): Promise<() => void> {
   const required = (path: string): Uint8Array => {
     const b = read(path);
     if (!b) throw new Error(`Falta ${path} en WAR_MP.DIR`);
@@ -95,7 +96,7 @@ export async function showMenu(view: HTMLElement, read: (path: string) => Uint8A
   };
   const choose = (): void => {
     const action = screens[page].rows[selected]?.action;
-    if (action === 'FACIL' || action === 'DIFICIL') { cleanup(); begin(action); }
+    if (action === 'FACIL' || action === 'DIFICIL') { cleanup(); begin(action, sizes[String(size)] ?? [640, 480]); }
     else if (action && action in sizes) size = Number(action);
     else if (action && action in screens) { page = action as Page; selected = 0; }
   };

@@ -4,6 +4,7 @@ import { parseIntro, type IntroCommand } from '../formats/intro.ts';
 import { parseZom, type ZoomBitmap } from '../formats/zom.ts';
 import { zoomPixels } from '../render/zom.ts';
 import { convertIntroVideo } from './intro-video.ts';
+import type { Resolution } from './viewport.ts';
 
 export interface TacticalIntro {
   draw(canvas: HTMLCanvasElement): void;
@@ -20,7 +21,7 @@ interface Fade { from: ImageBitmap; to: ImageBitmap; age: number; duration: numb
 interface MapZoom { bitmap: ZoomBitmap; bg: ImageBitmap; x: number; y: number; w: number; h: number; frames: number; age: number; x0: number; y0: number; x1: number; y1: number; z0: number; z1: number }
 type Loose = (path: string) => Promise<Uint8Array | undefined>;
 
-export async function playIntro(view: HTMLElement, script: string, read: (path: string) => Uint8Array | undefined, loose: Loose, tactical: TacticalIntro, report: (message: string) => void): Promise<void> {
+export async function playIntro(view: HTMLElement, script: string, read: (path: string) => Uint8Array | undefined, loose: Loose, tactical: TacticalIntro, report: (message: string) => void, resolution: Resolution): Promise<void> {
   const commands = parseIntro(script);
   const imageNames = new Set<string>();
   const mapNames = new Set<string>();
@@ -70,8 +71,7 @@ export async function playIntro(view: HTMLElement, script: string, read: (path: 
   }
   report(missing.length ? `Presentación: faltan ${missing.length.toString()} archivos sueltos; Escape saltea la sección.` : 'Presentación original. Escape saltea la sección.');
   const canvas = document.createElement('canvas');
-  // shortcut: la presentación usa 640×480 hasta aplicar al juego el modo elegido en el menú.
-  canvas.width = 640; canvas.height = 480;
+  canvas.width = resolution[0]; canvas.height = resolution[1];
   canvas.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;margin:auto';
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No se pudo crear el canvas de la presentación');
@@ -202,29 +202,37 @@ export async function playIntro(view: HTMLElement, script: string, read: (path: 
         if (!sequence.tick()) { done(); return; }
         accumulated -= 50;
       }
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 640, 480);
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       canvas.dataset['intro'] = isTactical ? 'tactical' : videoActive ? 'video' : mapZoom ? 'zoom' : 'history';
       if (isTactical) tactical.draw(canvas);
-      else if (videoActive && video.readyState >= 2) ctx.drawImage(video, 0, 0, 640, 480);
-      else if (fade) {
-        ctx.drawImage(fade.from, 0, 0);
-        ctx.save(); ctx.globalAlpha = fade.age / fade.duration; ctx.drawImage(fade.to, 0, 0); ctx.restore();
-      } else if (mapZoom) {
-        ctx.drawImage(mapZoom.bg, 0, 0);
-        const t = Math.min(1, Math.max(0, (mapZoom.age - 1) / Math.max(1, mapZoom.frames - 1)));
-        const x = mapZoom.x0 + (mapZoom.x1 - mapZoom.x0) * t;
-        const y = mapZoom.y0 + (mapZoom.y1 - mapZoom.y0) * t;
-        const z = 1 / (1 / mapZoom.z0 + (1 / mapZoom.z1 - 1 / mapZoom.z0) * t);
-        const key = `${mapZoom.x0.toString()}|${mapZoom.y0.toString()}|${mapZoom.x1.toString()}|${mapZoom.y1.toString()}|${mapZoom.age.toString()}`;
-        if (key !== renderedZoom) {
-          renderedZoom = key;
-          scratch.width = mapZoom.w; scratch.height = mapZoom.h;
-          const pixels = new ImageData(mapZoom.w, mapZoom.h);
-          pixels.data.set(zoomPixels(mapZoom.bitmap, x, y, z, mapZoom.w, mapZoom.h));
-          scratch.getContext('2d')?.putImageData(pixels, 0, 0);
-        }
-        ctx.drawImage(scratch, mapZoom.x, mapZoom.y);
-      } else if (background) ctx.drawImage(background, 0, 0);
+      else {
+        // shortcut: los recursos 4:3 se ajustan a la resolución elegida preservando proporción.
+        const scale = Math.min(canvas.width / 640, canvas.height / 480);
+        ctx.save();
+        ctx.translate((canvas.width - 640 * scale) / 2, (canvas.height - 480 * scale) / 2);
+        ctx.scale(scale, scale);
+        if (videoActive && video.readyState >= 2) ctx.drawImage(video, 0, 0, 640, 480);
+        else if (fade) {
+          ctx.drawImage(fade.from, 0, 0);
+          ctx.save(); ctx.globalAlpha = fade.age / fade.duration; ctx.drawImage(fade.to, 0, 0); ctx.restore();
+        } else if (mapZoom) {
+          ctx.drawImage(mapZoom.bg, 0, 0);
+          const t = Math.min(1, Math.max(0, (mapZoom.age - 1) / Math.max(1, mapZoom.frames - 1)));
+          const x = mapZoom.x0 + (mapZoom.x1 - mapZoom.x0) * t;
+          const y = mapZoom.y0 + (mapZoom.y1 - mapZoom.y0) * t;
+          const z = 1 / (1 / mapZoom.z0 + (1 / mapZoom.z1 - 1 / mapZoom.z0) * t);
+          const key = `${mapZoom.x0.toString()}|${mapZoom.y0.toString()}|${mapZoom.x1.toString()}|${mapZoom.y1.toString()}|${mapZoom.age.toString()}`;
+          if (key !== renderedZoom) {
+            renderedZoom = key;
+            scratch.width = mapZoom.w; scratch.height = mapZoom.h;
+            const pixels = new ImageData(mapZoom.w, mapZoom.h);
+            pixels.data.set(zoomPixels(mapZoom.bitmap, x, y, z, mapZoom.w, mapZoom.h));
+            scratch.getContext('2d')?.putImageData(pixels, 0, 0);
+          }
+          ctx.drawImage(scratch, mapZoom.x, mapZoom.y);
+        } else if (background) ctx.drawImage(background, 0, 0);
+        ctx.restore();
+      }
       frameId = requestAnimationFrame(render);
     };
     frameId = requestAnimationFrame(render);
