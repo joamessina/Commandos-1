@@ -284,6 +284,28 @@ describe('Soldier: cuerpos', () => {
   });
 });
 
+describe('Soldier: cuerpos a distinta altura', () => {
+  // muelle (x 0..100, suelo z=65) junto al mar (x 100..200, z=0): el borde esconde lo que yace a su pie (FUN_005F9820)
+  const pv: [number, number][] = [];
+  for (let i = 0; i <= 2; i++) pv.push([i * 100, 0], [i * 100, 100]);
+  const quad = (i: number, extra: object = {}): { verts: number[] } => ({ verts: [i * 2, i * 2 + 2, i * 2 + 3, i * 2 + 1], ...extra });
+  const pier = new SectorMap(parseSec(secBytes({ verts: pv, a: [quad(0, { plane: [0, 0, 65] }), quad(1, { type: 1 })], tw1: [[-1, 1, -1, -1], [-1, -1, -1, 0]] })));
+  const sawBody = (x: number, z?: number): boolean => {
+    const s = new Soldier('S', new Unit('S', anm, 80, 50, 65, 0, pier), null);
+    const w = { ...mkWorld([]).world, sectors: pier, bodies: [{ x, y: 50, ...(z === undefined ? {} : { z }) }] };
+    run(s, w, 40);
+    return s.order === Order.Investigate;
+  };
+
+  it('no ve al caído al pie del borde del muelle, sí al lejano y al de su mismo nivel; sin altura conocida lo ve como antes', () => {
+    expect(sawBody(110, 0)).toBe(false);
+    expect(sawBody(130, 0)).toBe(false); // un comando de pie (ojo 29) a 130 sí se vería: el caído tiene el ojo a 0
+    expect(sawBody(150, 0)).toBe(true);
+    expect(sawBody(90, 65)).toBe(true);
+    expect(sawBody(110)).toBe(true);
+  });
+});
+
 describe('artillero de nido (soldado fijo)', () => {
   it('vistaOf lee .MOD (×2) y .ANG del órgano Vista01; sin claves no hay opciones', async () => {
     const { parseClave } = await import('../formats/clave.ts');
