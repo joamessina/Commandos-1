@@ -567,7 +567,7 @@ async function load(introduction = false): Promise<void> {
       if (!a) return false;
       const f = i === 0 ? null : formationOf(i - 1, def.columns, def.n, def.formX);
       const follow = f ? { leader: () => { const lead = made[f.leader + 1]; return !lead || lead.dead ? null : { x: lead.x, y: lead.y, ang: lead.unit.body.ang, speed: lead.unit.speed }; }, lateral: f.lateral, back: def.formY } : undefined;
-      const s = new Soldier(`${def.token}_${i.toString()}_${soldiers.length.toString()}`, new Unit(`${def.token}_${i.toString()}`, a.anm, pos.x, pos.y, pos.z, def.angle, sectors), i === 0 ? def.route : null, follow ? { follow } : { alternateRoutes: def.routes.slice(1) });
+      const s = new Soldier(`${def.token}_${i.toString()}_${soldiers.length.toString()}`, new Unit(`${def.token}_${i.toString()}`, a.anm, pos.x, pos.y, pos.z, def.angle, sectors), i === 0 ? def.route : null, { sweep: def.sweep, sweepPeriod: def.sweepPeriod, ...(follow ? { follow } : { alternateRoutes: def.routes.slice(1) }) });
       made[i] = s;
       if (i === 0) groupLeaders.set(def.token, s);
       soldiers.push({ soldier: s, sprites: a.sprites });
@@ -1860,11 +1860,11 @@ function onMouse(e: MouseEvent): void {
   } else if (e.button === 0 && hit >= 0) g.selected = hit;
   else if (e.button === 0 && (g.mode === 'PISTOLA' || g.mode === 'MIRILLA') && barrel && sel && !sel.dead && (!sel.boat || g.mode === 'MIRILLA') && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, barrel, g.mode);
   else if (e.button === 0 && g.mode && foe && sel && !sel.dead && (!sel.boat || g.mode === 'MIRILLA') && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, foe.soldier, g.mode); // en el vehículo solo la mirilla (MSG_ITEM_ACTIVADO 0xF)
-  else if (e.button === 0 && g.mode === 'MIRILLA' && sel && !sel.dead && g.units[g.selected]?.weapons.includes('MIRILLA')) {
-    // sin nadie bajo el cursor el francotirador dispara igual al punto del suelo si hay alcance y línea
+  else if (e.button === 0 && (g.mode === 'MIRILLA' || g.mode === 'PISTOLA' || g.mode === 'ARPON') && sel && !sel.dead && !sel.diving && (!sel.boat || g.mode === 'MIRILLA') && g.units[g.selected]?.weapons.includes(g.mode)) {
+    // FUN_004F0E50: también se puede ordenar un disparo a un punto del terreno.
     const spot = g.sectors?.pick(mx, my);
     if (!spot) say('Ese punto está fuera de los sectores del mapa.');
-    else g.battle.attack(sel, groundTarget(spot.x, spot.y), 'MIRILLA');
+    else g.battle.attack(sel, groundTarget(spot.x, spot.y), g.mode);
   }
   else if (sel && !sel.dead && e.button === 0) {
     g.battle.cancel(sel);

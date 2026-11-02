@@ -2,7 +2,7 @@
  * Combate de una misión: reparte el ciclo entre soldados y ataques de los comandos, propaga el ruido de los disparos (radio de la tabla de ruidos: pistola 600, fusil 400)
  * y guarda los rastros de disparo para dibujarlos. Reglas en soldier.ts y attack.ts.
  */
-import { Attack, type Target, type Weapon } from './attack.ts';
+import { Attack, type AttackWorld, type Target, type Weapon } from './attack.ts';
 import type { SectorMap } from './sectors.ts';
 import { CHAT_CYCLES, CHAT_RANGE, type Shot, type Soldier, type SoldierVoice } from './soldier.ts';
 import { Packs, STONE_NOISE } from './throwing.ts';
@@ -59,7 +59,19 @@ export class Battle {
 
   /** Ordena un ataque (reemplaza el que tuviera). */
   attack(unit: Unit, target: Target, weapon: Weapon): void {
-    this.attacks.set(unit, new Attack(unit, target, weapon));
+    const attack = new Attack(unit, target, weapon);
+    // shortcut: cada clic de arma de fuego se procesa de inmediato, incluso si llegan varios en el mismo ciclo de 50 ms.
+    if (weapon === 'PISTOLA' || weapon === 'MIRILLA' || weapon === 'ARPON') attack.tick(this.attackWorld());
+    if (attack.done) this.attacks.delete(unit);
+    else this.attacks.set(unit, attack);
+  }
+
+  private attackWorld(): AttackWorld {
+    return {
+      sectors: this.sectors,
+      noise: (x, y, r) => { this.noise(x, y, r); this.onDanger?.(x, y); },
+      onShot: (fx, fy, tx, ty, weapon) => this.tracers.push({ fromX: fx, fromY: fy, toX: tx, toY: ty, hit: true, ttl: TRACER_CYCLES, enemy: false, ...(SHOT_TAG[weapon] ? { tag: SHOT_TAG[weapon] } : {}) }),
+    };
   }
 
   /** Cancela el ataque en curso de un comando (nueva orden de movimiento, Esc). */
@@ -90,14 +102,7 @@ export class Battle {
   /** Un ciclo lógico (los movimientos de los comandos los hace `Unit.tick` fuera). */
   tick(): void {
     for (const [u, a] of this.attacks) {
-      a.tick({
-        sectors: this.sectors,
-        noise: (x, y, r) => {
-          this.noise(x, y, r);
-          this.onDanger?.(x, y);
-        },
-        onShot: (fx, fy, tx, ty, weapon) => this.tracers.push({ fromX: fx, fromY: fy, toX: tx, toY: ty, hit: true, ttl: TRACER_CYCLES, enemy: false, ...(SHOT_TAG[weapon] ? { tag: SHOT_TAG[weapon] } : {}) }),
-      });
+      a.tick(this.attackWorld());
       if (a.done) this.attacks.delete(u);
     }
     const bodies = [...this.soldiers.filter((s) => s.dead && !s.unit.hidden).map((s) => ({ x: s.x, y: s.y, z: s.unit.z })), ...this.commandos.filter((c) => c.dead && !c.hidden).map((c) => ({ x: c.body.x, y: c.body.y, z: c.z }))];

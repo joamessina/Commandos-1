@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseAnm } from '../formats/anm.ts';
 import { anmSeq, bnm } from '../testing/builders.ts';
 import { Battle } from './battle.ts';
+import { groundTarget } from './attack.ts';
 import { RouteType } from './patrol.ts';
 import { Order, Soldier } from './soldier.ts';
 import { Unit } from './unit.ts';
@@ -76,7 +77,10 @@ describe('Battle', () => {
     const c = mk(0, 0);
     const b = new Battle([target, other, far], [c], null, () => 0);
     b.attack(c, target, 'PISTOLA');
-    expect(b.attacking(c)).toBe(true);
+    expect(b.attacking(c)).toBe(false);
+    expect(target.dead).toBe(false);
+    b.attack(c, target, 'PISTOLA');
+    b.attack(c, target, 'PISTOLA');
     for (let i = 0; i < 30; i++) {
       b.tick();
       c.tick();
@@ -89,6 +93,23 @@ describe('Battle', () => {
     expect(b.tracers).toHaveLength(0);
   });
 
+  it('cada clic dispara una vez al suelo inmediatamente, sin disparos automáticos', () => {
+    const c = mk(0, 0);
+    const b = new Battle([], [c], null);
+    const target = groundTarget(100, 0);
+    let noises = 0;
+    b.onDanger = () => { noises++; };
+    for (let i = 0; i < 5; i++) b.attack(c, target, 'PISTOLA');
+    expect(b.tracers).toHaveLength(5);
+    expect(noises).toBe(5);
+    expect(b.attacking(c)).toBe(false);
+    for (let i = 0; i < 3; i++) b.tick();
+    expect(b.tracers).toHaveLength(5);
+    expect(noises).toBe(5);
+    b.attack(c, groundTarget(301, 0), 'PISTOLA');
+    expect(b.tracers).toHaveLength(5);
+  });
+
   it('los soldados disparan al comando, el rastro es enemigo, otro soldado cercano lo oye; cancel() corta el ataque; perder = todos muertos', () => {
     const c = mk(300, 0, 180, 'FRANCOT');
     c.energy = 100;
@@ -96,7 +117,7 @@ describe('Battle', () => {
     const o = new Soldier('O', mk(0, 120, 0, 'O'), null);
     const b = new Battle([a], [c], null, () => 0);
     expect(b.lost).toBe(false);
-    b.attack(c, a, 'MIRILLA');
+    b.attack(c, a, 'CUCHILLO');
     b.cancel(c);
     expect(b.attacking(c)).toBe(false);
     let sawTracer = false;

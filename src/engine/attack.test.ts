@@ -27,6 +27,10 @@ describe('Attack', () => {
     const a = new Attack(mk(0), s, 'PISTOLA');
     run(a, world(log));
     expect(a.done).toBe(true);
+    expect(s.dead).toBe(false);
+    expect(log).toEqual({ noise: 1, shots: 1 });
+    run(new Attack(a.unit, s, 'PISTOLA'), world(log));
+    run(new Attack(a.unit, s, 'PISTOLA'), world(log));
     expect(s.dead).toBe(true);
     expect(log).toEqual({ noise: 3, shots: 3 });
     expect(a.unit.body.x).toBeGreaterThan(150); // tuvo que acercarse
@@ -95,6 +99,9 @@ describe('Attack: munición', () => {
     s.unit.energy = 1000; // no muere: hacen falta más de 2 tiros
     const a = new Attack(u, s, 'MIRILLA');
     run(a, world(log), 300);
+    expect(log.shots).toBe(1);
+    run(new Attack(u, s, 'MIRILLA'), world(log));
+    run(new Attack(u, s, 'MIRILLA'), world(log));
     expect(log.shots).toBe(2);
     expect(u.ammo['MIRILLA']).toBe(0);
     expect(a.done).toBe(true);

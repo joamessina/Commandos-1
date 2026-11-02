@@ -7,7 +7,7 @@ const MIS = `.MISSION [
     [ .TOKEN PAT1 .NSOLDIERS 3 .HOME CASA_REACT_01 .EXITHOME_EVENTS REAC .REACT_EVENTS [ REAC ALAR ] .STARTATHOME 1 .NCOLUMNS 1
       .RUTADEF [ [ .NOMBRE RUTA1 .TIPORUTA LOOP .RUTA [ [ .XYZ [ 10 20 0 ] ] [ .XYZ [ 30 40 0 ] ] ] .VEL 1.7 ] ]
       .ANIMCABO CABO .ANIMSOLDADO ALEGABAR ]
-    [ .TOKEN PAT2 .XYZ [ 7 8 9 ] .ANGULO 90 .EXITHOME_EVENTS [ REAC ZOIN ] ]
+    [ .TOKEN PAT2 .XYZ [ 7 8 9 ] .ANGULO 90 .EXITHOME_EVENTS [ REAC ZOIN ] .VIGILARDEF [ .ANGBARRIDO 75 .DEMORA 80 ] ]
   ]
 ]`;
 
@@ -71,6 +71,8 @@ describe('groups', () => {
     expect(g[0]?.routes).toHaveLength(1);
     expect(g[1]).toMatchObject({ token: 'PAT2', n: 4, home: null, position: { x: 7, y: 8, z: 9 }, angle: 90, exitEvents: ['REAC', 'ZOIN'], route: null, columns: 2 });
     expect(g[0]).toMatchObject({ position: null, angle: 0 });
+    expect(g[0]).toMatchObject({ sweep: 50, sweepPeriod: 50 });
+    expect(g[1]).toMatchObject({ sweep: 75, sweepPeriod: 80 });
     expect(eventList('reac')).toEqual(['REAC']);
     expect(eventList(undefined)).toEqual([]);
   });
@@ -105,5 +107,6 @@ describe('groups', () => {
     expect(parseZoneSensors(bad)).toEqual([]);
     expect(parseGroups('', 'FACIL')).toEqual([]);
     expect(parseGroups('.MISSION [ .PATRULLAS [ [ .TOKEN P .REGENERATEPATROL 1 ] ] ]', 'FACIL')[0]?.regeneratePatrol).toBe(true);
+    expect(parseGroups('.MISSION [ .PATRULLAS [ [ .TOKEN P .VIGILARDEF [ .ANGBARRIDO 0 .DEMORA 0 ] ] ] ]', 'FACIL')[0]).toMatchObject({ sweep: 0, sweepPeriod: 0 });
   });
 });

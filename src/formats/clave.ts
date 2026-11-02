@@ -63,7 +63,7 @@ export const asList = (n: Node | undefined): Node[] | undefined => (Array.isArra
 export const asText = (n: Node | undefined): string | undefined => (typeof n === 'string' ? n : undefined);
 
 export function asNumber(n: Node | undefined): number | undefined {
-  if (typeof n !== 'string') return undefined;
+  if (typeof n !== 'string' || n.trim() === '') return undefined;
   const v = Number(n);
   return Number.isFinite(v) ? v : undefined;
 }

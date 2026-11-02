@@ -4,6 +4,8 @@
 
 # Parte A. `ClassAcVigilar` (`0x4C0A60–0x4C1B90`): controla la mirada
 
+**Corrección del port:** `CAngBarrido` sin valor en las macros no debe convertirse en cero. `FUN_004C0C30` inicializa amplitud 50 y período 100; `FUN_004C0A60` solo reemplaza los campos si el bloque tiene contenido (`FUN_0060A4D0`). En los datos reales de M0 las excepciones explícitas, como `.AngBarrido 35`, conservan ese valor. Para los soldados creados desde `.PATRULLAS`, `FUN_0062B6C0` (`fn_00600000.c:28112–28132`) define `.VIGILARDEF` por defecto como `.ANGBARRIDO 50 .DEMORA 50`, y la creación de las acciones copia ese bloque (`fn_00580000.c:19438–19461`).
+
 Es una acción auxiliar que `AcBap`/`AcPatrulla`/etc. usan para mover la cabeza y limitar el alcance del cono de visión (el órgano de visión está en `organos.md`). Overrides: `+0x04` MAC `FUN_004C0A60` · `+0x10` tick `FUN_004C1B90` · `+0x14` mensajes `FUN_004C10D0` · `+0x28` serialización. Ctor `FUN_004C0C30`.
 
 ## A1. Parámetros del MAC [hecho]

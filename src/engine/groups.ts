@@ -32,6 +32,8 @@ export interface GroupDef {
   readonly columns: number;
   readonly formX: number;
   readonly formY: number;
+  readonly sweep: number;
+  readonly sweepPeriod: number;
 }
 
 /** La fábrica `FUN_005A2430` crea un cabo y después `NSOLDIERS` patrulleros. */
@@ -89,6 +91,7 @@ export function parseGroups(misText: string, difficulty: Difficulty): GroupDef[]
     if (!l || !token) continue;
     const routes = parseRoutes(['.PATRULLA', asList(find(l, '.RUTADEF')) ?? []], difficulty);
     const xyz = asNumbers(find(l, '.XYZ'));
+    const vigilar = asList(find(l, '.VIGILARDEF')) ?? [];
     out.push({
       token,
       n: asNumber(find(l, '.NSOLDIERS')) ?? 4,
@@ -106,6 +109,8 @@ export function parseGroups(misText: string, difficulty: Difficulty): GroupDef[]
       columns: asNumber(find(l, '.NCOLUMNS')) ?? 2,
       formX: asNumber(find(l, '.FORMX')) ?? 40,
       formY: asNumber(find(l, '.FORMY')) ?? 30,
+      sweep: asNumber(find(vigilar, '.ANGBARRIDO')) ?? 50,
+      sweepPeriod: asNumber(find(vigilar, '.DEMORA')) ?? 50,
     });
   }
   return out;

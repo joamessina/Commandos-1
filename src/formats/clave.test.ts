@@ -30,6 +30,9 @@ describe('parseClave', () => {
     expect(asNumbers(find(el, '.XYZ'))).toEqual([4, 5.5, -6]);
     expect(asNumber('7')).toBe(7);
     expect(asNumber('x')).toBeUndefined();
+    expect(asNumber('')).toBeUndefined();
+    expect(asNumber('  ')).toBeUndefined();
+    expect(asNumber('0')).toBe(0);
     expect(asNumber(['7'])).toBeUndefined();
     expect(asNumbers('7')).toBeUndefined();
     expect(asNumbers(['1', 'a'])).toBeUndefined();

@@ -1,14 +1,14 @@
 /**
- * Ataque de un comando a un blanco (soldado o barril): se acerca hasta el alcance del arma con el blanco a la vista, apunta y dispara hasta matarlo.
+ * Ataque de un comando a un blanco: cada orden produce un disparo o golpe; si hace falta se acerca al blanco.
  * Datos del exe: tabla de armas `0x8143C0` (docs/lectura/au-disparar.md) y rutinas de bala del jugador (docs/engine/armas-danio.md §3): PISTOLA alcance 300
  * y daño 40, MIRILLA (rifle del francotirador) 1000 y 100, con sonido solo la pistola (`DISPAROPISTOLA`; la tabla no trae sonido de la mirilla);
  * cuchillo = `FUN_005986A0(.., tipo 7 CUCHILLADA, 120)` al cuadro 6 de la animación, sin ruido (au-jugador.md §0b).
  * Arpón (LANCHERO): alcance 200, un tiro mata (tipo 13, cantidad 100), recarga 60, munición 1 que no baja, sin ruido para la IA (docs/lectura/armas-restantes.md §2).
  * Desde un vehículo (solo MIRILLA, `FUN_00502cb0` con el ítem 0xF activo): el clic dispara al instante un tiro (`FUN_00678110/006780a0` prueban alcance, `0067AA30` dispara con el vehículo como origen del rayo),
  * sin caminar ni apuntar; fuera de alcance o sin línea el disparo se rechaza. shortcut: sin animación de disparo en el vehículo (no leída).
- * Con la mirilla el clic en un punto sin nadie también dispara (`groundTarget`), sin ruido para la IA (`MIRI`, +0x34 = 0).
+ * Pistola, mirilla y arpón admiten un clic en un punto sin nadie (`FUN_004F0E50`); la mirilla no hace ruido para la IA (`MIRI`, +0x34 = 0).
  * La piedra y la cajetilla no pasan por aquí: caen en un punto (engine/throwing.ts).
- * shortcut: el apuntado tarda `AIM_CYCLES` fijos y entre tiros `SHOT_GAP` (no la duración de las animaciones); el cuchillo golpea tras `KNIFE_CYCLES`;
+ * shortcut: el cuchillo golpea tras `KNIFE_CYCLES`;
  *           sin munición limitada salvo la mirilla. Cuándo mejorar: al leer AUDisparar completo.
  */
 import { lineClear } from './vision.ts';
@@ -28,8 +28,6 @@ export const RANGE: Readonly<Record<Weapon, number>> = { PISTOLA: 300, MIRILLA: 
 export const DAMAGE: Readonly<Record<Weapon, number>> = { PISTOLA: 40, MIRILLA: 100, CUCHILLO: 120, PUNO: 0, ESPOSAS: 0, PIEDRA: 0, ARPON: 100 };
 /** Recarga del arpón: 60 ciclos (tabla de recargas, docs/lectura/armas-restantes.md); el resto de las armas no tiene espera propia aquí. */
 export const ARPON_RELOAD = 60;
-const AIM_CYCLES = 8;
-const SHOT_GAP = 6;
 const KNIFE_CYCLES = 12;
 const REPATH_EVERY = 10;
 
@@ -40,14 +38,12 @@ export interface Target {
   readonly dead: boolean;
   /** Recibe el golpe de `from` con `weapon`. */
   hurt(weapon: Weapon, from: Unit): void;
-  /** Punto del suelo sin nadie: el tiro sale igual si hay alcance y línea (`FUN_00502cb0` con `*param_2 == 0` → `FUN_00678110` + `FUN_0067AC80`); se rechaza sin caminar y es de un solo tiro. */
+  /** Punto del suelo sin nadie: se rechaza sin caminar si está fuera de alcance o sin línea. */
   readonly ground?: true;
 }
 
-/** Punto del suelo como blanco del francotirador. shortcut: la bala no daña a quien cruce el rayo (el trazado `FUN_006771a0` no se leyó); cuándo mejorar: al leerlo. */
+/** Punto del suelo como blanco. shortcut: la bala no daña a quien cruce el rayo; mejorar al portar `FUN_006771a0`. */
 export const groundTarget = (x: number, y: number): Target => ({ x, y, dead: false, ground: true, hurt: () => undefined });
-
-const isDead = (t: Target): boolean => t.dead;
 
 export interface AttackWorld {
   readonly sectors: SectorMap | null;
@@ -103,7 +99,7 @@ export class Attack {
     }
     u.stop();
     b.ang = norm360((Math.atan2(tg.y - b.y, tg.x - b.x) * 180) / Math.PI);
-    const need = MELEE.has(this.weapon) ? KNIFE_CYCLES : u.boat ? 1 : AIM_CYCLES;
+    const need = MELEE.has(this.weapon) ? KNIFE_CYCLES : 1;
     if (this.aim === 0 && !u.boat) {
       // PUNO: LANZARPIEDRA (AuCachiporra con el arma 0 del comando, docs/lectura/au-jugador.md §4); ESPOSAS: el comando no trae animación de esposar (shortcut: se queda quieto)
       const a = this.weapon === 'CUCHILLO' ? 'SACACUCHILLO' : this.weapon === 'PUNO' ? 'LANZARPIEDRA' : this.weapon === 'ESPOSAS' ? '' : this.weapon === 'MIRILLA' ? 'APUNTARIFLE' : this.weapon === 'ARPON' ? 'APUNTAARPON' : 'APUNTAPISTOLA';
@@ -119,7 +115,6 @@ export class Attack {
     }
     if (u.ammo[this.weapon] !== undefined) u.ammo[this.weapon] = (u.ammo[this.weapon] ?? 0) - 1; // gasta 1 por disparo (tabla +0x78)
     tg.hurt(this.weapon, u);
-    if (isDead(tg) || u.boat || tg.ground || this.weapon === 'PUNO' || this.weapon === 'ESPOSAS') this.done = true; // hurt() cambia `dead`; el puño y las esposas son de un solo golpe
-    else this.aim = need - SHOT_GAP;
+    this.done = true;
   }
 }
