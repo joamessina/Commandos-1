@@ -133,7 +133,7 @@ export class Barrel implements Target {
   dead = false;
   private readonly owner: Demolition;
 
-  constructor(owner: Demolition, token: string, x: number, y: number) {
+  constructor(owner: Demolition, token: string, x: number, y: number, readonly z = 0, readonly eye = 0) {
     this.owner = owner;
     this.token = token;
     this.x = x;
@@ -236,8 +236,8 @@ export class Demolition {
     }
   }
 
-  addBarrel(token: string, x: number, y: number): Barrel {
-    const b = new Barrel(this, token, x, y);
+  addBarrel(token: string, x: number, y: number, z = 0, eye = 0): Barrel {
+    const b = new Barrel(this, token, x, y, z, eye);
     this.barrels.push(b);
     return b;
   }

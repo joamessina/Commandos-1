@@ -1,5 +1,5 @@
 /**
- * Ataque de un comando a un blanco: cada orden produce un disparo o golpe; si hace falta se acerca al blanco.
+ * Ataque de un comando a un blanco: cada orden produce un disparo o golpe; las armas de fuego no se acercan automáticamente.
  * Datos del exe: tabla de armas `0x8143C0` (docs/lectura/au-disparar.md) y rutinas de bala del jugador (docs/engine/armas-danio.md §3): PISTOLA alcance 300
  * y daño 40, MIRILLA (rifle del francotirador) 1000 y 100, con sonido solo la pistola (`DISPAROPISTOLA`; la tabla no trae sonido de la mirilla);
  * cuchillo = `FUN_005986A0(.., tipo 7 CUCHILLADA, 120)` al cuadro 6 de la animación, sin ruido (au-jugador.md §0b).
@@ -12,6 +12,7 @@
  *           sin munición limitada salvo la mirilla. Cuándo mejorar: al leer AUDisparar completo.
  */
 import { lineClear } from './vision.ts';
+import { navFor } from './path.ts';
 import type { SectorMap } from './sectors.ts';
 import type { Unit } from './unit.ts';
 import { norm360 } from './walk.ts';
@@ -36,6 +37,9 @@ export interface Target {
   readonly x: number;
   readonly y: number;
   readonly dead: boolean;
+  readonly unit?: Unit;
+  readonly z?: number;
+  readonly eye?: number;
   /** Recibe el golpe de `from` con `weapon`. */
   hurt(weapon: Weapon, from: Unit): void;
   /** Punto del suelo sin nadie: se rechaza sin caminar si está fuera de alcance o sin línea. */
@@ -43,7 +47,20 @@ export interface Target {
 }
 
 /** Punto del suelo como blanco. shortcut: la bala no daña a quien cruce el rayo; mejorar al portar `FUN_006771a0`. */
-export const groundTarget = (x: number, y: number): Target => ({ x, y, dead: false, ground: true, hurt: () => undefined });
+export const groundTarget = (x: number, y: number, z?: number): Target => ({ x, y, ...(z === undefined ? {} : { z }), dead: false, ground: true, hurt: () => undefined });
+
+/** FUN_00677560/00677710: alcance 3D a un bicho y horizontal a un punto; FUN_006771A0 comprueba la trayectoria. */
+export function canFire(unit: Unit, target: Target, weapon: Weapon, sectors: SectorMap | null): boolean {
+  const b = unit.body;
+  const startZ = unit.z + unit.eye;
+  const endZ = target.unit ? target.unit.z + target.unit.eye : target.z === undefined ? startZ : target.z + (target.eye ?? 0);
+  const dz = target.ground ? 0 : endZ - startZ;
+  const reach = RANGE[weapon] + (target.ground ? 0 : 0.1);
+  if (Math.hypot(target.x - b.x, target.y - b.y, dz) >= reach) return false;
+  if (!lineClear(sectors, b.x, b.y, target.x, target.y, unit.z)) return false;
+  // shortcut: nav.sight aproxima los portales y no comprueba los volúmenes de FUN_0063E820.
+  return !sectors || !unit.sector || navFor(sectors).sight(unit.sector, { x: b.x, y: b.y, z: startZ }, { x: target.x, y: target.y, z: endZ });
+}
 
 export interface AttackWorld {
   readonly sectors: SectorMap | null;
@@ -83,17 +100,15 @@ export class Attack {
     }
     if (this.weapon === 'ARPON' && u.coolDown > 0) return; // recarga propia del arpón
     const reach = RANGE[this.weapon];
-    const clear = MELEE.has(this.weapon) || lineClear(w.sectors, b.x, b.y, tg.x, tg.y);
-    if (d > reach || !clear) {
+    if (!MELEE.has(this.weapon) && !canFire(u, tg, this.weapon, w.sectors)) { this.done = true; return; }
+    if (MELEE.has(this.weapon) && d > reach) {
       if (u.boat || tg.ground) {
         this.done = true; // en el vehículo y a un punto del suelo no camina: el disparo se rechaza
         return;
       }
       this.aim = 0;
       if (this.t++ % REPATH_EVERY === 0) {
-        const near = MELEE.has(this.weapon) ? 0 : 0.8;
-        const k = Math.max(0, d - reach * near) / d;
-        u.goTo({ x: b.x + (tg.x - b.x) * k, y: b.y + (tg.y - b.y) * k }, false);
+        u.goTo({ x: tg.x, y: tg.y }, false);
       }
       return;
     }

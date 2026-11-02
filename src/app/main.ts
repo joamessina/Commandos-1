@@ -15,7 +15,7 @@ import { parseSec, type Sector } from '../formats/sec.ts';
 import { parseVol, type Vol } from '../formats/vol.ts';
 import { parseWad, type Wad } from '../formats/wad.ts';
 import { Animator } from '../engine/anim.ts';
-import { groundTarget, RANGE, type Weapon } from '../engine/attack.ts';
+import { canFire, groundTarget, type Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
 import { BLAST_CYCLES, Demolition, parseSites, type Barrel, type Mine } from '../engine/demolition.ts';
 import { destroyLinkedHouses, House, parseHouses } from '../engine/house.ts';
@@ -36,7 +36,7 @@ import { cursorFor, type CursorMode } from '../engine/cursors.ts';
 import { Cursors } from '../render/cursors.ts';
 import { Hud, type HudUnit } from '../render/hud.ts';
 import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
-import { lineClear, rayReach, sees, vistaOf } from '../engine/vision.ts';
+import { rayReach, sees, vistaOf } from '../engine/vision.ts';
 import { asList, asNumber, asNumbers, asText, find, parseClave } from '../formats/clave.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
@@ -49,6 +49,7 @@ import { GameSound } from './gamesound.ts';
 import { showMenu } from './menu.ts';
 import { playIntro, type TacticalIntro } from './intro.ts';
 import { showBriefing } from './briefing.ts';
+import { showLoading } from './loading.ts';
 import { IntroCamera } from '../engine/intro-camera.ts';
 import { canvasPoint, type Resolution } from './viewport.ts';
 import type { AnmFrame } from '../formats/anm.ts';
@@ -370,18 +371,27 @@ async function load(introduction = false): Promise<void> {
   if (!loaded || !mapSel.value) return;
   closeMenu?.();
   closeMenu = null;
+  cancelAnimationFrame(loopId);
+  const loading = showLoading(view, bytes, screenSize);
+  // shortcut: porcentajes por etapas del port, no los incrementos de carga originales.
+  const progress = async (value: number): Promise<void> => {
+    loading(value);
+    await new Promise<void>((resolve) => { requestAnimationFrame(() => { requestAnimationFrame(() => { resolve(); }); }); });
+  };
+  await progress(0);
   const n = mapSel.value;
   const misBytes = bytes(`DATOS/MISIONES/${n}.MIS`);
   const misText = misBytes ? new TextDecoder('latin1').decode(misBytes) : '';
   const files = parseMissionFiles(misText);
   const volBytes = files.vol ? bytes(`DATOS/MISIONES/${files.vol.toUpperCase()}`) : undefined;
   const readWad = files.wad ? loaded.wads.get(files.wad) : undefined;
-  if (!volBytes || !readWad) return;
+  if (!volBytes || !readWad) throw new Error(`Faltan archivos de la misión ${n}.`);
   say(`Componiendo ${mapSel.selectedOptions[0]?.text ?? n}…`);
-  await new Promise((r) => setTimeout(r, 0));
+  await progress(0.05);
   const t0 = performance.now();
   const vol = parseVol(new TextDecoder('latin1').decode(volBytes));
   const wad = parseWad(new Uint8Array(await readWad()));
+  await progress(0.25);
   const wdef = waterBox.checked ? null : parseWater(misText);
   const wsprite = wdef ? wad.byName.get(wdef.dst.toUpperCase()) : undefined;
   const bounds = wsprite?.width === 256 && wsprite.height === 256 ? waterBounds(vol) : null; // el generador del exe asume 256×256
@@ -389,6 +399,7 @@ async function load(introduction = false): Promise<void> {
   const volOrder = new VolOrder(vol); // orden de dibujo del exe (docs/research/q1-orden-dibujo.md), los volúmenes una vez por mapa
   const order = volOrder.order;
   const img = composeMap(vol, wad, { ...(water ? { layer: 'land' as const } : { skipWater: waterBox.checked }), order });
+  await progress(0.5);
   const map = document.createElement('canvas');
   map.width = img.width;
   map.height = img.height;
@@ -538,7 +549,7 @@ async function load(introduction = false): Promise<void> {
     const prop = mineProps.find((p) => p.elem === e)?.prop;
     if (prop) mineMap.set(mine, prop);
   }
-  for (const b of barrelProps) barrelMap.set(demo.addBarrel(b.elem.token, b.elem.x, b.elem.y), b.prop);
+  for (const b of barrelProps) barrelMap.set(demo.addBarrel(b.elem.token, b.elem.x, b.elem.y, b.elem.z, b.elem.height), b.prop);
   const nests = [...nestOf].flatMap(([s, el]) => {
     const prop = props.find((x) => x.elem === el);
     return prop ? [{ soldier: s, prop }] : [];
@@ -673,6 +684,7 @@ async function load(introduction = false): Promise<void> {
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
+  await progress(1);
   if (introduction) {
     const mission = asList(find(parseClave(misText), '.MISSION')) ?? [];
     const filesBlock = asList(find(mission, '.DATOSFICHEROSMISION')) ?? [];
@@ -683,8 +695,6 @@ async function load(introduction = false): Promise<void> {
       presenting = true;
       const unlock = lockControls();
       try {
-        setupStage();
-        cancelAnimationFrame(loopId);
         const start = asNumbers(find(mission, '.XY'));
         const startX = start?.[0] ?? p.px;
         const startY = start?.[1] ?? p.py;
@@ -1037,9 +1047,10 @@ function scopeInRange(g: Game, weapon: 'MIRILLA' | 'ARPON' = 'MIRILLA'): boolean
   const my = g.camY - v.h / z / 2 + (cursor.y - v.y) / z;
   const near = (px: number, py: number): boolean => Math.abs(mx - px) < 14 && my > py - 40 && my < py + 8;
   const foe = g.soldiers.find((s) => !s.soldier.dead && near(project(s.soldier.x, s.soldier.y, s.soldier.unit.z).px, project(s.soldier.x, s.soldier.y, s.soldier.unit.z).py));
-  const spot = foe ? { x: foe.soldier.x, y: foe.soldier.y } : g.sectors?.pick(mx, my);
-  if (!spot) return false;
-  return Math.hypot(spot.x - sel.body.x, spot.y - sel.body.y) <= RANGE[weapon] && lineClear(g.sectors, sel.body.x, sel.body.y, spot.x, spot.y);
+  const barrel = [...g.barrelProps].find(([b, pr]) => !b.dead && Math.abs(mx - project(pr.x, pr.y, pr.z).px) < 14 && Math.abs(my - project(pr.x, pr.y, pr.z).py + 10) < 20)?.[0];
+  const spot = foe || barrel ? null : g.sectors?.pick(mx, my);
+  const target = foe?.soldier ?? barrel ?? (spot ? groundTarget(spot.x, spot.y, spot.z) : null);
+  return target !== null && canFire(sel, target, weapon, g.sectors);
 }
 
 /** Cursor del mouse según el arma elegida (engine/cursors.ts); en el HUD vuelve a la flecha. */
@@ -1870,7 +1881,7 @@ function onMouse(e: MouseEvent): void {
     // FUN_004F0E50: también se puede ordenar un disparo a un punto del terreno.
     const spot = g.sectors?.pick(mx, my);
     if (!spot) say('Ese punto está fuera de los sectores del mapa.');
-    else g.battle.attack(sel, groundTarget(spot.x, spot.y), g.mode);
+    else g.battle.attack(sel, groundTarget(spot.x, spot.y, spot.z), g.mode);
   }
   else if (sel && !sel.dead && e.button === 0) {
     g.battle.cancel(sel);

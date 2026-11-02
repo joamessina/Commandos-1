@@ -57,7 +57,7 @@ function cstr(b: Uint8Array, at: number, max: number): string {
   return s;
 }
 
-function decodeRle(name: string, b1: Uint8Array, b2: Uint8Array, palette: number): Sprite {
+export function decodeRle(name: string, b1: Uint8Array, b2: Uint8Array, palette: number): Sprite {
   if (b2.length < 12) throw new WadError(`${name}: índice RLE corto`);
   const dv = new DataView(b2.buffer, b2.byteOffset, b2.byteLength);
   const width = dv.getUint32(4, true);

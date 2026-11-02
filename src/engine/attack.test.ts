@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { parseAnm } from '../formats/anm.ts';
-import { anmSeq, bnm } from '../testing/builders.ts';
-import { Attack, groundTarget, type AttackWorld } from './attack.ts';
+import { parseSec } from '../formats/sec.ts';
+import { anmSeq, bnm, secBytes } from '../testing/builders.ts';
+import { Attack, canFire, groundTarget, type AttackWorld } from './attack.ts';
+import { SectorMap } from './sectors.ts';
 import { Soldier } from './soldier.ts';
 import { Unit } from './unit.ts';
 
@@ -21,20 +23,56 @@ const run = (a: Attack, w: AttackWorld, n = 400): void => {
 };
 
 describe('Attack', () => {
-  it('pistola (40 de daño): se acerca hasta el alcance y dispara con ruido; el soldado de 100 de energía muere al 3.er tiro', () => {
+  it('pistola: fuera de alcance no camina ni dispara; cada clic válido produce un tiro', () => {
     const s = new Soldier('S', mk(500, 0, 'S'), null);
     const log = { noise: 0, shots: 0 };
     const a = new Attack(mk(0), s, 'PISTOLA');
     run(a, world(log));
     expect(a.done).toBe(true);
     expect(s.dead).toBe(false);
+    expect(log).toEqual({ noise: 0, shots: 0 });
+    expect(a.unit.body.x).toBe(0);
+    s.unit.body.x = 250;
+    run(new Attack(a.unit, s, 'PISTOLA'), world(log));
     expect(log).toEqual({ noise: 1, shots: 1 });
     run(new Attack(a.unit, s, 'PISTOLA'), world(log));
     run(new Attack(a.unit, s, 'PISTOLA'), world(log));
     expect(s.dead).toBe(true);
     expect(log).toEqual({ noise: 3, shots: 3 });
-    expect(a.unit.body.x).toBeGreaterThan(150); // tuvo que acercarse
+    expect(a.unit.body.x).toBe(0);
     expect(a.unit.anim.name).toBe('DISPARAPISTOLA');
+  });
+
+  it('el alcance a un soldado incluye altura de ambos ojos, pero el punto usa distancia horizontal', () => {
+    const u = mk(0);
+    const s = new Soldier('S', mk(190, 0, 'S'), null);
+    s.unit.z = 100;
+    expect(canFire(u, s, 'ARPON', null)).toBe(false);
+    expect(canFire(u, groundTarget(190, 0, 100), 'ARPON', null)).toBe(true);
+    s.unit.z = 50;
+    expect(canFire(u, s, 'ARPON', null)).toBe(true);
+    expect(canFire(u, groundTarget(201, 0, 0), 'ARPON', null)).toBe(false);
+  });
+
+  it('dispara sin caminar dentro de la tolerancia del alcance a un soldado', () => {
+    const u = mk(0);
+    const s = new Soldier('S', mk(200.05, 0, 'S'), null);
+    const log = { noise: 0, shots: 0 };
+    run(new Attack(u, s, 'ARPON'), world(log));
+    expect(log.shots).toBe(1);
+    expect(u.body.x).toBe(0);
+    expect(canFire(mk(0), new Soldier('T', mk(200.11), null), 'ARPON', null)).toBe(false);
+  });
+
+  it('la trayectoria 3D no atraviesa el borde alto del muelle', () => {
+    const verts: [number, number][] = [[0, 0], [100, 0], [100, 100], [0, 100], [200, 0], [200, 100]];
+    const sec = parseSec(secBytes({ verts, a: [{ verts: [0, 1, 2, 3], plane: [0, 0, 65] }, { verts: [1, 4, 5, 2], type: 1 }], tw1: [[-1, 1, -1, -1], [-1, -1, -1, 0]] }));
+    const m = new SectorMap(sec);
+    const u = new Unit('LANCHERO', anm, 120, 50, 0, 180, m);
+    const s = new Soldier('S', new Unit('S', anm, 80, 50, 65, 0, m), null);
+    expect(canFire(u, s, 'ARPON', m)).toBe(false);
+    u.body.x = 170;
+    expect(canFire(u, s, 'ARPON', m)).toBe(true);
   });
 
   it('un soldado herido que sobrevive se vuelve a apuntar al agresor', () => {
