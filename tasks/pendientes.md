@@ -1,5 +1,7 @@
 # Pendientes (lista maestra para ir tachando)
 
+**Menú inicial (2026-11-02):** primera versión navegable con recursos originales, selección de dificultad y previsualización de resolución. Quedan la cinemática y el briefing, el resto de opciones y aplicar la resolución a la misión; ver atajos y diferencias en `verificacion-exe.md` y lectura en `docs/lectura/menu-principal.md`.
+
 Última actualización: 2026-10-30 (tras HUD, armas, cursores, balsa, refuerzos y lectura de los 19 .MIS y 96 .MAC). Marcá `[x]` lo que quede hecho. Reglas: nada inventado (lo no leído del exe se marca `shortcut:` en el código), solo commits locales hasta tener algo estable, el usuario hace las pruebas en el juego.
 
 **Revisión de investigación ≥70 % (2026-10-30):** se revisaron las 23 filas que cumplían ese umbral, incluidas las implementadas. Resultados, funciones y líneas: [`docs/lectura/cierre-70.md`](../docs/lectura/cierre-70.md). Los porcentajes ajustados siguen siendo estimaciones; no se marcaron implementaciones por haber leído su regla. Las notas de ese cierre prevalecen sobre las frases históricas que contradigan sus correcciones (piedra, recargas, presos, mochila y sensor de sonido).

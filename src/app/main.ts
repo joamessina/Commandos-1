@@ -45,6 +45,7 @@ import { Sfx } from '../render/audio.ts';
 import { SpriteCache } from '../render/sprites.ts';
 import { SPLASH_CYCLES, waterSplash } from '../render/splash.ts';
 import { GameSound } from './gamesound.ts';
+import { showMenu } from './menu.ts';
 import type { AnmFrame } from '../formats/anm.ts';
 
 const byId = (id: string): HTMLElement => {
@@ -194,6 +195,7 @@ let loaded: Loaded | null = null;
 let game: Game | null = null;
 let stage: HTMLCanvasElement | null = null;
 let loopId = 0;
+let closeMenu: (() => void) | null = null;
 const keys = new Set<string>();
 
 const say = (msg: string, error = false): void => {
@@ -249,6 +251,12 @@ async function onFolder(): Promise<void> {
 }
 
 async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffer>>, music: Map<string, () => Promise<ArrayBuffer>>): Promise<void> {
+  closeMenu?.();
+  closeMenu = null;
+  sound?.stop();
+  sfx.stopMusic();
+  game = null;
+  cancelAnimationFrame(loopId);
   const entries = new Map<string, DirEntry>();
   for (const e of parseContainer(dir)) entries.set(e.path.toUpperCase(), e);
   loaded = { dir, entries, wads, music };
@@ -276,8 +284,22 @@ async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffe
     say('Encontré WAR_MP.DIR pero ningún Fase000N.wad (carpeta DATOS/recursos/bmps/map_mp).', true);
     return;
   }
-  say(`${entries.size.toString()} archivos en el contenedor, ${maps.length.toString()} mapas disponibles.`);
-  await load();
+  say('Menú: mouse o flechas y Enter. Las opciones oscuras todavía no están implementadas.');
+  closeMenu = await showMenu(view, bytes, (difficulty) => {
+    closeMenu = null;
+    sfx.stopMusic();
+    diffSel.value = difficulty;
+    mapSel.value = campaign[0] ?? maps[0] ?? '';
+    // shortcut: falta reproducir el guion de introducción y el briefing antes de la primera misión.
+    guarded(load)();
+  });
+  const currentMenu = closeMenu;
+  const readMusic = music.get('menu.wav');
+  if (readMusic) {
+    const musicBytes = await readMusic();
+    const buffer = await sfx.decode(new Uint8Array(musicBytes));
+    if (buffer && closeMenu === currentMenu) sfx.playMusic(buffer, true);
+  }
 }
 
 /** WAD del HUD (GLOBAL, uno por resolución y las CARAS de los comandos de la misión); null si falta alguno de los básicos. */
@@ -319,6 +341,8 @@ function bytes(path: string): Uint8Array | undefined {
 
 async function load(): Promise<void> {
   if (!loaded || !mapSel.value) return;
+  closeMenu?.();
+  closeMenu = null;
   const n = mapSel.value;
   const misBytes = bytes(`DATOS/MISIONES/${n}.MIS`);
   const misText = misBytes ? new TextDecoder('latin1').decode(misBytes) : '';
@@ -1728,7 +1752,7 @@ if (import.meta.env.DEV) {
       if (m?.[1]) wads.set(m[1].toUpperCase(), async () => (await fetch(`/__game/DATOS/recursos/bmps/map_mp/${f}`)).arrayBuffer());
     }
     const music = new Map<string, () => Promise<ArrayBuffer>>();
-    for (const f of ['fases.wav', 'fases02.wav', 'mcomplet.wav', 'muerte.wav']) music.set(f, async () => (await fetch(`/__game/DATOS/musica/${f}`)).arrayBuffer());
+    for (const f of ['menu.wav', 'fases.wav', 'fases02.wav', 'mcomplet.wav', 'muerte.wav']) music.set(f, async () => (await fetch(`/__game/DATOS/musica/${f}`)).arrayBuffer());
     await start(dir, wads, music);
   }));
 }
