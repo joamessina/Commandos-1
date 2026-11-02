@@ -1,10 +1,27 @@
 /**
- * Sprites del WAD a canvas y dibujo de un fotograma de ANM. El píxel mezclado (FE) del RLE se dibuja como negro al 50 %,
- * que es exactamente lo que hace el blitter del exe (dst/2). Posición: esquina superior izquierda = punto del mundo
+ * Sprites del WAD a canvas y dibujo de un fotograma de ANM. El píxel mezclado (FE) combina el color de paleta y el fondo al 50 %
+ * (FUN_00659C80, 0x659E45–0x659E75). Posición: esquina superior izquierda = punto del mundo
  * proyectado + (hx,hy) del fotograma; si `mirror`, la imagen se voltea en su lugar (hx ya es su borde izquierdo).
  */
 import type { AnmFrame } from '../formats/anm.ts';
 import { BLEND, rgb565, TRANSPARENT, type Sprite, type Wad } from '../formats/wad.ts';
+
+/** Colores sin premultiplicar para el canvas: FE conserva el color y lo mezcla con el fondo. */
+export function spriteRgba(s: Sprite, pal: Uint8Array | undefined): Uint8ClampedArray {
+  const rgba = new Uint8ClampedArray(s.width * s.height * 4);
+  for (let i = 0; i < s.mode.length; i++) {
+    const m = s.mode[i] ?? TRANSPARENT;
+    if (m === TRANSPARENT) continue;
+    const o = i * 4;
+    const k = (s.index[i] ?? 0) * 2;
+    const [r, g, b] = rgb565(pal?.[k] ?? 0, pal?.[k + 1] ?? 0);
+    rgba[o] = r;
+    rgba[o + 1] = g;
+    rgba[o + 2] = b;
+    rgba[o + 3] = m === BLEND ? 128 : 255;
+  }
+  return rgba;
+}
 
 export class SpriteCache {
   private readonly cache = new Map<Sprite, HTMLCanvasElement>();
@@ -17,25 +34,12 @@ export class SpriteCache {
     c.height = s.height;
     const pal = this.wad.palettes[s.palette];
     const img = new ImageData(s.width, s.height);
-    for (let i = 0; i < s.mode.length; i++) {
-      const m = s.mode[i] ?? TRANSPARENT;
-      if (m === TRANSPARENT) continue;
-      const o = i * 4;
-      if (m === BLEND) img.data[o + 3] = 128;
-      else {
-        const k = (s.index[i] ?? 0) * 2;
-        const [r, g, b] = rgb565(pal?.[k] ?? 0, pal?.[k + 1] ?? 0);
-        img.data[o] = r;
-        img.data[o + 1] = g;
-        img.data[o + 2] = b;
-        img.data[o + 3] = 255;
-      }
-    }
+    img.data.set(spriteRgba(s, pal));
     c.getContext('2d')?.putImageData(img, 0, 0);
     return c;
   }
 
-  /** Canvas del sprite (con su paleta; el 50 % de las sombras como alfa 128). */
+  /** Canvas del sprite con su paleta y los píxeles mezclados a alfa 128. */
   canvasFor(s: Sprite): HTMLCanvasElement {
     let c = this.cache.get(s);
     if (!c) {
