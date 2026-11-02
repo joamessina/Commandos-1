@@ -42,7 +42,7 @@ import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.
 import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
 import { Sfx } from '../render/audio.ts';
 import { SpriteCache } from '../render/sprites.ts';
-import { waterSplash } from '../render/splash.ts';
+import { SPLASH_CYCLES, waterSplash } from '../render/splash.ts';
 import { GameSound } from './gamesound.ts';
 import type { AnmFrame } from '../formats/anm.ts';
 
@@ -128,6 +128,9 @@ interface Game {
   readonly barrelProps: ReadonlyMap<Barrel, Prop>;
   readonly mineProps: ReadonlyMap<Mine, Prop>;
   readonly blastArt: { readonly anm: Anm; readonly sprites: SpriteCache } | null;
+  readonly splashArt: { readonly anm: Anm; readonly sprites: SpriteCache } | null;
+  readonly splashes: { x: number; y: number; age: number }[];
+  readonly seenSplashes: WeakSet<object>;
   readonly vol: Vol;
   readonly wad: Wad;
   readonly order: readonly number[];
@@ -591,7 +594,7 @@ async function load(): Promise<void> {
   }
   sound?.stop();
   sound = new GameSound(sfx, { effect: (name) => bytes(`DATOS/RECURSOS/SONIDO/WAVE/${name.toUpperCase()}`), music: async (name) => { const r = loaded?.music.get(name.toLowerCase()); return r ? new Uint8Array(await r()) : undefined; } }, project);
-  game = { houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), splashArt: asset('DISPFALL'), splashes: [], seenSplashes: new WeakSet(), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
@@ -720,6 +723,12 @@ function setupStage(): void {
     while (acc >= TICK) {
       if (!g.battle.lost && !g.won) g.battle.tick();
       if (!g.battle.lost && !g.won) g.tickGroups();
+      for (const s of g.splashes) s.age++;
+      for (let i = g.splashes.length - 1; i >= 0; i--) if ((g.splashes[i]?.age ?? SPLASH_CYCLES) >= SPLASH_CYCLES) g.splashes.splice(i, 1);
+      for (const bl of g.demo.blasts) if (!g.seenSplashes.has(bl) && isWater(g.sectors?.at(bl.x, bl.y) ?? null)) {
+        g.seenSplashes.add(bl);
+        g.splashes.push({ x: bl.x, y: bl.y, age: 0 });
+      }
       g.demo.tick();
       g.sound.tick({ camX: g.camX, camY: g.camY, tracers: g.battle.tracers, blasts: g.demo.blasts, voices: g.battle.takeVoices(), end: g.result ? (g.result.victory ? 'win' : 'lose') : null });
       destroyLinkedHouses(g.houses, g.demo.destroyed);
@@ -988,18 +997,25 @@ function draw(g: Game): void {
   for (const bl of g.demo.blasts) {
     const sector = g.sectors?.at(bl.x, bl.y);
     const q = project(bl.x, bl.y, sector ? groundZ(sector, bl.x, bl.y) : 0);
-    if (isWater(sector ?? null)) {
-      for (const drop of waterSplash(bl.x, bl.y, BLAST_CYCLES - bl.ttl)) {
-        ctx.fillStyle = drop.color;
-        ctx.fillRect(Math.round(q.px + drop.x), Math.round(q.py + drop.y), 1, 1);
-      }
-      continue;
-    }
+    if (isWater(sector ?? null)) continue;
     if (!g.blastArt?.anm.sequences.has('EXPLOSION1')) continue;
     const anim = new Animator(g.blastArt.anm, 'EXPLOSION1');
     anim.advance(0, BLAST_CYCLES - bl.ttl);
     // shortcut: mezcla aditiva del exe para recuperar el brillo; falta confirmar la bandera del emisor de la explosión.
     g.blastArt.sprites.draw(ctx, { ...anim.frame(0), mirror: false }, q.px, q.py, true);
+  }
+  for (const splash of g.splashes) {
+    const sector = g.sectors?.at(splash.x, splash.y);
+    const q = project(splash.x, splash.y, sector ? groundZ(sector, splash.x, splash.y) : 0);
+    if (splash.age < 15 && g.splashArt?.anm.sequences.has('FALLOCANONAGUA')) {
+      const anim = new Animator(g.splashArt.anm, 'FALLOCANONAGUA');
+      anim.advance(0, splash.age);
+      g.splashArt.sprites.draw(ctx, anim.frame(0), q.px, q.py);
+    }
+    for (const drop of waterSplash(splash.x, splash.y, splash.age)) {
+      ctx.fillStyle = drop.color;
+      ctx.fillRect(Math.round(q.px + drop.x), Math.round(q.py + drop.y), 1, 1);
+    }
   }
   for (const tr of g.battle.tracers) {
     const a = project(tr.fromX, tr.fromY, 25);

@@ -1,32 +1,28 @@
-/**
- * Partículas de agua de FUN_006788C0 / ClassFireBolt: 16, hasta 5 por ciclo,
- * ángulo -90 ±32°, gravedad 0,2..0,599 y vida 10..19 (FUN_00632530/00632750).
- * shortcut: la escala de velocidad por partícula y la fase de la tabla de color son aproximadas; mejorar al portar el emisor completo.
- */
+/** ClassSplash: 500 plazas, hasta 30 por ciclo durante 20 ciclos, vida base 30, dispersión ±90°, posición ±20 y gravedad -0,4 (FUN_00637C30/00636CC0/00637090).
+ * shortcut: distribución entre clases, velocidad individual y tabla de color aproximadas; mejorar al portar ClassSplash completo. */
 import { lcg } from '../engine/sound.ts';
 
-export interface WaterDrop {
-  readonly x: number;
-  readonly y: number;
-  readonly color: string;
-}
+export const SPLASH_CYCLES = 80;
+export interface WaterDrop { readonly x: number; readonly y: number; readonly color: string }
 
-/** Posiciones de pantalla relativas a la superficie para una explosión y un ciclo. */
 export function waterSplash(x: number, y: number, tick: number): WaterDrop[] {
-  if (tick < 0) return [];
+  if (tick < 0 || tick >= SPLASH_CYCLES) return [];
   const rand = lcg((Math.trunc(x) * 65537 + Math.trunc(y)) >>> 0);
-  const gravity = 0.2 + (rand() % 400) / 1000;
-  const life = 10 + (rand() % 10);
   const drops: WaterDrop[] = [];
-  for (let i = 0; i < 16; i++) {
-    const angle = ((-90 + (rand() % 65) - 32) * Math.PI) / 180;
-    const speed = 4 * (0.6 + (rand() % 401) / 1000);
-    const age = tick - Math.floor(i / 5);
+  for (let i = 0; i < 500; i++) {
+    const birth = Math.floor(i / 30);
+    const angle = (rand() % 360) * Math.PI / 180;
+    const radius = rand() % 21;
+    const speed = (rand() % 301) / 100;
+    const upward = 5 + (rand() % 701) / 100;
+    const shade = 63 + (rand() % 64);
+    const life = i % 2 === 0 ? 60 : 30;
+    const age = tick - birth;
     if (age < 0 || age >= life) continue;
-    const fade = age / life;
-    const g = Math.round(255 - 105 * fade);
-    const b = Math.round(255 - 95 * fade);
-    drops.push({ x: Math.cos(angle) * speed * age, y: Math.sin(angle) * speed * age + gravity * age * (age + 1) / 2, color: `rgb(0,${g.toString()},${b.toString()})` });
+    const z = upward * age - 0.2 * age * (age + 1);
+    if (z < 0) continue;
+    const distance = radius + speed * age;
+    drops.push({ x: Math.cos(angle) * distance, y: Math.sin(angle) * distance * 0.643 - z * 0.766, color: `rgb(0,${shade.toString()},${shade.toString()})` });
   }
   return drops;
 }
