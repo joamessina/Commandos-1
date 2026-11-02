@@ -7,7 +7,7 @@
 - `FUN_00681B90(categoría, fourcc, bicho, vol)` = ruido **para la IA** (`FUN_00681660`) + reproducción (`FUN_0067F9C0`). Categorías vistas: 2 (atención) y 3 (peligro). Los explosivos usan siempre **3** con volumen `0.75`.
 - La tabla de radios define el alcance **si la fuente se registra**; no registra automáticamente cada reproducción audible. La ruta del tic de bomba `TKTK` usa el reproductor de sonido y no registra fuente de oído (§2).
 - `FUN_00507E80(r, h)`: fija el cilindro de choque del bicho (mina `FUN_00507E80(radio, 10)`; barril `(20,10)` tras explotar; bomba `(−1,40)` con cráter) — [hip: radio y altura]. `FUN_00615DE0/615F60/616020/616140/6156B0/615750/615670/6157B0/6156E0` = encender/apagar bits de visibilidad/actividad del bicho (`bicho+0x38`: 2,4,8,0x10,0x80).
-- **Cráter**: `BOQUETET` (sprite de agujero) con animación `GRANDE`; si el sector bajo el objeto es nulo o de tipo **1 o 3** (agua) no hay cráter (`NADA`, salpicadura `FUN_00679120`). El efecto central `EXPLOS1`/`EXPLOSION1` es una secuencia de sprites (`render.md` §2.2); la cámara tiembla en la bomba (`FUN_0063F760(10, 1.0)`).
+- **Cráter**: `BOQUETET` (sprite de agujero) con animación `GRANDE`; si el sector bajo el objeto es nulo o de tipo **1 o 3** (agua) no hay cráter y se llama `FUN_00679120`. El asm `0x6792B7–0x6792CF` muestra que esa función crea igualmente el efecto `EXPLOS1`/`EXPLOSION1`, en el punto de superficie calculado por `FUN_00483540`. El efecto central es una secuencia de sprites (`render.md` §2.2); la cámara tiembla en la bomba (`FUN_0063F760(10, 1.0)`).
 - Contador de minas por sector: el sector (`bicho+0xE4`) tiene un contador en `+0x48` que la mina suma al crearse (`FUN_00483140`) y resta al explotar [hecho; el consumidor —búsqueda de rutas del enemigo— no se leyó].
 
 ## 1. `ClassAcMina` (`0x483110…0x483C50`) [hecho]
@@ -18,9 +18,9 @@ Estados: `+0x34` armada, `+0x38` disparada, `+0x3C` ya explotó, `+0x40` fase de
 - `MSGA_ENTRADAENCONTENEDOR` / `SALIDADECONTENEDOR` (la mochila): `+0x34 = 0` (queda desarmada).
 - `MSGA_IMPACTO` (cualquier impacto) con la mina armada y no disparada: `+0x38=1`, `+0x18 = 0x14`.
 - `MSGA_COLISION_DINAMICA`: si armada y no disparada y el cuerpo que choca (`FUN_005FE1A0`) no tiene `+0x23C & 1` y su **masa `+0x238` es estrictamente mayor que PESOACT** → `+0x38=1`, `+0x18=0x14` y **el que pisó recibe de inmediato impacto tipo 2 (EXPLOSIONMENOR) con POTENCIA (200)**.
-- Tick `FUN_00483BB0`: fase 0: `+0x18++`; si disparada y no explotada y `+0x18 > 0x13` (o sea **20 ciclos = 1 s después**) → `FUN_00483540` (explota). Fase 1: avanza la animación del efecto; al terminar (`FUN_004E18B0`) → fase 2 y apaga el bicho.
+- Tick `FUN_00483BB0`: fase 0: `+0x18++`; si disparada y no explotada y `+0x18 > 0x13` → `FUN_00483540` (explota). **Corrección:** `FUN_00483160` pone el contador en `0x14` al recibir el impacto o la colisión, no en cero: la explosión sucede en la siguiente actualización, no 20 ciclos después. Fase 1: avanza la animación del efecto; al terminar (`FUN_004E18B0`) → fase 2 y apaga el bicho.
 - **Explosión** (`FUN_00483540`): cráter/agua (§0), `FUN_00571FE0(bicho, tipo 2, RADIO=20, POTENCIA=200)` (área: ver `armas-danio.md` §6), sonido `'XPLO'` (cat. 3, 0.75), animación `GRANDE`, `bicho+0x23C |= 1`, `+0x3C=1`. Con `POTENCIAMINA 10000` (minas submarinas) mata a cualquier cosa.
-- Port M0: las 22 instancias `MINASUB` del MIS se dibujan con su ANM/WAD en su posición original y dejan de dibujarse al explotar. En Chrome se probó colisión del Zodiac, explosión y hundimiento; la masa y activación por impacto siguen simplificadas como indica `engine/demolition.ts`.
+- Port M0: las 22 instancias `MINASUB` del MIS se dibujan con su ANM/WAD y dejan de dibujarse al explotar; el efecto usa `EXPLOS1/EXPLOSION1` durante sus 20 ciclos. En Chrome se verificó contacto, detonación en la actualización siguiente, hundimiento y avance de los fotogramas reales. La masa y activación por impacto siguen simplificadas como indica `engine/demolition.ts`.
 - Ruido de la IA: `XPLO` = radio **1200**.
 
 ## 2. `ClassAcBomba` (`0x43FE20…0x440FB0`) [hecho]

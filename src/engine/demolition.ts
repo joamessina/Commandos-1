@@ -5,7 +5,7 @@
  * soldados a 1200 u. Cambio de tiles: `CAMBIATILES [ .MAPA X .TILES [ a b … ] ]` son pares «sprite → sprite» (`NADA` = quitarlo; verificado contra
  * ANTENA/CASA04/FARO01); sin `.TILES` el volumen pasa a ruinas (los tiles con guion `-RUINA…` se muestran sin él y el resto se quita).
  * shortcut: el daño de área mata a todo el que esté dentro del radio (sin la fórmula de FUN_00571FE0 ni caída con la distancia), sin cráteres, sin
- *           temblor de cámara ni partículas (un círculo), la bomba se planta al instante donde está el zapador (sin PONEBOMBA ni caminar) y los umbrales
+ *           temblor de cámara ni partículas, la bomba se planta al instante donde está el zapador (sin PONEBOMBA ni caminar) y los umbrales
  *           `.IMPACTOS` distintos de 1 no se leen. Cuándo mejorar: al leer FUN_00571FE0 y AuManejaBomba.
  */
 import { asList, asNumbers, asText, find, parseClave, type Node } from '../formats/clave.ts';
@@ -20,7 +20,7 @@ import type { Elem } from './world.ts';
 export const BARREL_RADIUS = 100;
 export const BOMB_RADIUS = 250;
 const NOISE_RADIUS = 1200; // XPLO / EBAR en la tabla de ruidos (0x821DE0)
-const BLAST_CYCLES = 12;
+export const BLAST_CYCLES = 20; // EXPLOS1/EXPLOSION1, duración temporal del ANM
 
 export interface Rect {
   readonly x0: number;
@@ -156,7 +156,7 @@ export interface Mine {
 
 const MINE_R = 17;
 const MINE_BLAST = 20; // RADIOACCIONMINA
-const MINE_FUSE = 20; // la mina disparada explota 1 s después (+0x18 > 0x13)
+const MINE_FUSE = 1; // FUN_00483160 pone +0x18=20; FUN_00483BB0 detona en el siguiente ciclo
 
 /** Zona de `MATABICHOSSECTOR`: al morir el elemento disparador (su token) mueren los bichos del sector bajo (x,y,z) (`FUN_0059D490`, impacto 1 / 1000); con `DESAPARECE` el cuerpo desaparece. */
 export interface KillZone {
@@ -207,7 +207,7 @@ export class Demolition {
   }
 
   /**
-   * Minas: un cuerpo con masa > PESOACT (60; el Zodiac pesa 400) que toque el cilindro (R 17 + el del bote) la dispara y explota 20 ciclos después con
+   * Minas: un cuerpo con masa > PESOACT (60; el Zodiac pesa 400) que toque el cilindro (R 17 + el del bote) la dispara y explota al ciclo siguiente con
    * potencia 10000: lo que esté dentro del radio de la mina o a bordo del bote muere y el bote se hunde.
    * shortcut: pisan minas el bote y el buzo (la masa del comando no se leyó: el exe exige masa > PESOACT; a pie no la pisa nadie); la mina no se activa por impactos.
    */
@@ -216,7 +216,7 @@ export class Demolition {
       if (m.done) continue;
       if (m.fuse === null) {
         if (boat && !this.boatSunk && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_R + boat.radius) m.fuse = MINE_FUSE;
-        // un buzo que la toca recibe el impacto EXPLOSIONMENOR de 10000 (muere en el acto) y la mina explota 20 ciclos después
+        // un buzo que la toca recibe el impacto EXPLOSIONMENOR de 10000 (muere en el acto)
         for (const u of riders) {
           if (u.diving && !u.dead && Math.hypot(u.body.x - m.x, u.body.y - m.y) < MINE_R + 10) {
             u.wound(1e9);

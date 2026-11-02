@@ -3,7 +3,7 @@ import { parseAnm } from '../formats/anm.ts';
 import type { Vol } from '../formats/vol.ts';
 import { anmSeq, bnm } from '../testing/builders.ts';
 import { Boat } from './boat.ts';
-import { BARREL_RADIUS, BOMB_RADIUS, Demolition, parseSites } from './demolition.ts';
+import { BARREL_RADIUS, BLAST_CYCLES, BOMB_RADIUS, Demolition, parseSites } from './demolition.ts';
 import { Soldier } from './soldier.ts';
 import { Unit } from './unit.ts';
 import { loadWorld, flatten } from './world.ts';
@@ -68,7 +68,7 @@ describe('Demolition', () => {
     expect(d.mapState().ruined.has('ANTI01')).toBe(true);
     expect(d.blasts).toHaveLength(1);
     expect(d.blasts[0]?.tag).toBe('XPLO');
-    for (let i = 0; i < 12; i++) d.tick();
+    for (let i = 0; i < BLAST_CYCLES; i++) d.tick();
     expect(d.blasts).toHaveLength(0);
     expect(BOMB_RADIUS).toBe(250);
   });
@@ -124,12 +124,12 @@ describe('minas', () => {
     return { d, boat, u };
   };
 
-  it('el bote que roza la mina la dispara y 20 ciclos después explota: el bote se hunde y mueren los que van a bordo', () => {
+  it('el bote dispara la mina al contacto y explota al ciclo siguiente: se hunde y mueren los ocupantes', () => {
     const { d, boat, u } = mkMine();
     d.tickMines(boat, [u]);
     expect(d.mines[0]?.fuse).toBeNull(); // lejos
     boat.x = 160; // 40 < 17 + 30
-    for (let i = 0; i < 20; i++) d.tickMines(boat, [u]); // el 1.º arma la mecha (20) y los 19 siguientes la gastan
+    d.tickMines(boat, [u]);
     expect(d.boatSunk).toBe(false);
     d.tickMines(boat, [u]);
     expect(d.boatSunk).toBe(true);
@@ -146,7 +146,7 @@ describe('minas', () => {
     boat.x = 160;
     d.tickMines(boat, [u]);
     boat.x = -500;
-    for (let i = 0; i < 25; i++) d.tickMines(boat, [u]);
+    d.tickMines(boat, [u]);
     expect(d.boatSunk).toBe(false);
     expect(u.dead).toBe(false);
     const e = new Demolition([], [], { soldiers: [], commandos: [] });
@@ -171,6 +171,8 @@ describe('minas: buzo', () => {
     d.tickMines(null, [swimmer]);
     expect(swimmer.dead).toBe(true);
     expect(d.mines[0]?.fuse).not.toBeNull();
+    d.tickMines(null, [swimmer]);
+    expect(d.mines[0]?.done).toBe(true);
   });
 });
 

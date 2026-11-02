@@ -17,13 +17,13 @@ import { parseWad, type Wad } from '../formats/wad.ts';
 import { Animator } from '../engine/anim.ts';
 import { groundTarget, RANGE, type Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
-import { Demolition, parseSites, type Barrel, type Mine } from '../engine/demolition.ts';
+import { BLAST_CYCLES, Demolition, parseSites, type Barrel, type Mine } from '../engine/demolition.ts';
 import { destroyLinkedHouses, House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatShares, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, Traps } from '../engine/traps.ts';
 import { eventList, ExitSchedule, formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
-import { isWater, SectorMap } from '../engine/sectors.ts';
+import { groundZ, isWater, SectorMap } from '../engine/sectors.ts';
 import { canThrow, type Pack, type Throwable } from '../engine/throwing.ts';
 import { norm360 } from '../engine/walk.ts';
 import { parseRoutes } from '../engine/patrol.ts';
@@ -126,6 +126,7 @@ interface Game {
   /** Barril del juego -> su gráfico (se oculta al explotar). */
   readonly barrelProps: ReadonlyMap<Barrel, Prop>;
   readonly mineProps: ReadonlyMap<Mine, Prop>;
+  readonly blastArt: { readonly anm: Anm; readonly sprites: SpriteCache } | null;
   readonly vol: Vol;
   readonly wad: Wad;
   readonly order: readonly number[];
@@ -589,7 +590,7 @@ async function load(): Promise<void> {
   }
   sound?.stop();
   sound = new GameSound(sfx, { effect: (name) => bytes(`DATOS/RECURSOS/SONIDO/WAVE/${name.toUpperCase()}`), music: async (name) => { const r = loaded?.music.get(name.toLowerCase()); return r ? new Uint8Array(await r()) : undefined; } }, project);
-  game = { houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
@@ -984,11 +985,12 @@ function draw(g: Game): void {
     ctx.fillRect(q.px - 1, q.py - 3, 3, 3);
   }
   for (const bl of g.demo.blasts) {
-    const q = project(bl.x, bl.y, 0);
-    ctx.fillStyle = `rgba(255,170,40,${(bl.ttl / 14).toFixed(2)})`;
-    ctx.beginPath();
-    ctx.ellipse(q.px, q.py, bl.radius, bl.radius * COS_VIEW, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (!g.blastArt?.anm.sequences.has('EXPLOSION1')) continue;
+    const sector = g.sectors?.at(bl.x, bl.y);
+    const q = project(bl.x, bl.y, sector ? groundZ(sector, bl.x, bl.y) : 0);
+    const anim = new Animator(g.blastArt.anm, 'EXPLOSION1');
+    anim.advance(0, BLAST_CYCLES - bl.ttl);
+    g.blastArt.sprites.draw(ctx, anim.frame(0), q.px, q.py);
   }
   for (const tr of g.battle.tracers) {
     const a = project(tr.fromX, tr.fromY, 25);
@@ -1027,8 +1029,6 @@ function draw(g: Game): void {
     ctx.fillText(`${t.token}  x=${t.body.x.toFixed(0)} y=${t.body.y.toFixed(0)}  ${t.anim.name}[${t.anim.step.toString()}]  v=${Math.hypot(t.body.vx, t.body.vy).toFixed(2)} u/ciclo  ciclo ${g.ticks.toString()}`, 10, stage.height - 10);
   }
 }
-
-const COS_VIEW = Math.cos((50 * Math.PI) / 180);
 
 /**
  * Cono de visión del soldado sobre el SUELO (cada punto con la altura del terreno bajo él) y cortado en el primer sector Ocluso, igual que `sees`. Dos zonas como en

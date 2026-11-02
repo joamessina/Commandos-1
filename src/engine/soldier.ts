@@ -349,7 +349,8 @@ export class Soldier implements Target, Claimant {
   }
 
   private idleAnim(): void {
-    if (this.unit.anim.has('REPOSO')) this.unit.anim.set('REPOSO');
+    if (this.fixed && this.unit.anim.has('CANONERO')) this.unit.anim.set('CANONERO');
+    else if (this.unit.anim.has('REPOSO')) this.unit.anim.set('REPOSO');
   }
 
   /** Se queda quieto mirando (x, y) `cycles` ciclos y vuelve al puesto. */
@@ -589,7 +590,8 @@ export class Soldier implements Target, Claimant {
     this.unit.stop();
     this.moving = false;
     this.face(c.body.x, c.body.y);
-    if (this.unit.anim.has('APUNTAR')) this.unit.anim.set('APUNTAR');
+    if (this.fixed) this.idleAnim();
+    else if (this.unit.anim.has('APUNTAR')) this.unit.anim.set('APUNTAR');
   }
 
   private aiming(seen: Unit | null): void {
@@ -619,7 +621,7 @@ export class Soldier implements Target, Claimant {
       return;
     }
     this.cooldown = RELOAD_BASE + Math.floor(w.rng() * 6);
-    if (this.unit.anim.has('DISPARAR')) {
+    if (!this.fixed && this.unit.anim.has('DISPARAR')) {
       this.unit.anim.set('APUNTAR');
       this.unit.anim.set('DISPARAR');
     }

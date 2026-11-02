@@ -307,6 +307,17 @@ describe('Soldier: cuerpos a distinta altura', () => {
 });
 
 describe('artillero de nido (soldado fijo)', () => {
+  it('mantiene la animación CANONERO al vigilar y disparar, y conserva la de muerte', () => {
+    const poses = parseAnm(bnm([{ type: 0, slots: [6] }, ...anmSeq(1, 'ANDAR', 1, 0, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8), ...anmSeq(1, 'CANONERO', 1, 0, 0, 8), ...anmSeq(1, 'APUNTAR', 1, 0, 0, 8), ...anmSeq(1, 'DISPARAR', 1, 0, 0, 8), ...anmSeq(1, 'MUERTE1', 1, 0, 0, 8)]));
+    const gunner = new Soldier('N', new Unit('N', poses, 0, 0, 0, 0), null, { fixed: true });
+    const target = unit(100, 0, 0, 'COMANDO');
+    const w = mkWorld([target]).world;
+    expect(gunner.unit.anim.name).toBe('CANONERO');
+    for (let i = 0; i < 50; i++) gunner.tick(w);
+    expect(gunner.unit.anim.name).toBe('CANONERO');
+    gunner.kill();
+    expect(gunner.unit.anim.name).toBe('MUERTE1');
+  });
   it('vistaOf lee .MOD (×2) y .ANG del órgano Vista01; sin claves no hay opciones', async () => {
     const { parseClave } = await import('../formats/clave.ts');
     const { vistaOf } = await import('./vision.ts');
