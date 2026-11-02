@@ -1029,7 +1029,8 @@ function draw(g: Game): void {
     if (splash.age < 15 && g.splashArt?.anm.sequences.has('FALLOCANONAGUA')) {
       const anim = new Animator(g.splashArt.anm, 'FALLOCANONAGUA');
       anim.advance(0, splash.age);
-      g.splashArt.sprites.draw(ctx, anim.frame(0), q.px, q.py);
+      // shortcut: mezcla aditiva para eliminar el fondo negro; falta confirmar la bandera original del efecto.
+      g.splashArt.sprites.draw(ctx, anim.frame(0), q.px, q.py, true);
     }
     for (const drop of waterSplash(splash.x, splash.y, splash.age)) {
       ctx.fillStyle = drop.color;
