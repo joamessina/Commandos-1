@@ -1,5 +1,5 @@
 /**
- * Visor de mapa con los comandos animados. El jugador elige SU carpeta del juego (Legacy): WAR_MP.DIR +
+ * Visor de mapa con los comandos animados. El jugador elige SU carpeta raíz del juego: WAR_MP.DIR +
  * DATOS/recursos/bmps/map_mp/Fase000N.wad. Nada se sube ni se hace fetch: todo se lee con la File API.
  * Controles: clic izquierdo = elegir comando / caminar; clic derecho = caminar; Mayús+clic o doble clic derecho = correr;
  * flechas o WASD = mover la cámara; 1-4 = elegir comando; Inicio = centrar en el elegido.
@@ -36,7 +36,7 @@ import { Cursors } from '../render/cursors.ts';
 import { Hud, type HudUnit } from '../render/hud.ts';
 import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
 import { lineClear, rayReach, vistaOf } from '../engine/vision.ts';
-import { asNumber, find } from '../formats/clave.ts';
+import { asList, asNumber, asText, find, parseClave } from '../formats/clave.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
 import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
@@ -46,6 +46,9 @@ import { SpriteCache } from '../render/sprites.ts';
 import { SPLASH_CYCLES, waterSplash } from '../render/splash.ts';
 import { GameSound } from './gamesound.ts';
 import { showMenu } from './menu.ts';
+import { playIntro, type TacticalIntro } from './intro.ts';
+import { showBriefing } from './briefing.ts';
+import { IntroCamera } from '../engine/intro-camera.ts';
 import type { AnmFrame } from '../formats/anm.ts';
 
 const byId = (id: string): HTMLElement => {
@@ -70,6 +73,7 @@ interface Loaded {
   readonly wads: ReadonlyMap<string, () => Promise<ArrayBuffer>>;
   /** Archivos sueltos de `DATOS/MUSICA/` (en minúsculas) -> lector de sus bytes. */
   readonly music: ReadonlyMap<string, () => Promise<ArrayBuffer>>;
+  readonly loose: (path: string) => Promise<Uint8Array | undefined>;
 }
 interface UnitView {
   readonly unit: Unit;
@@ -196,6 +200,13 @@ let game: Game | null = null;
 let stage: HTMLCanvasElement | null = null;
 let loopId = 0;
 let closeMenu: (() => void) | null = null;
+let presenting = false;
+function lockControls(): () => void {
+  const inputs = [dirInput, mapSel, waterBox, diffSel, zoomSel, byId('dev') as HTMLButtonElement];
+  const disabled = inputs.map((input) => input.disabled);
+  for (const input of inputs) input.disabled = true;
+  return () => { inputs.forEach((input, i) => { input.disabled = disabled[i] ?? false; }); };
+}
 const keys = new Set<string>();
 
 const say = (msg: string, error = false): void => {
@@ -232,25 +243,35 @@ function setZoom(next: number): void {
 
 async function onFolder(): Promise<void> {
   const files = Array.from(dirInput.files ?? []);
-  const dirFile = files.find((f) => /(^|\/)WAR_MP\.DIR$/i.test(f.webkitRelativePath));
+  const dirs = files.filter((f) => /(^|\/)WAR_MP\.DIR$/i.test(f.webkitRelativePath));
+  const dirFile = dirs.reduce<File | undefined>((best, f) => !best || f.webkitRelativePath.length < best.webkitRelativePath.length ? f : best, undefined);
   if (!dirFile) {
-    say('No encontré WAR_MP.DIR en esa carpeta. Elegí la carpeta Legacy del juego.', true);
+    say('No encontré WAR_MP.DIR en esa carpeta. Elegí la carpeta raíz del juego.', true);
     return;
   }
   say('Leyendo WAR_MP.DIR…');
   const dir = new Uint8Array(await dirFile.arrayBuffer());
   const wads = new Map<string, () => Promise<ArrayBuffer>>();
   const music = new Map<string, () => Promise<ArrayBuffer>>();
+  const looseFiles = new Map<string, File>();
+  const prefix = dirFile.webkitRelativePath.slice(0, -'WAR_MP.DIR'.length);
   for (const f of files) {
-    const m = /map_mp\/(FASE\d{4})\.WAD$/i.exec(f.webkitRelativePath);
+    if (!f.webkitRelativePath.startsWith(prefix)) continue;
+    const path = f.webkitRelativePath.slice(prefix.length);
+    const m = /^DATOS\/recursos\/bmps\/map_mp\/(FASE\d{4})\.WAD$/i.exec(path);
     if (m?.[1]) wads.set(m[1].toUpperCase(), () => f.arrayBuffer());
-    const mu = /DATOS\/musica\/([^/]+)$/i.exec(f.webkitRelativePath);
+    const mu = /^DATOS\/musica\/([^/]+)$/i.exec(path);
     if (mu?.[1]) music.set(mu[1].toLowerCase(), () => f.arrayBuffer());
+    const relative = /^((?:DATOS|VIDEO)\/.*)$/i.exec(path);
+    if (relative?.[1]) looseFiles.set(relative[1].toUpperCase(), f);
   }
-  await start(dir, wads, music);
+  await start(dir, wads, music, async (path) => {
+    const f = looseFiles.get(path.toUpperCase());
+    return f ? new Uint8Array(await f.arrayBuffer()) : undefined;
+  });
 }
 
-async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffer>>, music: Map<string, () => Promise<ArrayBuffer>>): Promise<void> {
+async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffer>>, music: Map<string, () => Promise<ArrayBuffer>>, loose: Loaded['loose']): Promise<void> {
   closeMenu?.();
   closeMenu = null;
   sound?.stop();
@@ -259,7 +280,7 @@ async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffe
   cancelAnimationFrame(loopId);
   const entries = new Map<string, DirEntry>();
   for (const e of parseContainer(dir)) entries.set(e.path.toUpperCase(), e);
-  loaded = { dir, entries, wads, music };
+  loaded = { dir, entries, wads, music, loose };
   // misiones jugables = las que tienen sus archivos de mapa (volúmenes y banco de gráficos): se leen del propio .MIS
   const text = (path: string): string => { const b = bytes(path); return b ? new TextDecoder('latin1').decode(b) : ''; };
   const playable = missionNames(entries.keys()).filter((name) => {
@@ -290,8 +311,7 @@ async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffe
     sfx.stopMusic();
     diffSel.value = difficulty;
     mapSel.value = campaign[0] ?? maps[0] ?? '';
-    // shortcut: falta reproducir el guion de introducción y el briefing antes de la primera misión.
-    guarded(load)();
+    guarded(() => load(true))();
   });
   const currentMenu = closeMenu;
   const readMusic = music.get('menu.wav');
@@ -339,7 +359,7 @@ function bytes(path: string): Uint8Array | undefined {
   return e && loaded ? entryBytes(loaded.dir, e) : undefined;
 }
 
-async function load(): Promise<void> {
+async function load(introduction = false): Promise<void> {
   if (!loaded || !mapSel.value) return;
   closeMenu?.();
   closeMenu = null;
@@ -641,6 +661,27 @@ async function load(): Promise<void> {
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
+  if (introduction) {
+    const mission = asList(find(parseClave(misText), '.MISSION')) ?? [];
+    const filesBlock = asList(find(mission, '.DATOSFICHEROSMISION')) ?? [];
+    const introFile = asText(find(filesBlock, '.INTROSCRIPT'));
+    const scriptBytes = introFile ? bytes(`DATOS/MISIONES/${introFile.toUpperCase()}`) : undefined;
+    if (scriptBytes) {
+      const loadedGame = loaded;
+      presenting = true;
+      const unlock = lockControls();
+      try {
+        setupStage();
+        cancelAnimationFrame(loopId);
+        const previousZoom = zoomLevel;
+        try { await playIntro(view, new TextDecoder('windows-1252').decode(scriptBytes), bytes, loadedGame.loose, introCamera(game, elems), say); }
+        finally { zoomLevel = previousZoom; }
+      } finally {
+        presenting = false;
+        unlock();
+      }
+    }
+  }
   setupStage();
   sound.init(misText).catch(() => undefined); // sin ambiente ni música si algo falla (no frena la misión)
   say(`${mapSel.selectedOptions[0]?.text ?? n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.${import.meta.env.DEV ? ' Comandos invencibles (Alt+I), Ctrl+X teletransporta, Ctrl+Alt+N termina la misión.' : ''}`);
@@ -855,6 +896,62 @@ function resize(): void {
   stage.height = Math.max(240, view.clientHeight);
 }
 
+/** Cámara del recorrido táctico: posiciones y aceleración de FUN_005B0540 / FUN_005C9BC0. */
+function introCamera(g: Game, elems: readonly Elem[]): TacticalIntro {
+  const camera = new IntroCamera(g.camX, g.camY);
+  const target = (arg: string): { x: number; y: number } | null => {
+    // shortcut: [x y] se toma como píxel de mapa; falta portar la resolución por sector de FUN_004E1E70.
+    const screen = /^\[\s*([-\d.]+)\s+([-\d.]+)/.exec(arg);
+    if (screen?.[1] && screen[2]) return { x: Number(screen[1]), y: Number(screen[2]) };
+    const token = /^B\s+(\S+)/.exec(arg)?.[1];
+    const elem = token ? elems.find((e) => e.token.toUpperCase() === token.toUpperCase()) : undefined;
+    if (!elem) return null;
+    const p = project(elem.x, elem.y, elem.z);
+    return { x: p.px, y: p.py };
+  };
+  const clamp = (p: { x: number; y: number }): { x: number; y: number } => {
+    const halfW = 320 / camera.scale;
+    const halfH = 240 / camera.scale;
+    return { x: Math.max(halfW, Math.min(g.map.width - halfW, p.x)), y: Math.max(halfH, Math.min(g.map.height - halfH, p.y)) };
+  };
+  return {
+    draw(canvas) {
+      const previous = stage;
+      stage = canvas; g.camX = camera.x; g.camY = camera.y; zoomLevel = camera.scale;
+      try { draw(g, true); } finally { stage = previous; }
+      camera.x = g.camX; camera.y = g.camY;
+    },
+    setPos(arg) { const p = target(arg); if (p) { const q = clamp(p); camera.setPos(q.x, q.y); } },
+    setZoom(value) { camera.setZoom(value); },
+    goto(arg) {
+      const p = target(arg);
+      if (p) { const q = clamp(p); camera.goto(q.x, q.y, /@([LMNR])/.exec(arg)?.[1] ?? 'N'); }
+    },
+    zoom(arg) { const m = /^\s*([\d.]+)\s*([LMNR])?/.exec(arg); if (m?.[1]) camera.zoom(Number(m[1]), m[2] ?? 'N'); },
+    moving: () => camera.moving,
+    zooming: () => camera.zooming,
+    // shortcut: durante el briefing no avanzan la simulación ni el agua; verificar los receptores de FUN_0056D790.
+    tick: () => { camera.tick(); },
+    stop: () => { camera.stop(); },
+  };
+}
+
+async function openBriefing(): Promise<void> {
+  if (!game || !stage || presenting) return;
+  const missionData = bytes(`DATOS/MISIONES/${mapSel.value}.MIS`);
+  if (!missionData) return;
+  const mission = asList(find(parseClave(new TextDecoder('windows-1252').decode(missionData)), '.MISSION')) ?? [];
+  const briefing = asList(find(mission, '.BRIEFING')) ?? [];
+  const filename = asText(find(briefing, '.TEXTOS'));
+  const data = filename ? bytes(`DATOS/MISIONES/${filename.toUpperCase()}`) : undefined;
+  if (!data) { say('Esta misión no tiene ficha de objetivos.', true); return; }
+  presenting = true;
+  const unlock = lockControls();
+  cancelAnimationFrame(loopId);
+  try { await showBriefing(view, stage.width, stage.height, bytes, new TextDecoder('windows-1252').decode(data)); }
+  finally { presenting = false; unlock(); setupStage(); }
+}
+
 let cursorKey = '';
 
 /** ¿Hay un soldado vivo bajo el cursor? (mismo acierto que el clic de `onMouse`). */
@@ -936,11 +1033,11 @@ function updateCursor(g: Game): void {
   stage.style.cursor = scope ? 'none' : g.cursors.cssFor(spec);
 }
 
-function draw(g: Game): void {
+function draw(g: Game, briefing = false): void {
   const ctx = stage?.getContext('2d');
   if (!stage || !ctx) return;
   const z = zoom();
-  const v = vp(g);
+  const v = briefing ? { x: 0, y: 0, w: stage.width, h: stage.height } : vp(g);
   const vw = v.w / z;
   const vh = v.h / z;
   g.camX = Math.max(vw / 2, Math.min(g.map.width - vw / 2, g.camX));
@@ -1088,6 +1185,7 @@ function draw(g: Game): void {
     ctx.stroke();
   }
   ctx.restore();
+  if (briefing) return;
   g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => hudUnit(u, g.bag)), g.selected, (i) => g.faces.of(i), g.hudLeft, litItems(g));
   updateCursor(g);
   drawHud(ctx, g);
@@ -1753,7 +1851,10 @@ if (import.meta.env.DEV) {
     }
     const music = new Map<string, () => Promise<ArrayBuffer>>();
     for (const f of ['menu.wav', 'fases.wav', 'fases02.wav', 'mcomplet.wav', 'muerte.wav']) music.set(f, async () => (await fetch(`/__game/DATOS/musica/${f}`)).arrayBuffer());
-    await start(dir, wads, music);
+    await start(dir, wads, music, async (path) => {
+      const response = await fetch(`/__game/${path}`);
+      return response.ok ? new Uint8Array(await response.arrayBuffer()) : undefined;
+    });
   }));
 }
 dirInput.addEventListener('change', guarded(onFolder));
@@ -1774,7 +1875,12 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   keys.add(k);
   const g = game;
-  if (!g) return;
+  if (!g || presenting) return;
+  if (e.altKey && e.code === 'KeyB') {
+    e.preventDefault();
+    guarded(openBriefing)();
+    return;
+  }
   if (e.ctrlKey && !e.altKey && e.code === 'KeyX') {
     e.preventDefault();
     teleportAction(g);
