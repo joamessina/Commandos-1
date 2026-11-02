@@ -986,17 +986,20 @@ function draw(g: Game): void {
     ctx.fillRect(q.px - 1, q.py - 3, 3, 3);
   }
   for (const bl of g.demo.blasts) {
-    if (!g.blastArt?.anm.sequences.has('EXPLOSION1')) continue;
     const sector = g.sectors?.at(bl.x, bl.y);
     const q = project(bl.x, bl.y, sector ? groundZ(sector, bl.x, bl.y) : 0);
+    if (isWater(sector ?? null)) {
+      for (const drop of waterSplash(bl.x, bl.y, BLAST_CYCLES - bl.ttl)) {
+        ctx.fillStyle = drop.color;
+        ctx.fillRect(Math.round(q.px + drop.x), Math.round(q.py + drop.y), 1, 1);
+      }
+      continue;
+    }
+    if (!g.blastArt?.anm.sequences.has('EXPLOSION1')) continue;
     const anim = new Animator(g.blastArt.anm, 'EXPLOSION1');
     anim.advance(0, BLAST_CYCLES - bl.ttl);
     // shortcut: mezcla aditiva del exe para recuperar el brillo; falta confirmar la bandera del emisor de la explosión.
     g.blastArt.sprites.draw(ctx, { ...anim.frame(0), mirror: false }, q.px, q.py, true);
-    if (isWater(sector ?? null)) for (const drop of waterSplash(bl.x, bl.y, BLAST_CYCLES - bl.ttl)) {
-      ctx.fillStyle = drop.color;
-      ctx.fillRect(Math.round(q.px + drop.x), Math.round(q.py + drop.y), 1, 1);
-    }
   }
   for (const tr of g.battle.tracers) {
     const a = project(tr.fromX, tr.fromY, 25);
