@@ -86,7 +86,7 @@ export interface SoldierWorld {
   /** Comandos vivos o muertos (el soldado filtra). */
   readonly commandos: readonly Unit[];
   /** Cuerpos tirados (soldados y comandos muertos): al verlos va a investigar (clasificador FUN_006AFC10 código 2 → FUN_004326B0). */
-  readonly bodies?: readonly { readonly x: number; readonly y: number }[];
+  readonly bodies?: readonly { readonly x: number; readonly y: number; /** Altura del suelo bajo el cuerpo: con ella el rayo de vista pasa por la pendiente de los sectores como con cualquier blanco. */ readonly z?: number }[];
   readonly sectors: SectorMap | null;
   readonly rng: () => number;
   /** Cajetillas en el suelo. */
@@ -486,7 +486,9 @@ export class Soldier implements Target, Claimant {
   }
 
   /**
-   * Ve un cuerpo por primera vez (FUN_004326B0: anota su posición y mira hacia él) y va a verlo de cerca.
+   * Ve un cuerpo por primera vez (FUN_004326B0: anota su posición y mira hacia él) y va a verlo de cerca. El cuerpo se ve como cualquier blanco de la vista: cono, rayo ojo a ojo por la pendiente
+   * de los sectores (`FUN_005F9820`) con su ojo a 0 (`AcMuerte` estado 1: `bicho+0x58 = 0`), de modo que el borde de un acantilado o un muelle esconde al que yace a su pie y no hay regla por nivel (organos.md).
+   * shortcut: el ojo vale 0 desde que cae (el exe lo pone al terminar la animación de muerte, estado 1) y no se prueban los volúmenes (`FUN_0063E200`).
    * shortcut: sin niveles de alerta; BAP1 emite ALRM/VMUE y BAP2 VMUE al comenzar a investigar, una vez por posición. Mejorar al portar la cadena completa.
    */
   private lookForBodies(w: SoldierWorld): void {
@@ -495,7 +497,7 @@ export class Soldier implements Target, Claimant {
     for (const body of w.bodies ?? []) {
       const key = `${Math.round(body.x).toString()},${Math.round(body.y).toString()}`;
       if (this.seenBodies.has(key) || (body.x === b.x && body.y === b.y)) continue;
-      if (!sees(viewer, { x: body.x, y: body.y, radius: 10, low: false }, w.sectors)) continue;
+      if (!sees(viewer, { x: body.x, y: body.y, radius: 10, low: false, ...(body.z === undefined ? {} : { z: body.z, eye: 0 }) }, w.sectors)) continue;
       this.seenBodies.add(key);
       if (this.brain === 'base') w.onVoice?.(this, 'ALRM');
       if (this.brain) w.onVoice?.(this, 'VMUE');

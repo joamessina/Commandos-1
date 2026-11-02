@@ -86,7 +86,7 @@ export class Battle {
       });
       if (a.done) this.attacks.delete(u);
     }
-    const bodies = [...this.soldiers.filter((s) => s.dead && !s.unit.hidden).map((s) => ({ x: s.x, y: s.y })), ...this.commandos.filter((c) => c.dead && !c.hidden).map((c) => ({ x: c.body.x, y: c.body.y }))];
+    const bodies = [...this.soldiers.filter((s) => s.dead && !s.unit.hidden).map((s) => ({ x: s.x, y: s.y, z: s.unit.z })), ...this.commandos.filter((c) => c.dead && !c.hidden).map((c) => ({ x: c.body.x, y: c.body.y, z: c.z }))];
     // control alemán: el que anda cerca de un controlado se pone a charlar (ECHAR_CHARLA)
     for (const c of this.soldiers) {
       if (!c.controlled || c.dead) continue;
