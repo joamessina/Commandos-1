@@ -70,21 +70,18 @@ function drawTile(img: Uint8ClampedArray, mw: number, mh: number, t: Tile, s: Sp
       const dx = t.x + xx;
       if (dx < 0 || dx >= mw) continue;
       const o = (dy * mw + dx) * 4;
+      const i = (s.index[k] ?? 0) * 2;
+      const [r, g, b] = rgb565(pal[i] ?? 0, pal[i + 1] ?? 0);
       if (mode === BLEND) {
-        // 50 % con el fondo, como el blitter del exe (sombras): lo que hay debajo (esta capa + la del agua) se oscurece a la mitad. Con alfa a
-        // (0..255) la capa pasa a alfa' = (255 + a)/2 y color' = a·c/(255 + a); con a = 255 es el c/2 de siempre y sobre transparente, negro al 50 %.
+        // FUN_00659C80 mezcla al 50 % el color del sprite y el fondo, incluso en la capa transparente sobre el agua.
         const a = img[o + 3] ?? 0;
-        for (let ch = 0; ch < 3; ch++) img[o + ch] = ((img[o + ch] ?? 0) * a) / (255 + a);
+        for (const [ch, color] of [r, g, b].entries()) img[o + ch] = (color * 255 + (img[o + ch] ?? 0) * a) / (255 + a);
         img[o + 3] = (255 + a) / 2;
         continue;
       }
-      {
-        const i = (s.index[k] ?? 0) * 2;
-        const [r, g, b] = rgb565(pal[i] ?? 0, pal[i + 1] ?? 0);
-        img[o] = r;
-        img[o + 1] = g;
-        img[o + 2] = b;
-      }
+      img[o] = r;
+      img[o + 1] = g;
+      img[o + 2] = b;
       img[o + 3] = 255;
     }
   }

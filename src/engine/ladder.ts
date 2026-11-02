@@ -6,6 +6,7 @@
  *           al desnivel de la escalera; el montacargas se mueve a STDVEL 8 u/ciclo (MotorRail, el 0,02 de `SETRAIL` no está interpretado) y se activa con la tecla A.
  */
 import { asList, asNumbers, asText, find, type Node } from '../formats/clave.ts';
+import { groundZ, type SectorMap } from './sectors.ts';
 import type { Elem } from './world.ts';
 
 export interface P3 {
@@ -36,7 +37,7 @@ const p3 = (n: Node | undefined): P3 | null => {
 };
 
 /** Escaleras de una misión: elementos de macro ESCALA con su `acEscala`. */
-export function parseLadders(elems: readonly Elem[]): Ladder[] {
+export function parseLadders(elems: readonly Elem[], sectors?: SectorMap | null): Ladder[] {
   const out: Ladder[] = [];
   for (const e of elems) {
     const a = e.actions.find((x) => x.name.toUpperCase() === 'ACESCALA');
@@ -49,7 +50,7 @@ export function parseLadders(elems: readonly Elem[]): Ladder[] {
       token: e.token,
       low,
       high,
-      box: b?.length === 4 ? [b[0] ?? 0, b[1] ?? 0, b[2] ?? 0, b[3] ?? 0] : null,
+      box: b?.length === 4 ? [b[0] ?? 0, b[1] ?? 0, b[2] ?? 0, b[3] ?? 0] : sectors ? autoBox(low, high, sectors) : null,
       diver: asText(find(e.block, '.ESCALAUSABLEPORBUZO')) === '1',
       disabled: false,
     });
@@ -61,10 +62,39 @@ const COS50 = Math.cos((50 * Math.PI) / 180);
 const SIN50 = Math.sin((50 * Math.PI) / 180);
 const proj = (p: P3): { x: number; y: number } => ({ x: p.x, y: COS50 * p.y - SIN50 * p.z });
 
-/** Escalera bajo el cursor (píxel de mapa): dentro de su caja de selección o a menos de 24 px de alguno de sus extremos. */
+/** FUN_004A7420/004A7950/004A75F0: caja automática sobre la arista entre los dos sectores. */
+function autoBox(low: P3, high: P3, map: SectorMap): readonly [number, number, number, number] | null {
+  const lower = map.at(low.x, low.y);
+  const upper = map.at(high.x, high.y);
+  if (!lower || !upper || lower === upper) return null;
+  const index = map.sec.sectors.indexOf(lower);
+  for (let i = 0; i < upper.verts.length; i++) {
+    if (upper.neighbors[i] !== index) continue;
+    const a = map.sec.verts[upper.verts[i] ?? -1];
+    const b = map.sec.verts[upper.verts[(i + 1) % upper.verts.length] ?? -1];
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+    if (len === 0) continue;
+    const t = ((high.x - a.x) * dx + (high.y - a.y) * dy) / (len * len);
+    if (t < 0 || t > 1) continue;
+    const nx = -dy / len, ny = dx / len;
+    const x = a.x + t * dx + nx * 0.1, y = a.y + t * dy + ny * 0.1;
+    const height = Math.round(groundZ(upper, x, y) - groundZ(lower, x, y));
+    if (height <= 10) continue;
+    const p = proj({ x, y, z: high.z - height });
+    const left = Math.round(p.x) - 10, top = Math.round(p.y) + 10 - height;
+    return ny >= 0 ? [left, top - 40, 40, 40] : [left, top, 20, height];
+  }
+  return null;
+}
+
+/** Escalera bajo el cursor. shortcut: sin caja explícita aproxima la caja automática de FUN_004A75F0 con los extremos. */
 export function pickLadder(ladders: readonly Ladder[], px: number, py: number): Ladder | null {
   for (const l of ladders) {
-    if (l.box && px >= l.box[0] && px <= l.box[0] + l.box[2] && py >= l.box[1] && py <= l.box[1] + l.box[3]) return l;
+    if (l.box) {
+      if (px >= l.box[0] && px <= l.box[0] + l.box[2] && py >= l.box[1] && py <= l.box[1] + l.box[3]) return l;
+      continue;
+    }
     for (const e of [l.low, l.high]) {
       const q = proj(e);
       if (Math.hypot(px - q.x, py - q.y + 20) < 24) return l;

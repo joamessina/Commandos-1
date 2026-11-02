@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { parseAnm } from '../formats/anm.ts';
-import { anmSeq, bnm } from '../testing/builders.ts';
+import { parseSec } from '../formats/sec.ts';
+import { anmSeq, bnm, secBytes } from '../testing/builders.ts';
 import { Lift, parseLadders, parseLift, pickLadder, stepClimb, newClimb, reverse, wallXY, type Ladder } from './ladder.ts';
 import { Unit } from './unit.ts';
+import { SectorMap } from './sectors.ts';
 import { flatten, loadWorld } from './world.ts';
 
 const MAC = `.CLASS BICHO .VARIABLES [ PPUNTOBAJO PPUNTOALTO NCAJASELECCION VESCALAUSABLEPORBUZO ]
@@ -26,8 +28,19 @@ describe('parseLadders / pickLadder', () => {
   });
   it('se elige por su caja de selección o cerca de un extremo (proyectado)', () => {
     expect(pickLadder(ls, 110, 220)?.token).toBe('E1');
+    expect(pickLadder(ls, 0, -20)).toBeNull();
     expect(pickLadder(ls, 500, 500 * 0.6428 - 0.766 * 0 - 20)?.token).toBe('E2');
     expect(pickLadder(ls, 900, 900)).toBeNull();
+  });
+  it('calcula la caja automática con la arista y altura de los sectores', () => {
+    const vertices: [number, number][] = [[0, 0], [100, 0], [100, 100], [0, 100], [100, 200], [0, 200]];
+    const sec = parseSec(secBytes({ verts: vertices, a: [{ verts: [0, 1, 2, 3], plane: [0, 0, 65] }, { verts: [3, 2, 4, 5] }], tw1: [[-1, -1, 1, -1], [0, -1, -1, -1]] }));
+    const mis = `.MISSION [ .ELEMENTOS [ [ .CLASS MACRO .MACRO ESC .TOKEN E .PUNTOBAJO [ 50 120 0 ] .PUNTOALTO [ 50 80 65 ] ] ] ]`;
+    const items = flatten(loadWorld(mis, { difficulty: 'FACIL', macro: () => MAC }));
+    const ladders = parseLadders(items, new SectorMap(sec));
+    expect(ladders[0]?.box).toEqual([40, 9, 20, 65]);
+    expect(pickLadder(ladders, 50, 30)?.token).toBe('E');
+    expect(pickLadder(ladders, 70, 30)).toBeNull();
   });
 });
 

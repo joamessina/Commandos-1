@@ -14,6 +14,13 @@ const px = (img: Uint8ClampedArray, w: number, x: number, y: number): number[] =
 const vol = (tile: string, name = 'A'): ReturnType<typeof parseVol> => parseVol(`MAPDIMXY 4,3\nPOLY "${name}",0,0,0,0,0,1\nTILE ${tile}`);
 
 describe('composeMap', () => {
+  it('mezcla el color FE con el fondo y lo conserva sobre la capa transparente', () => {
+    const blend = rleParts(1, [[0xfe, 1, 1]]);
+    const colored = parseWad(wadBytes([palette([0, 0xf800])], [{ name: 'FE.RLE', comp: 4, h: 1, w: 1, b1: blend.b1, b2: blend.b2, palette: 0 }]));
+    expect(px(composeMap(vol('0,0,1,1,0,0,0,"FE.RLE","   "'), colored).pixels, 4, 0, 0)).toEqual([128, 0, 0, 255]);
+    expect(px(composeMap(vol('0,0,1,1,0,0,0,"FE.RLE","   "'), colored, { layer: 'land' }).pixels, 4, 0, 0)).toEqual([255, 0, 0, 128]);
+  });
+
   it('pinta opaco, mezcla 50 % sobre el fondo y respeta la transparencia', () => {
     const m = composeMap(vol('1,0,2,2,0,0,0,"S.RLE","   "'), wad);
     expect(px(m.pixels, 4, 1, 0)).toEqual(RED);

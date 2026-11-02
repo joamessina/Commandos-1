@@ -3,6 +3,10 @@
 Fuente: exe de la raíz (`py -I tools/showfn.py D:/Joaquin/research-c1/ghidra/all2 <hex>`), datos de `ESCALA.MAC` y `MAPA0000.MIS`. **[hecho]** = leído con dirección; **[hip]** = hipótesis; **NO LEÍDO** = pendiente. Nada de esto está portado: es investigación previa a implementar (pedido del usuario, 2026-10-28).
 Origen de la pregunta: en el original se hace clic en una escalera, el comando camina, sube con la animación de escalar, y **si se cancela (botón derecho) antes de terminar, queda congelado a mitad de la escalera**; con otro clic sigue o se da vuelta.
 
+## Caja de selección automática (2026-11-02)
+
+`FUN_004A7420` encuentra la arista entre sectores y guarda el desnivel; `FUN_004A7950` proyecta el punto alto sobre la arista y desplaza la posición 0,1 por la normal. `FUN_004A75F0` (`0x4A7668–0x4A76D1`) usa la caja explícita si existe; si no, parte de la posición proyectada, resta 10 a x y suma `10 − desnivel` a y. Con normal y negativa usa ancho 20 y alto desnivel; en caso contrario sube 40 y usa 40 × 40. El port resuelve el caso de sectores adyacentes; el recorrido general del rayo sigue pendiente. Con los archivos reales de M0 calcula para `ESCALA03` la caja `[2063,1037,20,65]`, en lugar de los círculos aproximados que capturaban clics cercanos. Falta comparar esa caja contra memoria del original.
+
 ## 1. Quién interviene [hecho]
 | Pieza | Dónde | Qué hace |
 |---|---|---|
