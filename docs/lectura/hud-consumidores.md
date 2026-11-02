@@ -27,7 +27,7 @@ No dibuja cuando alto=0. El código no añade un clamp. El puntero a vida está 
 
 ## 2. Alarma [hecho]
 
-`FUN_006FA220`, `fn_006c0000.c:40960–41043`, construye **ClassLinterna**, consulta la geometría del control con identificador 0x14 y arranca el índice global en cero. `006F76A0` (:38975–39042) carga fondo `ALMR0000` y animación inicial `ALMR0001`. Ver la investigación de activación y sirena en `alarma-global.md`.
+`FUN_006FA220`, `fn_006c0000.c:40960–41043`, construye **ClassLinterna**, asigna el cursor `CUR_ARROW` mediante identificador 0x14 y arranca el índice global en cero. Ese identificador no es geometría del control: corrección respaldada por el inicializador `0x78C449–0x78C468` y `FUN_0069EFB0`. `006F76A0` (:38975–39042) carga fondo `ALMR0000` y animación inicial `ALMR0001`. Ver la investigación de activación y sirena en `alarma-global.md`.
 
 `FUN_006F7830` (:39043–39175) centra el fondo respecto de la animación, dibuja ambos y avanza la tabla de punteros 0x837ADC. Verificada directamente con `py tools/audita-hud.py`:
 
