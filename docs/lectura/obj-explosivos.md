@@ -40,6 +40,7 @@ Estado `acc+0x2C`: 0 reposo · **1 explotar** · **2 comprobar si cae sobre algo
 - `MSGA_IMPACTO` (si aún no estalló): si el tipo ∈ {0, 1, 2, 3, 5, 6 ELECTRICO, 10, 11, 15 LANZALLAMAS, 16, 17} ⇒ `+0x2C=1`, `+0x30=1`; `MSGA_IMPACTO_SALVAJE` siempre.
 - `MSGA_SALIDADECONTENEDOR` (el comando lo suelta): si no estalló ⇒ estado **2**: `FUN_0043F020` recorre todos los bichos y, si alguno con `+0x240 & 0x30` solapa el círculo del barril (`FUN_0057C400`), lo **guarda debajo** (`acc+0x3C`), le apaga la visibilidad/actividad (`FUN_006157B0`, `FUN_006156B0`, `FUN_005086E0(0)`) y marca `+0x38=1` [hip: es el cuerpo inmovilizado que se oculta bajo el barril]. `MSGA_QUITASOCAVON` borra el cráter.
 - **Explosión** (`FUN_0043F9B0`): cráter `GRANDE` (o `NADA` en agua), `EXPLOS1/EXPLOSION1`, `'EBAR'` (cat. 3, radio de oído **1200**), **`FUN_00571FE0(bicho, tipo 2, radio 100, cantidad 20000)`**, `bicho+0x23C |= 4`.
+- Port: cada barril conserva `EBAR` incluso en una cadena; bombas y minas conservan `XPLO`. En Chrome con MAPA0000 y archivos reales se comprobó el inicio de dos sonidos `EBAR` al encadenarse dos barriles. Falta validación auditiva y el sonido propio de las casas.
 
 ## 4. `ClassAcCepo` (`0x450C00…0x451040`) [hecho]
 MAC `CEPO`: cilindro `R10 H5`, `MASA 200`, `OCLU 0`, anim `CEPO`. Cadena de animación `PILLAR`.

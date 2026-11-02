@@ -48,6 +48,7 @@ export interface Blast {
   readonly x: number;
   readonly y: number;
   readonly radius: number;
+  readonly tag: 'XPLO' | 'EBAR';
   ttl: number;
 }
 
@@ -188,7 +189,7 @@ export class Demolition {
   private readonly people: People;
   private readonly sectors: Pick<SectorMap, 'atZ' | 'at'> | null;
   private readonly kills: ReadonlyMap<string, readonly KillZone[]>;
-  private readonly queue: { x: number; y: number; r: number }[] = [];
+  private readonly queue: { x: number; y: number; r: number; tag: Blast['tag'] }[] = [];
 
   constructor(sites: Site[], objectives: readonly string[], people: People, bombs = 0, opts: { sectors?: Pick<SectorMap, 'atZ' | 'at'> | null; kills?: ReadonlyMap<string, readonly KillZone[]> } = {}) {
     this.sectors = opts.sectors ?? null;
@@ -257,32 +258,32 @@ export class Demolition {
   blowBarrel(b: Barrel): void {
     if (b.dead) return;
     b.dead = true;
-    this.explode(b.x, b.y, BARREL_RADIUS);
+    this.explode(b.x, b.y, BARREL_RADIUS, 'EBAR');
   }
 
   /** Explosión en (x,y): mata a las personas dentro del radio, encadena barriles y bombas, destruye sitios y avisa a los soldados. */
-  explode(x: number, y: number, radius: number): void {
-    this.queue.push({ x, y, r: radius });
+  explode(x: number, y: number, radius: number, tag: Blast['tag'] = 'XPLO'): void {
+    this.queue.push({ x, y, r: radius, tag });
     while (this.queue.length > 0) {
       const e = this.queue.shift();
-      if (e) this.blast(e.x, e.y, e.r);
+      if (e) this.blast(e.x, e.y, e.r, e.tag);
     }
   }
 
-  private blast(x: number, y: number, r: number): void {
-    this.blasts.push({ x, y, radius: r, ttl: BLAST_CYCLES });
+  private blast(x: number, y: number, r: number, tag: Blast['tag']): void {
+    this.blasts.push({ x, y, radius: r, tag, ttl: BLAST_CYCLES });
     for (const s of this.people.soldiers) if (!s.dead && Math.hypot(s.x - x, s.y - y) <= r) s.kill();
     for (const c of this.people.commandos) if (!c.dead && Math.hypot(c.body.x - x, c.body.y - y) <= r) c.wound(1e9);
     for (const b of this.barrels) {
       if (b.dead || Math.hypot(b.x - x, b.y - y) > r) continue;
       b.dead = true;
-      this.queue.push({ x: b.x, y: b.y, r: BARREL_RADIUS });
+      this.queue.push({ x: b.x, y: b.y, r: BARREL_RADIUS, tag: 'EBAR' });
     }
     for (let i = this.planted.length - 1; i >= 0; i--) {
       const p = this.planted[i];
       if (p && Math.hypot(p.x - x, p.y - y) <= r) {
         this.planted.splice(i, 1);
-        this.queue.push({ x: p.x, y: p.y, r: BOMB_RADIUS });
+        this.queue.push({ x: p.x, y: p.y, r: BOMB_RADIUS, tag: 'XPLO' });
       }
     }
     for (const s of this.sites) {

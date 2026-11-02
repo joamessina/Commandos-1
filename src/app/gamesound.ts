@@ -1,19 +1,20 @@
 /**
  * Sonido de la misión en marcha: ambiente del `.MIS` (engine/sound.ts), música y los efectos de los disparos y explosiones que ve la partida.
  * shortcut: suenan VMUE, ALRM y AL07 ya emitidas por BAP, disparos, explosiones y jingles; faltan otras voces, pasos, objetos y emisores. Mejorar al portar las acciones restantes.
- *           Todas las explosiones usan XPLO (EXPLOSI.WAV): no se distingue barril (EBAR) ni casa (XCA*). Cuándo mejorar: al leer qué tag emite cada fuente.
+ *           Falta el sonido de las casas (XCA*). Cuándo mejorar: al portar sus emisores.
  */
 import { AmbientSource, attenuate, BASE_VOLUME, isPositional, lcg, parseAmbient, parseMusic, type AmbientDef } from '../engine/sound.ts';
 import { SOUND_WAV } from '../engine/sound-table.ts';
 import type { Sfx } from '../render/audio.ts';
 import type { VoiceSound } from '../engine/battle.ts';
+import type { Blast } from '../engine/demolition.ts';
 
 /** Lo que `GameSound` necesita de la partida en cada ciclo. */
 export interface SoundView {
   readonly camX: number;
   readonly camY: number;
   readonly tracers: readonly { readonly fromX: number; readonly fromY: number; readonly tag?: string }[];
-  readonly blasts: readonly { readonly x: number; readonly y: number }[];
+  readonly blasts: readonly Pick<Blast, 'x' | 'y' | 'tag'>[];
   readonly voices: readonly VoiceSound[];
   /** Fin de la misión: 'win' = victoria, 'lose' = derrota, null = sigue. */
   readonly end: 'win' | 'lose' | null;
@@ -119,7 +120,7 @@ export class GameSound {
     for (const b of v.blasts) {
       if (this.seen.has(b)) continue;
       this.seen.add(b);
-      this.playAt('XPLO', b.x, b.y, 0, v);
+      this.playAt(b.tag, b.x, b.y, 0, v);
     }
     for (const voice of v.voices) this.playVoice(voice, v);
     if (v.end && !this.ended) {

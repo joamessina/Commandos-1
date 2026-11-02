@@ -67,6 +67,7 @@ describe('Demolition', () => {
     expect(d.dirty).toBe(true);
     expect(d.mapState().ruined.has('ANTI01')).toBe(true);
     expect(d.blasts).toHaveLength(1);
+    expect(d.blasts[0]?.tag).toBe('XPLO');
     for (let i = 0; i < 12; i++) d.tick();
     expect(d.blasts).toHaveLength(0);
     expect(BOMB_RADIUS).toBe(250);
@@ -95,6 +96,7 @@ describe('Demolition', () => {
     expect(s2.order).not.toBe(4); // a 800 u: lo oyó
     a.hurt('MIRILLA'); // ya explotó: no repite
     expect(d.blasts.filter((e) => e.radius === BARREL_RADIUS)).toHaveLength(2);
+    expect(d.blasts.map((e) => e.tag)).toEqual(['EBAR', 'EBAR', 'XPLO']);
   });
 
   it('la antena (acExplotaCasa con CAMBIATILES) cambia dos volúmenes y cumple CASA04; un sitio no se destruye dos veces', () => {
@@ -133,6 +135,7 @@ describe('minas', () => {
     expect(u.dead).toBe(true);
     expect(d.mines[0]?.done).toBe(true);
     expect(d.blasts).toHaveLength(1);
+    expect(d.blasts[0]?.tag).toBe('XPLO');
     d.tickMines(boat, [u]); // ya explotó: no repite
     expect(d.blasts).toHaveLength(1);
   });
