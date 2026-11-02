@@ -4,6 +4,8 @@
 
 **Arpón (2026-11-02):** corregido el clic sobre el icono de la mochila que coincidía con la columna, y corregidos impacto letal, munición y recarga. Selección y disparo verificados en navegador con M0; la recarga se muestra en el texto de depuración.
 
+**Piedra e impactos (2026-11-02):** lanzamiento vuelve a reposo; efecto y sonido de caída reales, reacción `NSHERIDO` sin daño y `HERIDO1` con pausa de la animación y sonido `HERI` en heridas de soldados. Detalles y límites en `armas-restantes.md`, `muerte.md` y `verificacion-exe.md`.
+
 **Mochila (2026-11-02):** los controles normales toman clics por rectángulo y la mochila no deja pasar clics al terreno. La bombona se filtra por bote o agua somera; el límite de sectores pisados queda en `verificacion-exe.md`.
 
 **Carga y altura (2026-11-02):** pantalla de carga con recursos originales y barra durante la preparación. Pistola, mirilla y arpón comprueban alcance y desniveles; quedan volúmenes y cuerpos interpuestos (`docs/lectura/carga-armas-altura.md`).

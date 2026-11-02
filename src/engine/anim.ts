@@ -64,6 +64,11 @@ export class Animator {
   /** Cambia de secuencia y reinicia los acumuladores (no hace nada si ya es la actual). */
   set(name: string): void {
     if (name === this.seq.name) return;
+    this.restart(name);
+  }
+
+  /** Reinicia incluso si ya estaba seleccionada, para impactos o acciones repetidas. */
+  restart(name: string): void {
     this.seq = this.get(name);
     this.accDist = 0;
     this.accTime = 0;

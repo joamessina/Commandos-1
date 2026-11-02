@@ -135,6 +135,7 @@ export class Soldier implements Target, Claimant {
   private pack: Pack | null = null;
   private smokeIn = -1;
   private standHeight = 0;
+  private impactSounds = 0;
 
   /** Artillero de un nido: no se mueve (investiga girando, no caminando). */
   private readonly fixed: boolean;
@@ -225,11 +226,18 @@ export class Soldier implements Target, Claimant {
       this.handcuff();
       return;
     }
+    const previousEnergy = this.unit.energy;
     if (this.unit.hit(weapon === 'ARPON' ? Number.POSITIVE_INFINITY : DAMAGE[weapon])) {
       this.order = Order.Dead;
       this.target = null;
-    } else if (!this.down && (this.order === Order.Patrol || this.order === Order.Return || this.order === Order.Investigate)) this.startAim(from);
+    } else if (this.unit.energy < previousEnergy) {
+      this.impactSounds++;
+      if (!this.down && (this.order === Order.Patrol || this.order === Order.Return || this.order === Order.Investigate)) this.startAim(from);
+      if (this.unit.reacting && this.unit.anim.has('HERIDO1')) this.unit.anim.restart('HERIDO1');
+    }
   }
+
+  takeImpactSounds(): number { const n = this.impactSounds; this.impactSounds = 0; return n; }
 
   /** Atontado o esposado: no ve ni actúa. */
   get down(): boolean {
@@ -287,9 +295,10 @@ export class Soldier implements Target, Claimant {
     this.pedradas++;
     const b = from.body;
     if (this.fixed) this.face(b.x, b.y);
-    else if (this.order === Order.Aim || this.order === Order.Shoot) return;
+    else if (this.order === Order.Aim || this.order === Order.Shoot) { this.unit.react('NSHERIDO'); return; }
     else if (this.pedradas >= 3 && this.walks) this.investigate(b.x, b.y);
     else this.stare(b.x, b.y, this.pedradas === 1 ? LOOK_CYCLES : 2 * LOOK_CYCLES);
+    this.unit.react('NSHERIDO');
   }
 
   /** `NO_VENGAS` de la cajetilla: otro está más cerca, vuelve al puesto. */
@@ -418,6 +427,12 @@ export class Soldier implements Target, Claimant {
     if (this.unit.dead) {
       this.order = Order.Dead;
       this.unit.tick();
+      return;
+    }
+    if (this.unit.reacting) {
+      this.unit.tick();
+      const reacting = (): boolean => this.unit.reacting;
+      if (!reacting() && (this.order === Order.Aim || this.order === Order.Shoot) && this.unit.anim.has('APUNTAR')) this.unit.anim.set('APUNTAR');
       return;
     }
     if (this.down) {

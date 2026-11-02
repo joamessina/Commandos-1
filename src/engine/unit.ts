@@ -91,6 +91,8 @@ export class Unit {
   /** Ciclos que faltan de una animación que ocupa al personaje (`playOnce`) y qué hacer al terminar. */
   private busy = 0;
   private busyDone: (() => void) | null = null;
+  private reaction = 0;
+  private resumeAnim = '';
   /** Vehículo en el que va (su plaza = `seat`): el cuerpo sigue a la plaza y no camina. */
   boat: Boat | null = null;
   private seat = 0;
@@ -302,6 +304,18 @@ export class Unit {
     return this.busy > 0;
   }
 
+  /** AcMuerte: motor apagado hasta completar la animación de herida. */
+  get reacting(): boolean { return this.reaction > 0; }
+
+  react(name: string): void {
+    if (this.dead) return;
+    if (!this.reacting) this.resumeAnim = this.anim.name;
+    this.body.vx = 0;
+    this.body.vy = 0;
+    if (this.anim.has(name)) this.anim.restart(name);
+    this.reaction = Math.max(1, this.anim.period(name));
+  }
+
   /** Camina hasta `p` y al llegar ejecuta `then` (ManejaBomba: camina → gira → anima → actúa, docs/lectura/au-jugador.md). Devuelve false si no hay camino. */
   doAt(p: Vec, then: () => void, sector?: Sector | null): boolean {
     if (!this.goTo(p, false, sector)) return false;
@@ -310,12 +324,12 @@ export class Unit {
   }
 
   /** Reproduce una animación una vez, quieto, durante su período, y al terminar llama a `done`. */
-  playOnce(name: string, done: () => void): void {
+  playOnce(name: string, done: () => void, extraCycles = 0): void {
     this.path = [];
     this.target = null;
     this.arrive = null;
-    if (this.anim.has(name)) this.anim.set(name);
-    this.busy = Math.max(1, this.anim.period(name));
+    if (this.anim.has(name)) this.anim.restart(name);
+    this.busy = Math.max(1, this.anim.period(name) + extraCycles);
     this.busyDone = done;
   }
 
@@ -384,7 +398,7 @@ export class Unit {
 
   /**
    * `AcMuerte` (docs/lectura/muerte.md §3): si la energía ≤ daño muere (energía 0), si no se descuenta. Devuelve true si murió con este golpe.
-   * shortcut: sin animación de herido ni voces; la muerte anima MUERTE1 y deja el cuerpo.
+   * shortcut: sin voces de herida del comando ni variantes de herida de personajes esposados; mejorar al portar AcMuerte completo.
    */
   hit(damage: number): boolean {
     if (this.dead || this.invulnerable) return false;
@@ -400,6 +414,7 @@ export class Unit {
     if (this.dead || this.invulnerable) return false;
     if (this.energy > damage) {
       this.energy -= damage;
+      if (!this.crouched && !this.diving) this.react('HERIDO1');
       return false;
     }
     this.energy = 0;
@@ -430,6 +445,11 @@ export class Unit {
       this.anim.advance(0, 1);
       return;
     }
+    if (this.reaction > 0) {
+      this.anim.advance(0, 1);
+      if (--this.reaction === 0 && this.anim.has(this.resumeAnim)) this.anim.set(this.resumeAnim);
+      return;
+    }
     if (this.climb) {
       this.climbTick();
       return;
@@ -439,7 +459,10 @@ export class Unit {
       if (--this.busy === 0) {
         const d = this.busyDone;
         this.busyDone = null;
+        const before = this.anim.name;
         d?.();
+        const canIdle = (): boolean => !this.dead && this.busy === 0;
+        if (canIdle() && this.anim.name === before && this.anim.has('REPOSO')) this.anim.set('REPOSO');
       }
       return;
     }

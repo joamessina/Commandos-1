@@ -7,6 +7,14 @@ const view = (voices: SoundView['voices']): SoundView => ({ camX: 0, camY: 0, tr
 const buffer = { duration: 1 } as AudioBuffer;
 
 describe('voces de la misión', () => {
+  it('reproduce los efectos originales de piedra y herida en la posición del impacto', async () => {
+    const fake = { decode: vi.fn(() => Promise.resolve(buffer)), play: vi.fn(), stopMusic: vi.fn() };
+    const effect = vi.fn((name: string) => name ? new Uint8Array([1]) : undefined);
+    const sound = new GameSound(fake as unknown as Sfx, { effect, music: () => Promise.resolve(undefined) }, (x, y) => ({ px: x, py: y }));
+    sound.tick({ ...view([]), effects: [{ tag: 'PEDL', x: 0, y: 0, z: 0 }, { tag: 'PEDW', x: 10, y: 0, z: 0 }, { tag: 'HERI', x: 20, y: 0, z: 0 }] });
+    await vi.waitFor(() => { expect(fake.play).toHaveBeenCalledTimes(3); });
+    expect(effect.mock.calls.map((args) => args[0])).toEqual(['PIEDTERR.WAV', 'PIEDAGUA.WAV', 'HERIDO.WAV']);
+  });
   it('inicia la sirena en bucle, actualiza el volumen y la detiene', async () => {
     const handle = { setVolume: vi.fn(), stop: vi.fn() };
     const fake = { decode: vi.fn(() => Promise.resolve(buffer)), loop: vi.fn(() => handle), stopMusic: vi.fn() };

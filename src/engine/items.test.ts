@@ -12,7 +12,7 @@ import { MEDKIT_HEAL, Unit } from './unit.ts';
 
 const anm = parseAnm(
   bnm([
-    { type: 0, slots: [11] },
+    { type: 0, slots: [13] },
     ...anmSeq(1, 'ANDAR', 2, 30, 0, 8),
     ...anmSeq(1, 'REPOSO', 1, 0, 0, 8),
     ...anmSeq(1, 'APUNTAR', 1, 0, 0, 8),
@@ -21,7 +21,9 @@ const anm = parseAnm(
     ...anmSeq(2, 'RECOGER', 1, 0, 8, 8),
     ...anmSeq(1, 'FUMAR', 1, 0, 0, 8),
     ...anmSeq(1, 'ESPOSAS1', 1, 0, 0, 8),
-    ...anmSeq(2, 'LANZARPIEDRA', 1, 0, 8, 8),
+    ...anmSeq(2, 'LANZARPIEDRA', 4, 0, 8, 8),
+    ...anmSeq(2, 'HERIDO1', 1, 0, 5, 8),
+    ...anmSeq(2, 'NSHERIDO', 1, 0, 5, 8),
     ...anmSeq(1, 'APUNTAARPON', 1, 0, 0, 8),
     ...anmSeq(2, 'DISPARAARPON', 1, 0, 2, 8),
   ]),
@@ -32,6 +34,52 @@ const run = (s: Soldier, w: SoldierWorld, n: number): void => {
   for (let i = 0; i < n; i++) s.tick(w);
 };
 const smoker = (x: number, y = 0, opts: ConstructorParameters<typeof Soldier>[3] = {}): Soldier => new Soldier('B2', mk(x, y, 'B2'), null, { smokes: true, tobacco: true, ...opts });
+
+describe('animaciones de impacto y lanzamiento', () => {
+  it('el lanzamiento avanza, se repite desde el principio y vuelve a reposo', () => {
+    const u = mk(0);
+    let throws = 0;
+    u.playOnce('LANZARPIEDRA', () => { throws++; }, 1);
+    for (let i = 0; i < 4; i++) u.tick();
+    expect(u.anim.step).toBe(2);
+    for (let i = 0; i < 5; i++) u.tick();
+    expect([throws, u.anim.name]).toEqual([1, 'REPOSO']);
+    u.playOnce('LANZARPIEDRA', () => { throws++; }, 1);
+    expect(u.anim.step).toBe(0);
+    for (let i = 0; i < 9; i++) u.tick();
+    expect([throws, u.anim.name]).toEqual([2, 'REPOSO']);
+  });
+
+  it('el impacto no letal reproduce HERIDO1 y pausa cinco ciclos; la pedrada usa NSHERIDO sin daño', () => {
+    const victim = new Soldier('V', mk(100), null);
+    const shooter = mk(0, 0, 'T');
+    victim.hurt('PISTOLA', shooter);
+    expect([victim.unit.energy, victim.unit.anim.name, victim.unit.reacting, victim.takeImpactSounds()]).toEqual([60, 'HERIDO1', true, 1]);
+    const w = world();
+    run(victim, w, 4);
+    expect(victim.unit.reacting).toBe(true);
+    run(victim, w, 1);
+    expect([victim.unit.reacting, victim.unit.anim.name]).toEqual([false, 'APUNTAR']);
+    victim.pedrada(shooter);
+    expect([victim.unit.energy, victim.unit.anim.name, victim.unit.reacting]).toEqual([60, 'NSHERIDO', true]);
+    run(victim, w, 5);
+    expect(victim.unit.reacting).toBe(false);
+  });
+
+  it('elige sonido de piedra en suelo, agua o impacto y entrega HERI una sola vez', () => {
+    const victim = new Soldier('V', mk(100), null);
+    const shooter = mk(0, 0, 'T');
+    const battle = new Battle([victim], [], null);
+    expect(battle.stone(200, 0, shooter)).toBe(false);
+    expect(battle.stone(300, 0, shooter, 0, true)).toBe(false);
+    expect(battle.stone(100, 0, shooter, 0, true)).toBe(true);
+    expect(battle.takeEffects().map((e) => e.tag)).toEqual(['PEDL', 'PEDW', 'PEDL']);
+    victim.hurt('PISTOLA', shooter);
+    battle.tick();
+    expect(battle.takeEffects().map((e) => e.tag)).toEqual(['HERI']);
+    expect(battle.takeEffects()).toEqual([]);
+  });
+});
 
 describe('canThrow', () => {
   const from = { x: 0, y: 0, z: 0 };

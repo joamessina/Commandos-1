@@ -26,6 +26,7 @@
 Resto → `FUN_004C2A60`.
 
 ## 3. Herida por impacto genérico (`FUN_00484700`) [hecho]
+**Port (2026-11-02):** `HERIDO1` detiene el motor durante el período de la secuencia y emite `HERI` al herir a un soldado; `FUN_00484C20` usa `NSHERIDO` al recibir una piedra. En `ALEMAN2.ANM` ambas duran 5 ciclos. El manejo de cuerpos esposados, atontados y algunas variantes sigue incompleto.
 Solo si no es invencible (`+0x34`) y el estado es 6 ó 5. Con `+0x2C == 0` (juego normal):
 - **Daño**: si `bicho+0x208` (energía) ≤ `impacto.daño` (`impacto+0x10`): energía = 0, estado **3** (muere), guarda la dirección del golpe (`impacto+4..+0xC`) en `bicho+0x184..+0x18C` (para orientar la caída), `bicho+0x128=1`; si es aliado `FUN_00513C70(5)`; con impacto tipo 7 suena `'CUCH'` (`0x43554348`). Si no: `energía −= daño`.
 - **Animación de herida** (si no va en contenedor `bicho+0x134`, ni agachado `23C&0x80`): según bandas de `bicho+0x23C`: sin banderas `HERIDO1` · desnudo (`&0x400000`) `HERIDO_DESNUDO` · atontado (`&0x200000`) `ATONTADO_HERIDO` · atontado y desnudo `ATONTADO_DESNUDO_HERIDO` · esposado (`&0x4000`) `HERIDOESPOSAS` + parte según el tipo de ficha y, si está desnudo, `_DESNUDO1/2/3` elegido por el ángulo del bicho más cercano a **20°, 80° o 337°** (`FUN_00484310`); con `impacto.daño == 0` el prefijo `NS` (sin sangre). Prioridad 6.

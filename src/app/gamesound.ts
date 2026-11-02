@@ -6,7 +6,7 @@
 import { AmbientSource, attenuate, BASE_VOLUME, isPositional, lcg, parseAmbient, parseMusic, type AmbientDef } from '../engine/sound.ts';
 import { SOUND_WAV } from '../engine/sound-table.ts';
 import type { Sfx } from '../render/audio.ts';
-import type { VoiceSound } from '../engine/battle.ts';
+import type { EffectSound, VoiceSound } from '../engine/battle.ts';
 import type { Blast } from '../engine/demolition.ts';
 
 /** Lo que `GameSound` necesita de la partida en cada ciclo. */
@@ -17,6 +17,7 @@ export interface SoundView {
   readonly tracers: readonly { readonly fromX: number; readonly fromY: number; readonly tag?: string }[];
   readonly blasts: readonly Pick<Blast, 'x' | 'y' | 'tag'>[];
   readonly voices: readonly VoiceSound[];
+  readonly effects?: readonly EffectSound[];
   /** Fin de la misión: 'win' = victoria, 'lose' = derrota, null = sigue. */
   readonly end: 'win' | 'lose' | null;
 }
@@ -141,6 +142,7 @@ export class GameSound {
       this.playAt(b.tag, b.x, b.y, 0, v);
     }
     for (const voice of v.voices) this.playVoice(voice, v);
+    for (const effect of v.effects ?? []) this.playAt(effect.tag, effect.x, effect.y, effect.z, v);
     if (v.end && !this.ended) {
       this.ended = true;
       this.sfx.stopMusic();

@@ -23,12 +23,13 @@ export interface VoiceSound {
   readonly y: number;
   readonly z: number;
 }
+export interface EffectSound { readonly tag: string; readonly x: number; readonly y: number; readonly z: number }
 
 const SHOT_TAG: Readonly<Partial<Record<Weapon, string>>> = { PISTOLA: 'PIPA', MIRILLA: 'MIRI', ARPON: 'MIRI' };
 
 const TRACER_CYCLES = 4;
 const NEST_NOISE = 500;
-/** Distancia a la que la piedra alcanza a un soldado como víctima (cilindro de R10 del bicho). */
+/** shortcut: 14 aproxima el contacto de la piedra con el cilindro del soldado; mejorar al portar su colisión dinámica. */
 const STONE_HIT = 14;
 
 export class Battle {
@@ -36,6 +37,7 @@ export class Battle {
   readonly commandos: Unit[];
   readonly tracers: Tracer[] = [];
   private readonly voices: VoiceSound[] = [];
+  private readonly effects: EffectSound[] = [];
   /** Cajetillas de tabaco en el suelo. */
   readonly packs = new Packs();
   private readonly attacks = new Map<Unit, Attack>();
@@ -88,15 +90,20 @@ export class Battle {
     return this.voices.splice(0);
   }
 
+  takeEffects(): EffectSound[] { return this.effects.splice(0); }
+
   /** Ruido en (x,y): los soldados a menos del radio lo oyen. */
   noise(x: number, y: number, radius: number): void {
     for (const s of this.soldiers) if (Math.hypot(s.unit.body.x - x, s.unit.body.y - y) < radius) s.hear(x, y);
   }
 
   /** La piedra cae en (x,y) (`CAcPiedra`): ruido de atención `PEDL` y, si cae sobre un soldado, le manda `MSGA_PEDRADA` (sin daño). */
-  stone(x: number, y: number, from: Unit): void {
+  stone(x: number, y: number, from: Unit, z = 0, water = false): boolean {
     this.noise(x, y, STONE_NOISE);
-    this.soldiers.find((s) => !s.dead && Math.hypot(s.x - x, s.y - y) < STONE_HIT)?.pedrada(from);
+    const victim = this.soldiers.find((s) => !s.dead && Math.hypot(s.x - x, s.y - y) < STONE_HIT && Math.abs(s.unit.z - z) <= s.unit.height);
+    victim?.pedrada(from);
+    this.effects.push({ tag: water && !victim ? 'PEDW' : 'PEDL', x, y, z });
+    return victim !== undefined;
   }
 
   /** Un ciclo lógico (los movimientos de los comandos los hace `Unit.tick` fuera). */
@@ -112,6 +119,7 @@ export class Battle {
       for (const s of this.soldiers) if (s !== c && Math.hypot(s.x - c.x, s.y - c.y) < CHAT_RANGE) s.chat(c.x, c.y, CHAT_CYCLES);
     }
     for (const s of this.soldiers) {
+      for (let n = s.takeImpactSounds(); n > 0; n--) this.effects.push({ tag: 'HERI', x: s.x, y: s.y, z: s.unit.z });
       s.tick({
         packs: this.packs,
         commandos: this.commandos,
