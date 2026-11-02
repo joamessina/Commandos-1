@@ -99,6 +99,7 @@ function build(inst: readonly Node[], opts: WorldOpts, depth: number, parent: El
   if (nivel === 'FACIL' || nivel === 'DIFICIL') if (nivel !== opts.difficulty) return;
   const cls = asText(find(inst, '.CLASS'))?.toUpperCase() ?? '';
   let block: Node[] = [...inst];
+  let macroChildren: readonly Node[] = [];
   let macro: string | null = null;
   let macroClass = cls;
   if (cls === 'MACRO') {
@@ -109,6 +110,7 @@ function build(inst: readonly Node[], opts: WorldOpts, depth: number, parent: El
     const vars = macroDefaults(mac);
     for (const [k, v] of instanceVars(inst)) vars.set(k, v);
     const expanded = subst(mac, vars) as Node[];
+    macroChildren = asList(find(expanded, '.ELEMENTOS')) ?? [];
     macroClass = asText(find(expanded, '.CLASS'))?.toUpperCase() ?? 'BICHO';
     block = [...expanded, ...inst];
   }
@@ -132,7 +134,7 @@ function build(inst: readonly Node[], opts: WorldOpts, depth: number, parent: El
     parent,
   };
   (parent ? parent.children : out).push(el);
-  if (depth < MAX_DEPTH) for (const c of asList(find(inst, '.ELEMENTOS')) ?? []) if (Array.isArray(c)) build(c, opts, depth + 1, el, out);
+  if (depth < MAX_DEPTH) for (const c of [...macroChildren, ...(asList(find(inst, '.ELEMENTOS')) ?? [])]) if (Array.isArray(c)) build(c, opts, depth + 1, el, out);
 }
 
 /** Elementos de nivel superior de `.MISSION .ELEMENTOS` (con sus hijos anidados). */

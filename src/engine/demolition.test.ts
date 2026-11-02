@@ -116,7 +116,8 @@ describe('Demolition', () => {
 describe('minas', () => {
   const mkMine = () => {
     const d = new Demolition([], [], { soldiers: [], commandos: [] });
-    d.addMine(200, 0);
+    const mine = d.addMine(200, 0);
+    expect(d.mines[0]).toBe(mine);
     const boat = new Boat(0, 0, 0, 0, [{ entry: [0, 0], exit: [0, 0], angle: 0 }], null);
     const u = unit(0, 0, 'COMANDO');
     u.board(boat, 0);

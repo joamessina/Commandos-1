@@ -20,6 +20,7 @@ Estados: `+0x34` armada, `+0x38` disparada, `+0x3C` ya explotó, `+0x40` fase de
 - `MSGA_COLISION_DINAMICA`: si armada y no disparada y el cuerpo que choca (`FUN_005FE1A0`) no tiene `+0x23C & 1` y su **masa `+0x238` es estrictamente mayor que PESOACT** → `+0x38=1`, `+0x18=0x14` y **el que pisó recibe de inmediato impacto tipo 2 (EXPLOSIONMENOR) con POTENCIA (200)**.
 - Tick `FUN_00483BB0`: fase 0: `+0x18++`; si disparada y no explotada y `+0x18 > 0x13` (o sea **20 ciclos = 1 s después**) → `FUN_00483540` (explota). Fase 1: avanza la animación del efecto; al terminar (`FUN_004E18B0`) → fase 2 y apaga el bicho.
 - **Explosión** (`FUN_00483540`): cráter/agua (§0), `FUN_00571FE0(bicho, tipo 2, RADIO=20, POTENCIA=200)` (área: ver `armas-danio.md` §6), sonido `'XPLO'` (cat. 3, 0.75), animación `GRANDE`, `bicho+0x23C |= 1`, `+0x3C=1`. Con `POTENCIAMINA 10000` (minas submarinas) mata a cualquier cosa.
+- Port M0: las 22 instancias `MINASUB` del MIS se dibujan con su ANM/WAD en su posición original y dejan de dibujarse al explotar. En Chrome se probó colisión del Zodiac, explosión y hundimiento; la masa y activación por impacto siguen simplificadas como indica `engine/demolition.ts`.
 - Ruido de la IA: `XPLO` = radio **1200**.
 
 ## 2. `ClassAcBomba` (`0x43FE20…0x440FB0`) [hecho]

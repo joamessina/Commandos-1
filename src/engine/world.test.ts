@@ -32,6 +32,14 @@ const MIS = `.MISSION [ .ELEMENTOS [
 ] ]`;
 
 describe('loadWorld', () => {
+  it('expande hijos definidos en la macro con sus variables y conserva los hijos de la instancia', () => {
+    const macro = '.CLASS BICHO .VARIABLES [ TArtillero ] .ELEMENTOS [ [ .CLASS BICHO .TOKEN $Artillero .BANDO ALEMAN ] ]';
+    const mis = '.MISSION [ .ELEMENTOS [ [ .CLASS MACRO .MACRO NIDO .TOKEN ARMA .Artillero ART1 .ELEMENTOS [ [ .CLASS BICHO .TOKEN OTRO ] ] ] ] ]';
+    const [nido] = loadWorld(mis, { difficulty: 'FACIL', macro: () => macro });
+    expect(nido?.children.map((c) => c.token)).toEqual(['ART1', 'OTRO']);
+    expect(nido?.children[0]?.parent).toBe(nido);
+    expect(nido?.children[0]?.bando).toBe('ALEMAN');
+  });
   it('expande la macro: variables de la instancia, defaults de .VARIABLES y acciones con $Var', () => {
     const [s1] = loadWorld(MIS, opts('DIFICIL'));
     expect(s1).toMatchObject({ token: 'S1', cls: 'BICHO', macro: 'SOLD', bando: 'ALEMAN', x: 10, y: 20, z: 30, angle: 30, anim: 'ALEMAN2', radius: 10, height: 29 });

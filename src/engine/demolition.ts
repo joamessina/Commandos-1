@@ -200,8 +200,10 @@ export class Demolition {
     this.bombs = bombs;
   }
 
-  addMine(x: number, y: number): void {
-    this.mines.push({ x, y, fuse: null, done: false });
+  addMine(x: number, y: number): Mine {
+    const mine = { x, y, fuse: null, done: false };
+    this.mines.push(mine);
+    return mine;
   }
 
   /**

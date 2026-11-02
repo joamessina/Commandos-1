@@ -17,7 +17,7 @@ import { parseWad, type Wad } from '../formats/wad.ts';
 import { Animator } from '../engine/anim.ts';
 import { groundTarget, RANGE, type Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
-import { Demolition, parseSites, type Barrel } from '../engine/demolition.ts';
+import { Demolition, parseSites, type Barrel, type Mine } from '../engine/demolition.ts';
 import { destroyLinkedHouses, House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatShares, boatSlots, freeSeat } from '../engine/boat.ts';
@@ -125,6 +125,7 @@ interface Game {
   readonly demo: Demolition;
   /** Barril del juego -> su gráfico (se oculta al explotar). */
   readonly barrelProps: ReadonlyMap<Barrel, Prop>;
+  readonly mineProps: ReadonlyMap<Mine, Prop>;
   readonly vol: Vol;
   readonly wad: Wad;
   readonly order: readonly number[];
@@ -343,6 +344,7 @@ async function load(): Promise<void> {
   const nestOf = new Map<Soldier, Elem>();
   let bombCount = 0;
   const barrelProps: { elem: Elem; prop: Prop }[] = [];
+  const mineProps: { elem: Elem; prop: Prop }[] = [];
   const kit: { cepo: Kit | null; decoy: Kit | null } = { cepo: null, decoy: null };
   const boats = new Map<Elem, { boat: Boat; prop: Prop }>();
   for (const e of elems) {
@@ -391,7 +393,8 @@ async function load(): Promise<void> {
     } else if (e.bando === 'ALEMAN' && e.anim && e.actions.some((x) => /^ac(bap|banpe|metrallero)/i.test(x.name))) {
       const a = asset(e.anim);
       if (!a) continue;
-      const unit = new Unit(e.token, a.anm, e.x, e.y, e.z, e.angle, sectors);
+      const nestHost = e.actions.some((x) => x.name.toUpperCase() === 'ACMETRALLERO') ? e.parent : null;
+      const unit = new Unit(e.token, a.anm, nestHost?.x ?? e.x, nestHost?.y ?? e.y, nestHost?.z ?? e.z, nestHost?.angle ?? e.angle, sectors);
       if (e.height > 0) unit.height = e.height;
       const pat = e.actions.find((x) => x.name.toUpperCase() === 'ACPATRULLA');
       const routes = pat ? parseRoutes(pat.params, diffSel.value as Difficulty) : [];
@@ -430,12 +433,13 @@ async function load(): Promise<void> {
         if (k) k.left++;
         else kit[kitOf] = { elem: e, anm: ka.anm, sprites: ka.sprites, left: 1 };
       }
-    } else if (e.anim && !boats.has(e) && e.macro?.toUpperCase() !== 'MINASUB') {
+    } else if (e.anim && !boats.has(e)) {
       const a = asset(e.anim);
       if (!a) continue;
       const prop = { elem: e, anim: new Animator(a.anm, defaultSeq(a.anm)), sprites: a.sprites, x: e.x, y: e.y, z: e.z, ang: e.angle };
       props.push(prop);
       if (e.macro?.toUpperCase() === 'BARRIL') barrelProps.push({ elem: e, prop });
+      if (e.macro?.toUpperCase() === 'MINASUB') mineProps.push({ elem: e, prop });
     }
   }
   const mainBoat = [...boats.values()][0] ?? null;
@@ -449,7 +453,12 @@ async function load(): Promise<void> {
   const { sites, objectives, escape, kills } = parseSites(misText, vol, elems);
   const demo = new Demolition(sites, objectives, { soldiers: battle.soldiers, commandos: battle.commandos }, bombCount, { sectors, kills });
   const barrelMap = new Map<Barrel, Prop>();
-  for (const e of elems) if (e.macro?.toUpperCase() === 'MINASUB') demo.addMine(e.x, e.y);
+  const mineMap = new Map<Mine, Prop>();
+  for (const e of elems) if (e.macro?.toUpperCase() === 'MINASUB') {
+    const mine = demo.addMine(e.x, e.y);
+    const prop = mineProps.find((p) => p.elem === e)?.prop;
+    if (prop) mineMap.set(mine, prop);
+  }
   for (const b of barrelProps) barrelMap.set(demo.addBarrel(b.elem.token, b.elem.x, b.elem.y), b.prop);
   const nests = [...nestOf].flatMap(([s, el]) => {
     const prop = props.find((x) => x.elem === el);
@@ -580,7 +589,7 @@ async function load(): Promise<void> {
   }
   sound?.stop();
   sound = new GameSound(sfx, { effect: (name) => bytes(`DATOS/RECURSOS/SONIDO/WAVE/${name.toUpperCase()}`), music: async (name) => { const r = loaded?.music.get(name.toLowerCase()); return r ? new Uint8Array(await r()) : undefined; } }, project);
-  game = { houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
@@ -715,6 +724,7 @@ function setupStage(): void {
       tickWorld(g);
       for (const h of g.houses) h.tick();
       for (const n of g.nests) {
+        n.prop.ang = n.soldier.unit.body.ang;
         const want = n.soldier.dead ? 'NODISPARA' : n.soldier.order === Order.Shoot ? 'DISPARA' : 'NODISPARA';
         if (n.prop.anim.has(want)) n.prop.anim.set(want);
       }
@@ -933,6 +943,7 @@ function draw(g: Game): void {
     const { px, py } = project(pr.x, pr.y, pr.z);
     if (off(px, py)) continue;
     if ([...g.barrelProps].some(([b, bp]) => bp === pr && b.dead)) continue;
+    if ([...g.mineProps].some(([m, mp]) => mp === pr && m.done)) continue;
     const isBoat = pr === g.boat?.prop;
     add({ x: pr.x, y: pr.y, z: pr.z, r: isBoat ? 30 : pr.elem.radius || 10, h: isBoat ? 0.01 : pr.elem.height || 20 }, pr.sprites, pr.anim.frame(pr.ang), px, py);
   }
