@@ -40,6 +40,7 @@ import { asNumber, find } from '../formats/clave.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
 import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
+import { parseCampaign, parseMissionInfo } from '../engine/campaign.ts';
 import { Sfx } from '../render/audio.ts';
 import { SpriteCache } from '../render/sprites.ts';
 import { GameSound } from './gamesound.ts';
@@ -245,8 +246,16 @@ async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffe
   const entries = new Map<string, DirEntry>();
   for (const e of parseContainer(dir)) entries.set(e.path.toUpperCase(), e);
   loaded = { dir, entries, wads, music };
-  const maps = [...wads.keys()].sort().map((k) => k.slice(4)).filter((n) => entries.has(`DATOS/MISIONES/MAPA${n}.VOL`));
-  mapSel.replaceChildren(...maps.map((n) => new Option(`Mapa ${n}`, n)));
+  const playable = [...wads.keys()].sort().map((k) => k.slice(4)).filter((n) => entries.has(`DATOS/MISIONES/MAPA${n}.VOL`));
+  // orden y nombres de la campaña (MISIONES.DAT + MBnn.STR); los mapas que no figuran en la lista van al final como extras
+  const text = (path: string): string => { const b = bytes(path); return b ? new TextDecoder('latin1').decode(b) : ''; };
+  const campaign = parseCampaign(text('DATOS/MISIONES/MISIONES.DAT')).filter((n) => playable.includes(n));
+  const maps = [...campaign, ...playable.filter((n) => !campaign.includes(n))];
+  mapSel.replaceChildren(...maps.map((n) => {
+    const k = campaign.indexOf(n);
+    const info = parseMissionInfo(text(`DATOS/MISIONES/MB${n.slice(2)}.STR`));
+    return new Option(k < 0 ? `Extra: mapa ${n}` : `${(k + 1).toString()}. ${info ? `${info.title} (${info.place})` : `Mapa ${n}`}`, n);
+  }));
   mapSel.disabled = maps.length === 0;
   if (maps.length === 0) {
     say('Encontré WAR_MP.DIR pero ningún Fase000N.wad (carpeta DATOS/recursos/bmps/map_mp).', true);
