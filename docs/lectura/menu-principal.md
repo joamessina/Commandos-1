@@ -2,6 +2,10 @@
 
 Lectura del ejecutable raíz y de los recursos del `WAR_MP.DIR` raíz. Esta investigación todavía no es una implementación completa.
 
+## Recorrido observado por Joaquín
+
+Al elegir **Nueva partida** aparece otro menú con **Nueva misión**, una opción que recuerda como introducción de código para entrar a un mapa específico y otras opciones. Al elegir Nueva misión desde cero aparece el selector **EASY / HARD**; luego se reproduce la cinemática y el briefing de la misión antes de empezar a jugar. Esta descripción es una referencia aportada por Joaquín: confirmar en el exe los nombres, el orden, las condiciones y los recursos de cada transición. La opción de código queda expresamente como recuerdo a verificar.
+
 ## Entrada y recursos
 
 - `FUN_005C7160` despacha el estado 1 a `FUN_005B9CE0`, que actualiza `ClassGestorMenus`; la carga de recursos del arranque está en `FUN_005C2790` (`ui-misiones-guardado.md` §1).
