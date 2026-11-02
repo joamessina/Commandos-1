@@ -10,6 +10,20 @@ const anm = parseAnm(bnm([{ type: 0, slots: [5] }, ...anmSeq(1, 'ANDAR', 2, 30, 
 const mk = (x: number, y: number, ang = 0, token = 'X'): Unit => new Unit(token, anm, x, y, 0, ang);
 
 describe('Battle', () => {
+  it('la voz AL07 al ir por tabaco se entrega al audio sin avisar a la IA ni al sensor', () => {
+    const witness = new Soldier('BAP2', mk(0, 0), null, { smokes: true, brain: 'route' });
+    const listener = new Soldier('OTRO', mk(-20, 0, 180), null);
+    const b = new Battle([witness, listener], [], null, () => 0);
+    const danger: number[][] = [];
+    b.onDanger = (x, y) => { danger.push([x, y]); };
+    b.packs.drop(100, 0);
+    b.tick();
+    expect(b.takeVoices()).toEqual([{ tag: 'AL07', x: 0, y: 0, z: 0 }]);
+    expect(listener.order).toBe(Order.Patrol);
+    expect(danger).toEqual([]);
+    b.tick();
+    expect(b.takeVoices()).toEqual([]);
+  });
   it('difunde el evento de un punto de patrulla cuando el soldado llega', () => {
     const s = new Soldier('S', mk(0, 0), { name: 'R', type: RouteType.Stopped, points: [{ x: 20, y: 0, z: 0, wait: 2, angle: 0, vel: 2, event: 'REAC' }] });
     const b = new Battle([s], [], null);
@@ -29,6 +43,8 @@ describe('Battle', () => {
     b.onDanger = (x, y) => { danger.push([x, y]); };
     b.tick();
     expect(danger).toEqual([[0, 0]]);
+    expect(b.takeVoices()).toEqual([{ tag: 'ALRM', x: 0, y: 0, z: 0 }, { tag: 'VMUE', x: 0, y: 0, z: 0 }]);
+    expect(b.takeVoices()).toEqual([]);
     expect(listener.order).toBe(Order.Investigate);
     expect(far.order).toBe(Order.Patrol);
     b.tick();
@@ -48,8 +64,10 @@ describe('Battle', () => {
     expect(listener.order).toBe(Order.Investigate);
     expect(far.order).toBe(Order.Patrol);
     expect(danger).toEqual([]);
+    expect(b.takeVoices()).toEqual([{ tag: 'VMUE', x: 0, y: 0, z: 0 }]);
     for (let i = 0; i < 250; i++) b.tick();
     expect(danger).toHaveLength(1);
+    expect(b.takeVoices().map((voice) => voice.tag)).toEqual(['ALRM']);
   });
   it('un tiro de pistola del comando mata al soldado y alerta a otro que está a <200 u (investiga); rastro unos ciclos', () => {
     const target = new Soldier('A', mk(250, 0, 180, 'A'), null);

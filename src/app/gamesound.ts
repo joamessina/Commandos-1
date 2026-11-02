@@ -1,11 +1,12 @@
 /**
  * Sonido de la misión en marcha: ambiente del `.MIS` (engine/sound.ts), música y los efectos de los disparos y explosiones que ve la partida.
- * shortcut: solo suenan disparos (PIPA, MIRI, FUSL, NIDO), explosiones (XPLO) y los jingles de fin; faltan voces, pasos, objetos y el resto de la tabla de 152 (docs/lectura/sonido.md S2.1).
+ * shortcut: suenan VMUE, ALRM y AL07 ya emitidas por BAP, disparos, explosiones y jingles; faltan otras voces, pasos, objetos y emisores. Mejorar al portar las acciones restantes.
  *           Todas las explosiones usan XPLO (EXPLOSI.WAV): no se distingue barril (EBAR) ni casa (XCA*). Cuándo mejorar: al leer qué tag emite cada fuente.
  */
 import { AmbientSource, attenuate, BASE_VOLUME, isPositional, lcg, parseAmbient, parseMusic, type AmbientDef } from '../engine/sound.ts';
 import { SOUND_WAV } from '../engine/sound-table.ts';
 import type { Sfx } from '../render/audio.ts';
+import type { VoiceSound } from '../engine/battle.ts';
 
 /** Lo que `GameSound` necesita de la partida en cada ciclo. */
 export interface SoundView {
@@ -13,6 +14,7 @@ export interface SoundView {
   readonly camY: number;
   readonly tracers: readonly { readonly fromX: number; readonly fromY: number; readonly tag?: string }[];
   readonly blasts: readonly { readonly x: number; readonly y: number }[];
+  readonly voices: readonly VoiceSound[];
   /** Fin de la misión: 'win' = victoria, 'lose' = derrota, null = sigue. */
   readonly end: 'win' | 'lose' | null;
 }
@@ -31,6 +33,7 @@ export class GameSound {
   private readonly cache = new Map<string, Promise<AudioBuffer | null>>();
   private ambient: { readonly def: AmbientDef; readonly source: AmbientSource; readonly buffer: AudioBuffer }[] = [];
   private readonly seen = new WeakSet();
+  private voiceTail: Promise<void> = Promise.resolve();
   private ended = false;
   private alive = true;
 
@@ -80,16 +83,22 @@ export class GameSound {
     this.sfx.stopMusic();
   }
 
-  /** Suena `tag` en el punto del mundo (x, y): atenuado por la distancia en pantalla al centro de la cámara. */
-  private playAt(tag: string, x: number, y: number, v: SoundView): void {
-    this.tag(tag)
-      .then((buffer) => {
-        if (!buffer) return;
-        const p = this.project(x, y, 0);
-        const mix = attenuate(p.px - v.camX, p.py - v.camY, BASE_VOLUME);
-        if (mix) this.sfx.play(buffer, mix.volume, mix.pan);
-      })
-      .catch(() => undefined);
+  private playBuffer(buffer: AudioBuffer | null, x: number, y: number, z: number, v: SoundView): void {
+    if (!buffer || !this.isLive()) return;
+    const p = this.project(x, y, z);
+    const mix = attenuate(p.px - v.camX, p.py - v.camY, BASE_VOLUME);
+    if (mix) this.sfx.play(buffer, mix.volume, mix.pan);
+  }
+
+  /** Suena `tag` en el punto del mundo, atenuado respecto de la cámara. */
+  private playAt(tag: string, x: number, y: number, z: number, v: SoundView): void {
+    this.tag(tag).then((buffer) => { this.playBuffer(buffer, x, y, z, v); }).catch(() => undefined);
+  }
+
+  /** Decodifica en paralelo, pero inicia las voces en el orden en que se emitieron. */
+  private playVoice(voice: VoiceSound, v: SoundView): void {
+    const ready = this.tag(voice.tag).catch(() => null);
+    this.voiceTail = this.voiceTail.then(() => ready).then((buffer) => { this.playBuffer(buffer, voice.x, voice.y, voice.z, v); }).catch(() => undefined);
   }
 
   /** Un ciclo de juego: ambiente, disparos nuevos, explosiones nuevas y el jingle de fin. */
@@ -105,13 +114,14 @@ export class GameSound {
     for (const t of v.tracers) {
       if (this.seen.has(t) || !t.tag) continue;
       this.seen.add(t);
-      this.playAt(t.tag, t.fromX, t.fromY, v);
+      this.playAt(t.tag, t.fromX, t.fromY, 0, v);
     }
     for (const b of v.blasts) {
       if (this.seen.has(b)) continue;
       this.seen.add(b);
-      this.playAt('XPLO', b.x, b.y, v);
+      this.playAt('XPLO', b.x, b.y, 0, v);
     }
+    for (const voice of v.voices) this.playVoice(voice, v);
     if (v.end && !this.ended) {
       this.ended = true;
       this.sfx.stopMusic();

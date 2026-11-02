@@ -82,6 +82,8 @@ export interface Shot {
   readonly hit: boolean;
 }
 
+export type SoldierVoice = 'VMUE' | 'ALRM' | 'AL07';
+
 export interface SoldierWorld {
   /** Comandos vivos o muertos (el soldado filtra). */
   readonly commandos: readonly Unit[];
@@ -93,7 +95,7 @@ export interface SoldierWorld {
   readonly packs?: Packs;
   /** Un disparo de un soldado: el mundo lo dibuja y avisa a los demás. */
   readonly onShot: (from: Soldier, shot: Shot) => void;
-  readonly onVoice?: (from: Soldier, voice: 'VMUE' | 'ALRM') => void;
+  readonly onVoice?: (from: Soldier, voice: SoldierVoice) => void;
   readonly onEvent?: (event: string) => void;
 }
 
@@ -515,7 +517,8 @@ export class Soldier implements Target, Claimant {
       this.pack = p;
       this.order = Order.Pack;
       this.unit.speed = PACK_SPEED;
-      this.unit.goTo({ x: p.x, y: p.y }, false);
+      const started = this.unit.goTo({ x: p.x, y: p.y }, false);
+      if (started) w.onVoice?.(this, 'AL07');
       this.moving = this.unit.target !== null;
       if (this.moving) this.unit.anim.set('ANDAR');
       return;

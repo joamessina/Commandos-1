@@ -4,7 +4,7 @@ import { parseSec, SectorFlag } from '../formats/sec.ts';
 import { anmSeq, bnm, secBytes } from '../testing/builders.ts';
 import { RouteType, type Route } from './patrol.ts';
 import { SectorMap } from './sectors.ts';
-import { lookRange, Order, Soldier, type Shot, type SoldierWorld } from './soldier.ts';
+import { lookRange, Order, Soldier, type Shot, type SoldierVoice, type SoldierWorld } from './soldier.ts';
 import { COMMANDO_ENERGY, Unit } from './unit.ts';
 import { inCone, lineClear, rayReach, sees } from './vision.ts';
 
@@ -104,7 +104,7 @@ describe('Soldier', () => {
     const commandos: Unit[] = [];
     const voices: string[] = [];
     const s = new Soldier('BAP2', unit(0, 0), null, { brain: 'route' });
-    const w = { ...mkWorld(commandos).world, bodies: [{ x: 50, y: 0 }], onVoice: (_s: Soldier, voice: 'VMUE' | 'ALRM') => { voices.push(voice); } };
+    const w = { ...mkWorld(commandos).world, bodies: [{ x: 50, y: 0 }], onVoice: (_s: Soldier, voice: SoldierVoice) => { voices.push(voice); } };
     for (let i = 0; i < 100 && s.order !== Order.Look; i++) s.tick(w);
     expect(s.order).toBe(Order.Look);
     expect(voices).toEqual(['VMUE']);

@@ -710,7 +710,7 @@ function setupStage(): void {
       if (!g.battle.lost && !g.won) g.battle.tick();
       if (!g.battle.lost && !g.won) g.tickGroups();
       g.demo.tick();
-      g.sound.tick({ camX: g.camX, camY: g.camY, tracers: g.battle.tracers, blasts: g.demo.blasts, end: g.result ? (g.result.victory ? 'win' : 'lose') : null });
+      g.sound.tick({ camX: g.camX, camY: g.camY, tracers: g.battle.tracers, blasts: g.demo.blasts, voices: g.battle.takeVoices(), end: g.result ? (g.result.victory ? 'win' : 'lose') : null });
       destroyLinkedHouses(g.houses, g.demo.destroyed);
       tickWorld(g);
       for (const h of g.houses) h.tick();

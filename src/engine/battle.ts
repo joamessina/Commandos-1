@@ -4,7 +4,7 @@
  */
 import { Attack, type Target, type Weapon } from './attack.ts';
 import type { SectorMap } from './sectors.ts';
-import { CHAT_CYCLES, CHAT_RANGE, type Shot, type Soldier } from './soldier.ts';
+import { CHAT_CYCLES, CHAT_RANGE, type Shot, type Soldier, type SoldierVoice } from './soldier.ts';
 import { Packs, STONE_NOISE } from './throwing.ts';
 import type { Unit } from './unit.ts';
 
@@ -14,6 +14,14 @@ export interface Tracer extends Shot {
   readonly enemy: boolean;
   /** Código de sonido del disparo (tabla del exe, engine/sound-table.ts): `PIPA` pistola, `MIRI` mirilla y arpón, `FUSL` fusil alemán, `NIDO` nido. */
   readonly tag?: string;
+}
+
+/** Voz emitida durante el ciclo, con la posición del emisor al producirse. */
+export interface VoiceSound {
+  readonly tag: SoldierVoice;
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
 }
 
 const SHOT_TAG: Readonly<Partial<Record<Weapon, string>>> = { PISTOLA: 'PIPA', MIRILLA: 'MIRI', ARPON: 'MIRI' };
@@ -27,6 +35,7 @@ export class Battle {
   readonly soldiers: Soldier[];
   readonly commandos: Unit[];
   readonly tracers: Tracer[] = [];
+  private readonly voices: VoiceSound[] = [];
   /** Cajetillas de tabaco en el suelo. */
   readonly packs = new Packs();
   private readonly attacks = new Map<Unit, Attack>();
@@ -60,6 +69,11 @@ export class Battle {
 
   attacking(unit: Unit): boolean {
     return this.attacks.has(unit);
+  }
+
+  /** Entrega las voces una sola vez al reproductor, incluso si hay varios ciclos por cuadro. */
+  takeVoices(): VoiceSound[] {
+    return this.voices.splice(0);
   }
 
   /** Ruido en (x,y): los soldados a menos del radio lo oyen. */
@@ -101,6 +115,8 @@ export class Battle {
         rng: this.rng,
         onEvent: (event) => this.onMissionEvent?.(event),
         onVoice: (from, voice) => {
+          this.voices.push({ tag: voice, x: from.x, y: from.y, z: from.unit.z });
+          if (voice === 'AL07') return;
           const radius = voice === 'ALRM' ? 300 : 150;
           for (const other of this.soldiers) if (other !== from && Math.hypot(other.x - from.x, other.y - from.y) < radius) other.hear(from.x, from.y);
           if (voice === 'ALRM') this.onDanger?.(from.x, from.y);

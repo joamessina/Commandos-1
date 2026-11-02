@@ -14,4 +14,10 @@ El port propaga ahora `ALRM` y `VMUE` a los soldados dentro de sus radios, y `AL
 
 Para ese caso de BAP2, `FUN_0043BA50` (`fn_00400000.c:425100`) cuenta 30 ciclos y ordena tres giros con otras esperas de 30; si no hay una reacción que lo interrumpa, vuelve al puesto. La salida de la orden emite `ALRM` si estaba pendiente una voz (`FUN_0043C330`, `soldado-acbap2.md` §6). El port conserva los giros como cambios instantáneos y aún no reproduce el fallo de camino ni todas las interrupciones y reacciones.
 
+## Audio y tabaco
+
+`FUN_0043B270` (`fn_00400000.c:424723`) llama a `FUN_00430DC0` (`419080`) al iniciar un camino viable hacia la cajetilla: reproduce `AL07` mediante `FUN_0067F9C0`, sin emitir estímulo a la IA. El port reproduce `AL07` (`ALE07.WAV`) en esa transición y `ALRM`/`VMUE` al generar las voces por cadáver, con la posición y altura del soldado. Las cargas de audio se inician en paralelo y los sonidos empiezan en el orden emitido.
+
+En Chrome con MAPA0000 y archivos reales se comprobó el inicio de los nodos de audio de `ALRM` y `VMUE` en ese orden para BAP1, y de `AL07` para `BAP2_5_NIVEL1` al ir hacia una cajetilla. Falta la escucha subjetiva. `ALTO` depende de la máquina de estados del sargento (`FUN_004D5830`), todavía no portada; no corresponde emitirlo por cualquier soldado que ve a un comando.
+
 Pendiente: asociar el resto de emisiones y temporizaciones a cada estado, distinguir las demás categorías de cuerpo, portar las reactividades de evento cuando una misión las declare y reproducir audio desde archivos del jugador. La prueba de visibilidad y el sonido de atención todavía no constituyen toda la cadena de alarma.
