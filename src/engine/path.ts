@@ -6,11 +6,10 @@
  * shortcut: el embudo es el estándar (string-pulling con portales recortados); el original usa intervalos angulares (FUN_00674B40/6749B0/674A10,
  *           NO leídos) y además emite un punto por cada portal cruzado (FUN_00625900, colineales): aquí solo los puntos de giro y el destino.
  *           Cuándo mejorar: al leer esas funciones, si una ruta real difiere.
- * shortcut: solo el modo a pie (agua/buceo FUN_00611470 y escaleras con bit 4 no portados); sin límite del pool de nodos (DAT_00874E9C);
- *           los márgenes se recalculan en cada consulta (sin caché). Cuándo mejorar: al portar el bote/buceo; si el perfil lo pide.
+ * shortcut: sin escaleras con bit 4 ni límite del pool de nodos (DAT_00874E9C); márgenes sin caché. Mejorar al portar escaleras y si el perfil lo pide.
  */
 import { SectorFlag, type Sector } from '../formats/sec.ts';
-import { groundZ, TYPE_DEEPWATER, type SectorMap } from './sectors.ts';
+import { groundZ, isWater, TYPE_DEEPWATER, type SectorMap } from './sectors.ts';
 import type { Vec } from './walk.ts';
 
 /** Punto de ruta con la altura del suelo en él (para dibujar la ruta; el movimiento usa solo x, y). */
@@ -154,11 +153,12 @@ export class Nav {
   }
 
   /** ¿Está bloqueada la arista `e` de `si` para quien camina? (FUN_00611220; el vecino debe existir.) */
-  private blocked(si: number, e: number, crouched: boolean): boolean {
+  private blocked(si: number, e: number, crouched: boolean, water: boolean): boolean {
     const s = this.list[si];
     const ni = s?.neighbors[e] ?? -1;
     const n = this.list[ni];
     if (!s || !n) return true;
+    if (water) return !isWater(s) || !isWater(n) || (n.flags & (SectorFlag.NTrans | SectorFlag.NCamin)) !== 0;
     return !(
       n.type !== TYPE_DEEPWATER &&
       !(n.flags & (SectorFlag.NTrans | SectorFlag.NCamin)) &&
@@ -168,7 +168,7 @@ export class Nav {
   }
 
   /** ¿Hay una arista bloqueada (o sin vecino) a menos de 11 u del punto, recorriendo los sectores vecinos? (FUN_00577770 + FUN_00610710) */
-  private wallNear(start: number, x: number, y: number, crouched: boolean): boolean {
+  private wallNear(start: number, x: number, y: number, crouched: boolean, water: boolean): boolean {
     this.stamp++;
     const queue = [start];
     for (let q = 0; q < queue.length; q++) {
@@ -185,7 +185,7 @@ export class Nav {
         const t1 = -(b * (x - e.x1) - a * (y - e.y1));
         if (!((t0 > 0 || d * d + t0 * t0 < WALL_RADIUS ** 2) && (t1 > 0 || d * d + t1 * t1 < WALL_RADIUS ** 2))) continue;
         const ni = s.neighbors[k] ?? -1;
-        if (ni < 0 || this.blocked(si, k, crouched)) return true;
+        if (ni < 0 || this.blocked(si, k, crouched, water)) return true;
         if (this.seen[ni] !== this.stamp && queue.length < MAX_BFS) {
           this.seen[ni] = this.stamp;
           queue.push(ni);
@@ -196,12 +196,12 @@ export class Nav {
   }
 
   /** Filtro a pie (FUN_006112B0): null si la arista está bloqueada; si no, márgenes por extremo (11 con pared cerca, 4 sin ella). */
-  private cross(si: number, k: number, crouched: boolean): { w1: number; w2: number; bits: number } | null {
+  private cross(si: number, k: number, crouched: boolean, water: boolean): { w1: number; w2: number; bits: number } | null {
     const s = this.list[si];
-    if (!s || this.blocked(si, k, crouched)) return null;
+    if (!s || this.blocked(si, k, crouched, water)) return null;
     const e = this.edge(s, k);
-    const near0 = this.wallNear(si, e.x0, e.y0, crouched);
-    const near1 = this.wallNear(si, e.x1, e.y1, crouched);
+    const near0 = this.wallNear(si, e.x0, e.y0, crouched, water);
+    const near1 = this.wallNear(si, e.x1, e.y1, crouched, water);
     return { w1: near0 ? WALL_RADIUS : CLEAR_MARGIN, w2: near1 ? WALL_RADIUS : CLEAR_MARGIN, bits: (near1 ? 2 : 0) | (near0 ? 1 : 0) };
   }
 
@@ -264,7 +264,7 @@ export class Nav {
   }
 
   /** Atajo de línea recta (FUN_00624840): sigue el segmento arista a arista; null si no llega al sector del destino por un camino libre. */
-  private straight(start: Vec, from: number, goal: Vec, crouched: boolean): PathStep[] | null {
+  private straight(start: Vec, from: number, goal: Vec, crouched: boolean, water: boolean): PathStep[] | null {
     const d = { x: goal.x - start.x, y: goal.y - start.y };
     const steps: PathStep[] = [];
     let cur = from;
@@ -277,7 +277,7 @@ export class Nav {
         return steps;
       }
       const ni = s.neighbors[hit.edge] ?? -1;
-      const m = ni < 0 ? null : this.cross(cur, hit.edge, crouched);
+      const m = ni < 0 ? null : this.cross(cur, hit.edge, crouched, water);
       if (!m || !this.wideEnough(s, hit.edge, m.w1 + m.w2)) return null;
       steps.push({ sector: cur, edge: hit.edge, ...m });
       cur = ni;
@@ -286,7 +286,7 @@ export class Nav {
   }
 
   /** A* sobre sectores (FUN_00624B90): corta al generar el sector destino, por lo que la ruta no es necesariamente la óptima. */
-  private search(start: Vec, from: number, goal: Vec, to: number, crouched: boolean): PathStep[] | null {
+  private search(start: Vec, from: number, goal: Vec, to: number, crouched: boolean, water: boolean): PathStep[] | null {
     const mid = (s: Sector, k: number): Vec => {
       const e = this.edge(s, k);
       return { x: (e.x0 + e.x1) * 0.5, y: (e.y0 + e.y1) * 0.5 };
@@ -310,7 +310,7 @@ export class Nav {
       for (let k = 0; k < s.verts.length; k++) {
         const ni = s.neighbors[k] ?? -1;
         if (ni < 0) continue;
-        const m = this.cross(node.sector, k, crouched);
+        const m = this.cross(node.sector, k, crouched, water);
         if (!m || !this.wideEnough(s, k, m.w1 + m.w2)) continue;
         const enter = node.parent ? mid(this.list[node.parent.sector] as Sector, node.entry) : start;
         const exit = mid(s, k);
@@ -339,12 +339,12 @@ export class Nav {
   }
 
   /** Cadena de sectores de `start` a `goal`, o null si no hay camino (buscaCamino -1). */
-  steps(start: Vec, from: Sector, goal: Vec, to: Sector, crouched = false): PathStep[] | null {
+  steps(start: Vec, from: Sector, goal: Vec, to: Sector, crouched = false, water = false): PathStep[] | null {
     const a = this.indexOf(from);
     const b = this.indexOf(to);
     if (a < 0 || b < 0) return null;
     if (a === b) return [{ sector: a, edge: -1, w1: 0, w2: 0, bits: 0 }];
-    return this.straight(start, a, goal, crouched) ?? this.search(start, a, goal, b, crouched);
+    return this.straight(start, a, goal, crouched, water) ?? this.search(start, a, goal, b, crouched, water);
   }
 
   /** Portal de un paso con los extremos recortados por sus márgenes (FUN_00625750): `right` junto al extremo 0, `left` junto al 1. */
@@ -418,9 +418,9 @@ export class Nav {
    * Ruta completa: puntos por los que pasar para ir de `start` (en `from`) a `goal` (en `to`); [] si ya está a menos de 2 u;
    * null si no hay camino o el destino no cae en un sector.
    */
-  route(start: Vec, from: Sector, goal: Vec, to: Sector | null, crouched = false): Waypoint[] | null {
+  route(start: Vec, from: Sector, goal: Vec, to: Sector | null, crouched = false, water = false): Waypoint[] | null {
     if ((start.x - goal.x) ** 2 + (start.y - goal.y) ** 2 < ALREADY_THERE_D2) return [];
-    const steps = to ? this.steps(start, from, goal, to, crouched) : null;
+    const steps = to ? this.steps(start, from, goal, to, crouched, water) : null;
     return steps ? this.waypoints(steps, start, goal) : null;
   }
 }

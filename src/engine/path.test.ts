@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { parseSec, SectorFlag, type Sector } from '../formats/sec.ts';
-import { secBytes } from '../testing/builders.ts';
+import { anmSeq, bnm, secBytes } from '../testing/builders.ts';
+import { parseAnm } from '../formats/anm.ts';
 import { navFor } from './path.ts';
 import { SectorMap } from './sectors.ts';
+import { Unit } from './unit.ts';
 
 // Rejilla 3×3 de celdas de 100: celda (cx, cy) = sector cy*3+cx. Vértice (x, y) = y*4+x. Antihorario: 0 abajo, 1 derecha, 2 arriba, 3 izquierda.
 const verts: [number, number][] = [];
@@ -119,6 +121,38 @@ describe('rutas por sectores', () => {
     const sb = at(low, b.x, b.y);
     expect(got(nav.route(a, sa, b, sb)).length).toBeGreaterThan(1); // de pie lo rodea
     expect(nav.route(a, sa, b, sb, true)).toMatchObject([b]); // agachado pasa recto
+  });
+
+  it('el filtro de buceo rodea tierra, permite agua profunda y respeta sectores bloqueados', () => {
+    const m = grid((cx, cy) => cx === 1 && cy === 1 ? {} : { type: (cx + cy) % 2 ? 3 : 1 });
+    const a = { x: 50, y: 150 };
+    const b = { x: 250, y: 150 };
+    const nav = navFor(m);
+    const route = got(nav.route(a, at(m, a.x, a.y), b, at(m, b.x, b.y), false, true));
+    expect(route.length).toBeGreaterThan(1);
+    let prev = a;
+    for (const p of route) {
+      for (let t = 0; t <= 1; t += 0.02) expect([1, 3]).toContain(m.at(prev.x + (p.x - prev.x) * t, prev.y + (p.y - prev.y) * t)?.type);
+      prev = p;
+    }
+    const closed = grid((cx, cy) => cx === 1 ? { type: 1, flags: cy === 1 ? SectorFlag.NTrans : SectorFlag.NCamin } : { type: 1 });
+    expect(navFor(closed).route(a, at(closed, a.x, a.y), b, at(closed, b.x, b.y), false, true)).toBeNull();
+    expect(nav.steps(a, at(m, 150, 150), b, at(m, b.x, b.y), false, true)).toBeNull();
+  });
+
+  it('el marine sigue la ruta acuática hasta el otro lado de un obstáculo', () => {
+    const m = grid((cx, cy) => cx === 1 && cy === 1 ? {} : { type: 1 });
+    const anm = parseAnm(bnm([{ type: 0, slots: [2] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'BUCEAR', 2, 30, 0, 8)]));
+    const u = new Unit('LANCHERO', anm, 50, 150, 0, 0, m);
+    u.diving = true;
+    expect(u.goTo({ x: 250, y: 150 }, false)).toBe(true);
+    expect(u.waypoints.length).toBeGreaterThan(1);
+    for (let i = 0; i < 400 && u.target; i++) {
+      u.tick();
+      expect(u.sector?.type).toBe(1);
+    }
+    expect(u.target).toBeNull();
+    expect(Math.hypot(u.body.x - 250, u.body.y - 150)).toBeLessThan(3);
   });
 
   it('un sector sin índice en el mapa no tiene ruta', () => {

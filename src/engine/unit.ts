@@ -5,7 +5,7 @@
  * Con un SectorMap: suelo = plano del sector, destino y pasos validados (docs/research/q1-movimiento.md §R4); agua ×0.5.
  * Rutas (R3, docs/research/q1-rutas.md): `goTo` pide a `Nav` la cadena de sectores (atajo recto o A*) y camina por sus puntos de giro; sin camino la orden se rechaza.
  * Atasco: 9 ciclos sin avanzar (FUN_00629EF0) y la orden se abandona (TPathTool::abandona, FUN_006281A0: para el motor y, si faltan menos de 10 u al
- * destino, la da por cumplida; si no, resetea. NO re-planifica). shortcut: sin escaleras/PEscal (bit 4) ni agua/buceo en la ruta.
+ * destino, la da por cumplida; si no, resetea. NO re-planifica). shortcut: sin escaleras/PEscal (bit 4) en la ruta.
  * shortcut: al detenerse la secuencia queda en el paso donde estaba (no se leyó cómo el original elige la pose de reposo),
  *           cuándo mejorar: al leer REPOSO/AGACHARSE y el estado de animación del bicho.
  */
@@ -80,7 +80,7 @@ export class Unit {
   get eye(): number {
     return this.crouched || this.diving ? this.height * 0.125 : this.height;
   }
-  /** Buceando (AuBucear): solo se pisan sectores de agua, sin el ×0,5 del agua (MotorAliado lo omite al bucear) y los soldados no lo ven (oculto). shortcut: va en línea recta (sin rutas por el mar). */
+  /** Buceando (AuBucear): solo se pisan sectores de agua, sin el ×0,5 del agua (MotorAliado lo omite al bucear) y los soldados no lo ven (oculto). */
   diving = false;
   /** Casa en la que está (oculto dentro). */
   inHouse: string | null = null;
@@ -127,8 +127,8 @@ export class Unit {
     if (this.sectors && !validTarget(to, this.diving ? { water: true } : {})) return false;
     const goalZ = to ? groundZ(to, p.x, p.y) : this.z;
     let path: Vec3[] = [{ ...p, z: goalZ }];
-    if (this.nav && !this.diving) {
-      const route = this.sector ? this.nav.route(this.body, this.sector, p, to) : null;
+    if (this.nav) {
+      const route = this.sector ? this.nav.route(this.body, this.sector, p, to, false, this.diving) : null;
       if (!route) return false;
       if (route.length === 0) return true; // ya está a menos de 2 u: la orden se ignora
       path = route;
