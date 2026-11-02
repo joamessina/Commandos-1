@@ -58,7 +58,7 @@
 | [x] | Cámara: paso del scroll con zoom menor a 1 | 50 % | Baja | `q1-camara.md` (valor "no leído"). Hecho: `trunc(n/zoom)`. |
 | [ ] | Guardado de partidas (`.SAV` texto, `SAVB` binario con CRC32) | 40 % | Media-alta | `.SAV` leído; `SAVB` no. |
 | [ ] | Menús, briefing, créditos, pantallas de fin | 30 % | Media-alta | `ui-misiones-guardado.md`. |
-| [ ] | Tutorial (`.ROL`, `TUT00..06`) | 30 % | Media | |
+| [ ] | Tutorial (`.ROL`, `TUT00..06`) | 30 % | Media | Los 7 mapas ya se cargan y juegan desde el selector (2026-11-02; usan MAPA0008 con `TUT.SEC`; cada uno trae al comando de su prefijo de voz). Falta reproducir el `.ROL` (entrada grabada) con las frases de `rolling/wave`. |
 | [ ] | Videos `AVI` (probablemente transcodificar) | 10 % | Media | |
 | [ ] | Multijugador / red (`CRed_*`) | 10 % | Alta (3+ sesiones), probablemente fuera de alcance | |
 

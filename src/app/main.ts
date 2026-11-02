@@ -40,7 +40,7 @@ import { asNumber, find } from '../formats/clave.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
 import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
-import { parseCampaign, parseMissionInfo } from '../engine/campaign.ts';
+import { missionNames, parseCampaign, parseMissionFiles, parseMissionInfo } from '../engine/campaign.ts';
 import { Sfx } from '../render/audio.ts';
 import { SpriteCache } from '../render/sprites.ts';
 import { GameSound } from './gamesound.ts';
@@ -246,15 +246,24 @@ async function start(dir: Uint8Array, wads: Map<string, () => Promise<ArrayBuffe
   const entries = new Map<string, DirEntry>();
   for (const e of parseContainer(dir)) entries.set(e.path.toUpperCase(), e);
   loaded = { dir, entries, wads, music };
-  const playable = [...wads.keys()].sort().map((k) => k.slice(4)).filter((n) => entries.has(`DATOS/MISIONES/MAPA${n}.VOL`));
-  // orden y nombres de la campaña (MISIONES.DAT + MBnn.STR); los mapas que no figuran en la lista van al final como extras
+  // misiones jugables = las que tienen sus archivos de mapa (volúmenes y banco de gráficos): se leen del propio .MIS
   const text = (path: string): string => { const b = bytes(path); return b ? new TextDecoder('latin1').decode(b) : ''; };
-  const campaign = parseCampaign(text('DATOS/MISIONES/MISIONES.DAT')).filter((n) => playable.includes(n));
-  const maps = [...campaign, ...playable.filter((n) => !campaign.includes(n))];
-  mapSel.replaceChildren(...maps.map((n) => {
-    const k = campaign.indexOf(n);
-    const info = parseMissionInfo(text(`DATOS/MISIONES/MB${n.slice(2)}.STR`));
-    return new Option(k < 0 ? `Extra: mapa ${n}` : `${(k + 1).toString()}. ${info ? `${info.title} (${info.place})` : `Mapa ${n}`}`, n);
+  const playable = missionNames(entries.keys()).filter((name) => {
+    const f = parseMissionFiles(text(`DATOS/MISIONES/${name}.MIS`));
+    return f.vol !== undefined && entries.has(`DATOS/MISIONES/${f.vol.toUpperCase()}`) && f.wad !== undefined && wads.has(f.wad);
+  });
+  // orden y nombres de la campaña (MISIONES.DAT + MBnn.STR); el resto (variantes, tutoriales) va al final como extras
+  const campaign = parseCampaign(text('DATOS/MISIONES/MISIONES.DAT')).map((n) => `MAPA${n}`).filter((name) => playable.includes(name));
+  const maps = [...campaign, ...playable.filter((name) => !campaign.includes(name))];
+  const tutorials = ['básico', 'GB', 'SN', 'MA', 'SA', 'DR', 'SP']; // prefijo de las voces de cada .ROL (docs/engine/sonido-parsers.md §1.9)
+  mapSel.replaceChildren(...maps.map((name) => {
+    const k = campaign.indexOf(name);
+    const num = name.slice(4);
+    if (k >= 0) {
+      const info = parseMissionInfo(text(`DATOS/MISIONES/MB${num.slice(2)}.STR`));
+      return new Option(`${(k + 1).toString()}. ${info ? `${info.title} (${info.place})` : name}`, name);
+    }
+    return new Option(name.startsWith('TUT') ? `Tutorial ${num.slice(0, 2)} (${tutorials[Number(num.slice(0, 2))] ?? '?'})` : `Extra: ${name}`, name);
   }));
   mapSel.disabled = maps.length === 0;
   if (maps.length === 0) {
@@ -305,16 +314,17 @@ function bytes(path: string): Uint8Array | undefined {
 async function load(): Promise<void> {
   if (!loaded || !mapSel.value) return;
   const n = mapSel.value;
-  const volBytes = bytes(`DATOS/MISIONES/MAPA${n}.VOL`);
-  const readWad = loaded.wads.get(`FASE${n}`);
+  const misBytes = bytes(`DATOS/MISIONES/${n}.MIS`);
+  const misText = misBytes ? new TextDecoder('latin1').decode(misBytes) : '';
+  const files = parseMissionFiles(misText);
+  const volBytes = files.vol ? bytes(`DATOS/MISIONES/${files.vol.toUpperCase()}`) : undefined;
+  const readWad = files.wad ? loaded.wads.get(files.wad) : undefined;
   if (!volBytes || !readWad) return;
-  say(`Componiendo mapa ${n}…`);
+  say(`Componiendo ${mapSel.selectedOptions[0]?.text ?? n}…`);
   await new Promise((r) => setTimeout(r, 0));
   const t0 = performance.now();
   const vol = parseVol(new TextDecoder('latin1').decode(volBytes));
   const wad = parseWad(new Uint8Array(await readWad()));
-  const misBytes = bytes(`DATOS/MISIONES/MAPA${n}.MIS`);
-  const misText = misBytes ? new TextDecoder('latin1').decode(misBytes) : '';
   const wdef = waterBox.checked ? null : parseWater(misText);
   const wsprite = wdef ? wad.byName.get(wdef.dst.toUpperCase()) : undefined;
   const bounds = wsprite?.width === 256 && wsprite.height === 256 ? waterBounds(vol) : null; // el generador del exe asume 256×256
@@ -328,7 +338,7 @@ async function load(): Promise<void> {
   map.getContext('2d')?.putImageData(new ImageData(img.pixels, img.width, img.height), 0, 0);
 
   const units: UnitView[] = [];
-  const secBytes = bytes(`DATOS/MISIONES/MAPA${n}.SEC`);
+  const secBytes = files.sec ? bytes(`DATOS/MISIONES/${files.sec.toUpperCase()}`) : undefined;
   const sec = secBytes ? parseSec(secBytes) : null;
   const sectors = sec ? new SectorMap(sec) : null;
   const macro = (name: string): string | undefined => {
@@ -595,7 +605,7 @@ async function load(): Promise<void> {
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
   setupStage();
   sound.init(misText).catch(() => undefined); // sin ambiente ni música si algo falla (no frena la misión)
-  say(`Mapa ${n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.${import.meta.env.DEV ? ' Comandos invencibles (Alt+I), Ctrl+X teletransporta, Ctrl+Alt+N termina la misión.' : ''}`);
+  say(`${mapSel.selectedOptions[0]?.text ?? n}: ${img.width.toString()}×${img.height.toString()} px, ${units.length.toString()} comandos (${Math.round(performance.now() - t0).toString()} ms). Clic izquierdo = ordenar, doble clic = correr; derecho = cancelar o arrastrar para elegir.${import.meta.env.DEV ? ' Comandos invencibles (Alt+I), Ctrl+X teletransporta, Ctrl+Alt+N termina la misión.' : ''}`);
 }
 
 /** `.ARMAS [ … ]` de la acción AuDisparar de un comando. */

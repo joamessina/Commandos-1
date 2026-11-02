@@ -30,3 +30,31 @@ export function parseMissionInfo(strText: string): MissionInfo | null {
   const m = /DATE\s+(.+?)\s+PLAC\s+(.+?)\s+TITL\s+(.+?)\s*(?:\x1a.*)?$/s.exec(strText.replace(/\s+/g, ' '));
   return m?.[1] && m[2] && m[3] ? { date: capital(m[1]), place: capital(m[2]), title: capital(m[3]) } : null;
 }
+
+export interface MissionFiles {
+  readonly vol: string | undefined;
+  readonly sec: string | undefined;
+  /** `FASEnnnn` (sin extensión): banco de gráficos del mapa. */
+  readonly wad: string | undefined;
+}
+
+/**
+ * Archivos de mapa de una misión (`.MISSION [ .DATOSFICHEROSMISION [ .VOLUMENES … .SECTORES … .WADMAP … ] ]`). No siempre son los del número de la misión: MAPA0009 usa los de la 4 (de noche),
+ * MAPA0010 y los siete tutoriales los de MAPA0008 (los tutoriales 1 a 6 con `TUT.SEC`), MAPF0001 los de la 1.
+ */
+export function parseMissionFiles(misText: string): MissionFiles {
+  const mission = asList(find(parseClave(misText), '.MISSION')) ?? [];
+  const files = asList(find(mission, '.DATOSFICHEROSMISION')) ?? [];
+  const wad = asText(find(files, '.WADMAP'));
+  return { vol: asText(find(files, '.VOLUMENES')), sec: asText(find(files, '.SECTORES')), wad: wad?.replace(/\.WAD$/i, '').toUpperCase() };
+}
+
+/** Misiones jugables que trae el contenedor, por nombre de archivo sin extensión (`MAPA0005`, `MAPF0001`, `TUT03`), ordenadas. */
+export function missionNames(paths: Iterable<string>): string[] {
+  const out: string[] = [];
+  for (const p of paths) {
+    const m = /^DATOS\/MISIONES\/((?:MAPA|MAPF)\d{4}|TUT\d{2})\.MIS$/i.exec(p);
+    if (m?.[1]) out.push(m[1].toUpperCase());
+  }
+  return out.sort();
+}
