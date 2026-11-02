@@ -23,7 +23,7 @@ export class Cursors {
 
   /** Valor de la propiedad CSS `cursor` (con la flecha del sistema de reserva si falta el sprite). */
   cssFor(spec: CursorSpec): string {
-    const key = `${spec.sprite}|${spec.hot}`;
+    const key = `${spec.sprite}|${spec.hot}|${spec.x?.toString() ?? ''}|${spec.y?.toString() ?? ''}`;
     const hit = this.css.get(key);
     if (hit !== undefined) return hit;
     let found: { s: Sprite; canvas: HTMLCanvasElement } | null = null;
@@ -36,8 +36,8 @@ export class Cursors {
     }
     let value = 'default';
     if (found) {
-      const x = spec.hot === 'center' ? Math.floor(found.s.width / 2) : 0;
-      const y = spec.hot === 'center' ? Math.floor(found.s.height / 2) : 0;
+      const x = spec.x ?? (spec.hot === 'center' ? Math.floor(found.s.width / 2) : 0);
+      const y = spec.y ?? (spec.hot === 'center' ? Math.floor(found.s.height / 2) : 0);
       value = `url(${found.canvas.toDataURL()}) ${x.toString()} ${y.toString()}, default`;
     }
     this.css.set(key, value);

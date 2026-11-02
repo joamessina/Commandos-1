@@ -139,6 +139,7 @@ export class Soldier implements Target, Claimant {
   /** Artillero de un nido: no se mueve (investiga girando, no caminando). */
   private readonly fixed: boolean;
   private readonly sweepAmp: number;
+  private readonly sweepPeriod: number;
   private readonly elliptical: boolean;
   /** false = soldado de la base `AcBap` (BAP1/BANPE1): mira el punto del estímulo pero no va hasta él. */
   private readonly walks: boolean;
@@ -155,10 +156,11 @@ export class Soldier implements Target, Claimant {
     token: string,
     unit: Unit,
     route: Route | null,
-    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean; readonly follow?: Follow; readonly smokes?: boolean; readonly tobacco?: boolean; readonly brain?: 'base' | 'route'; readonly investigateSpeed?: number; readonly alternateRoutes?: readonly Route[]; readonly waitRouteEvent?: boolean } = {},
+    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly sweepPeriod?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean; readonly follow?: Follow; readonly smokes?: boolean; readonly tobacco?: boolean; readonly brain?: 'base' | 'route'; readonly investigateSpeed?: number; readonly alternateRoutes?: readonly Route[]; readonly waitRouteEvent?: boolean } = {},
   ) {
     this.fixed = opts.fixed ?? false;
     this.sweepAmp = opts.sweep ?? SWEEP_AMP;
+    this.sweepPeriod = opts.sweepPeriod ?? SWEEP_PERIOD;
     this.elliptical = opts.elliptical ?? true;
     this.walks = opts.walks ?? true;
     this.follow = opts.follow ?? null;
@@ -438,7 +440,7 @@ export class Soldier implements Target, Claimant {
     const aiming = this.order === Order.Aim || this.order === Order.Shoot;
     // AcVigilar: la cabeza barre ±ANGBARRIDO; apuntando, mira al frente (el cuerpo ya se giró hacia el blanco)
     this.phase++;
-    this.headAngle = aiming ? 0 : Math.sin((2 * Math.PI * (this.phase % SWEEP_PERIOD)) / SWEEP_PERIOD) * this.sweepAmp;
+    this.headAngle = aiming || this.sweepPeriod <= 0 || this.sweepAmp <= 0 ? 0 : Math.sin((2 * Math.PI * (this.phase % this.sweepPeriod)) / this.sweepPeriod) * this.sweepAmp;
     this.reach = this.elliptical ? lookRange(this.range, this.headAngle) : this.range; // VISTAELIPTICA 0: el alcance no varía con la cabeza
     const seen = this.scan(w);
     if (seen) {

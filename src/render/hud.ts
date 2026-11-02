@@ -16,6 +16,7 @@ export interface HudUnit {
   readonly items: readonly BagItem[];
   /** Va en un vehículo (bote): solo se ven los ítems permitidos en vehículos. */
   readonly inVehicle: boolean;
+  readonly diving?: boolean;
   /** Balas que le quedan con la mirilla (0 = no se dibujan). */
   readonly bullets: number;
 }
@@ -32,6 +33,7 @@ export class Hud {
   private readonly sized = new Map<string, Bank>();
   private readonly faces = new Map<string, Bank>();
   private readonly items = new Map<string, Bank>();
+  private alarmFrame = 0;
 
   /** `sized` = `GLOBAL/<ancho>X<alto>.WAD` por "ancho×alto"; `faces` = `CARAS/<TOKEN>.WAD` por token de comando; `items` = `OPCIONES/<ITEM>.WAD` por nombre. */
   constructor(global: Wad, sized: ReadonlyMap<string, Wad>, faces: ReadonlyMap<string, Wad>, items: ReadonlyMap<string, Wad>) {
@@ -56,7 +58,7 @@ export class Hud {
   /** Ítem de la mochila bajo el punto (el de más arriba cuya parte opaca lo contiene), o null. */
   itemAt(x: number, y: number, width: number, height: number, unit: HudUnit, left: boolean): BagItem | null {
     const bag = bagRect(width, height, left);
-    const list = visibleItems(unit.items, unit.inVehicle);
+    const list = visibleItems(unit.items, unit.inVehicle, unit.diving);
     for (let i = list.length - 1; i >= 0; i--) {
       const it = list[i];
       const art = it ? this.items.get(it.wad)?.wad.byName.get(it.sprite) : undefined;
@@ -70,7 +72,7 @@ export class Hud {
   }
 
   /** `phase(i)` = fotograma de la cara del comando i (engine/hud.ts `FaceAnim`); `left` = columna y mochila a la izquierda. */
-  draw(ctx: CanvasRenderingContext2D, width: number, height: number, units: readonly HudUnit[], selected: number, phase: (i: number) => number, left: boolean, lit: ReadonlySet<string> = new Set()): void {
+  draw(ctx: CanvasRenderingContext2D, width: number, height: number, units: readonly HudUnit[], selected: number, phase: (i: number) => number, left: boolean, lit: ReadonlySet<string> = new Set(), alarm = false): void {
     const was = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = false;
     // tira superior
@@ -129,7 +131,7 @@ export class Hud {
       const photo = fb?.wad.sprites.find((s) => /^FOTO\d+\.RLE$/i.test(s.name));
       // la foto grande solo se ve en un vehículo: a pie los `IT_CARA_*` están ocultos (flag +0x124 = 1 en la memoria del exe)
       if (fb && photo && sel.inVehicle) ctx.drawImage(fb.cache.canvasFor(photo), bag.x + BAG.photoDx, bag.y + BAG.photoDy);
-      for (const it of visibleItems(sel.items, sel.inVehicle)) {
+      for (const it of visibleItems(sel.items, sel.inVehicle, sel.diving)) {
         const art = this.items.get(it.wad)?.wad.byName.get(it.sprite);
         const ib = this.items.get(it.wad);
         if (ib && art) {
@@ -148,6 +150,20 @@ export class Hud {
       const mb = this.items.get('MIRILLA');
       const bullet = mb?.wad.sprites.find((sp) => /^BALA0000/i.test(sp.name));
       if (mb && bullet) for (let k = 0; k < sel.bullets; k++) ctx.drawImage(mb.cache.canvasFor(bullet), bulletX(k, bag, left), bag.y + BULLET.y);
+    }
+    if (alarm) {
+      const x = left ? 60 : width - 163;
+      const y = height - 78;
+      const bg = Hud.get(this.global, 'ALMR0000.RLE');
+      const frame = this.alarmFrame++ % 4;
+      const art = Hud.get(this.global, `ALMR000${[1, 2, 1, 3][frame]?.toString() ?? '1'}.RLE`);
+      if (bg) ctx.drawImage(bg.c, x + 37, y + 25);
+      if (art) {
+        ctx.save();
+        if (frame === 2) { ctx.translate(x * 2 + art.c.width, 0); ctx.scale(-1, 1); }
+        ctx.drawImage(art.c, x, y);
+        ctx.restore();
+      }
     }
     ctx.imageSmoothingEnabled = was;
   }

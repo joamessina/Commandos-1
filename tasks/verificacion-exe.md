@@ -53,7 +53,10 @@ Mapa general (2026-10-30): `docs/exe-mapa-general.md` enlaza 49 funciones con VA
 - Por indicación de Joaquín, en agua se dibujan únicamente las partículas, sin el sprite de fuego; la lectura de `FUN_00679120` aún requiere contrastarse visualmente contra el original.
 - `engine/unit.ts` `treat`: sin prueba de distancia/ángulo de `FUN_0050A380`; JERINGA no existe en FRANCO.ANM (la cura sale al ciclo siguiente).
 - `engine/cursors.ts`: ARPON usa el cursor de la pistola; BOTIQUIN/CONTROL emparejados por nombre (C_MEDIC, C_GORRA1), sin leer la tabla.
-- Sin implementar: granada del jugador (nadie la tiene en M0) y la mano (AuCoger).
+- Sin implementar: granada del jugador (nadie la tiene en M0) y las categorías de AuCoger distintas del tabaco de cadáveres. El cursor de la mano está implementado; sus demás receptores siguen pendientes (`armas-restantes.md` §5).
+
+- Ojo: seleccionar un punto usa el cono y la oclusión disponibles en `vision.ts`; el testigo original tiene su propia altura y comunicación, aún sin portar. Las reglas actuales de oclusión conservan las limitaciones documentadas en ese módulo. La linterna avanza por pintado del navegador, que puede tener otra frecuencia que el original.
+- Desenfundado: pistola, rifle y arpón usan la secuencia de la tabla `0x8143C0`, pero todavía no se sincroniza su duración con todas las órdenes; AUDisparar conserva los atajos de tiempos anotados en `attack.ts`.
 
 ## Francotirador desde el bote (2026-10-31)
 - `engine/sound.ts` + `app/gamesound.ts`: atenuación (`FUN_0067EFA0`, R 800), ambiente `.AMBIENTE` (`FUN_00682A60/00682970/00682280`, LCG `FUN_006453C0`, arranca de inmediato, `POS 0 0 0` sin atenuación), música `.MUSICA` en bucle a 0,75·VOLMUSICA sin fundido, jingles `MUERTE`/`MCOMPLET`; tabla tag→WAV de 152 entradas (`0x820F28`). Voces ALRM/VMUE por cadáver y AL07 al ir por tabaco, con posición y altura del soldado. Barriles reproducen EBAR y bombas y minas XPLO. shortcut: faltan sonidos de casas XCA*; el volumen final multiplica `VOLEFECTOS` sin haber leído si el exe lo hace en los sonidos posicionales; la z de disparos y explosiones se toma 0; el oyente es el centro de la cámara sin zoom; faltan otras voces, pasos y opciones de volumen configurables. Cuándo mejorar: al barrer los llamadores de `FUN_0067F9C0` por emisor.

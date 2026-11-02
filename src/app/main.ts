@@ -28,14 +28,15 @@ import { canThrow, type Pack, type Throwable } from '../engine/throwing.ts';
 import { norm360 } from '../engine/walk.ts';
 import { parseRoutes } from '../engine/patrol.ts';
 import { Order, Soldier } from '../engine/soldier.ts';
+import { Alarm } from '../engine/alarm.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
-import { type BagItem, bagItems, FaceAnim, photoRect, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, parseInterface, slotAt, viewRect } from '../engine/hud.ts';
+import { type BagItem, bagItems, FaceAnim, photoRect, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, parseInterface, slotAt, viewRect, visibleItems } from '../engine/hud.ts';
 import { cursorFor, type CursorMode } from '../engine/cursors.ts';
 import { Cursors } from '../render/cursors.ts';
 import { Hud, type HudUnit } from '../render/hud.ts';
 import { DEFEAT_DELAY, END_TEXT, parsePar, score, type Score } from '../engine/score.ts';
-import { lineClear, rayReach, vistaOf } from '../engine/vision.ts';
+import { lineClear, rayReach, sees, vistaOf } from '../engine/vision.ts';
 import { asList, asNumber, asNumbers, asText, find, parseClave } from '../formats/clave.ts';
 import { parseWater, WaterFx } from '../engine/water.ts';
 import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.ts';
@@ -124,6 +125,10 @@ interface Prop {
   ang: number;
 }
 interface Game {
+  readonly alarm: Alarm;
+  readonly seenAlarmBlasts: WeakSet<object>;
+  visionPicking: boolean;
+  visionTarget: { soldier: Soldier } | { x: number; y: number; z: number } | null;
   readonly houses: House[];
   readonly tickGroups: () => void;
   /** Nido de ametralladora: su gráfico dispara cuando el artillero dispara. */
@@ -159,7 +164,7 @@ interface Game {
   /** El zapador va a plantar la bomba donde se haga clic (B). */
   planting: PlaceKind | null;
   /** Ítem que se usa con el próximo clic sobre un comando (botiquín) o un soldado esposado (control alemán). */
-  use: 'BOTIQUIN' | 'CONTROL' | null;
+  use: 'BOTIQUIN' | 'CONTROL' | 'MANO' | null;
   /** Soldado esposado que un comando controla (clic = adónde va; botón derecho lo suelta). */
   control: { readonly soldier: Soldier; readonly owner: Unit } | null;
   /** Gráfico (`CAJETILL`) de cada cajetilla en el suelo. */
@@ -169,7 +174,6 @@ interface Game {
   readonly kit: { cepo: Kit | null; decoy: Kit | null };
   /** Gráfico de cada cepo/señuelo colocado. */
   readonly trapProps: Map<Cepo | Decoy, Prop>;
-  showCones: boolean;
   readonly props: Prop[];
   readonly boat: { readonly boat: Boat; readonly prop: Prop } | null;
   readonly water: WaterView | null;
@@ -473,6 +477,7 @@ async function load(introduction = false): Promise<void> {
       const nest = e.actions.some((x) => x.name.toUpperCase() === 'ACMETRALLERO');
       const vig = e.actions.find((x) => x.name.toUpperCase() === 'ACVIGILAR')?.params ?? [];
       const sweep = asNumber(find(vig, '.ANGBARRIDO'));
+      const sweepPeriod = asNumber(find(vig, '.DEMORA'));
       const bap2 = e.actions.find((x) => /^ac(bap|banpe)2$/i.test(x.name));
       const investigateSpeed = asNumber(find(bap2?.params ?? [], '.VELDEJARPATRULLA'));
       const soldier = new Soldier(e.token, unit, route, {
@@ -488,6 +493,7 @@ async function load(introduction = false): Promise<void> {
         // AcBap1/AcBanpe1 = la base: mira el estímulo y no camina hasta él (AcBap2/AcBanpe2 sí)
         ...(e.actions.some((x) => /^ac(bap1|banpe1)$/i.test(x.name)) ? { walks: false } : {}),
         ...(sweep === undefined ? {} : { sweep }),
+        ...(sweepPeriod === undefined ? {} : { sweepPeriod }),
         elliptical: asNumber(find(vig, '.VISTAELIPTICA')) !== 0,
       });
       soldiers.push({ soldier, sprites: a.sprites });
@@ -651,16 +657,17 @@ async function load(introduction = false): Promise<void> {
   };
   battle.onMissionEvent = raise; // shortcut: solo entrega a rutas y salidas de grupos; mejorar al portar otros receptores de misión.
   for (const def of groups) if (!def.home && def.exitEvents.length === 0) spawnGroup(def);
+  const alarm = new Alarm();
   if (sec && sectors) {
     const zones = new ZoneEvents(sec, parseZoneSensors(misText));
     battle.onDanger = (x, y) => {
       const s = sectors.at(x, y);
-      if (s) for (const ev of zones.at(sec.sectors.indexOf(s))) raise(ev);
+      if (s) for (const ev of zones.at(sec.sectors.indexOf(s))) { alarm.trigger(); raise(ev); }
     };
   }
   sound?.stop();
   sound = new GameSound(sfx, { effect: (name) => bytes(`DATOS/RECURSOS/SONIDO/WAVE/${name.toUpperCase()}`), music: async (name) => { const r = loaded?.music.get(name.toLowerCase()); return r ? new Uint8Array(await r()) : undefined; } }, project);
-  game = { houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), splashArt: asset('DISPFALL'), splashes: [], seenSplashes: new WeakSet(), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), showCones: false, props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { alarm, seenAlarmBlasts: new WeakSet(), visionPicking: false, visionTarget: null, houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), splashArt: asset('DISPFALL'), splashes: [], seenSplashes: new WeakSet(), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
@@ -824,7 +831,11 @@ function setupStage(): void {
         g.splashes.push({ x: bl.x, y: bl.y, age: 0 });
       }
       g.demo.tick();
-      g.sound.tick({ camX: g.camX, camY: g.camY, tracers: g.battle.tracers, blasts: g.demo.blasts, voices: g.battle.takeVoices(), end: g.result ? (g.result.victory ? 'win' : 'lose') : null });
+      for (const bl of g.demo.blasts) if (!g.seenAlarmBlasts.has(bl)) { g.seenAlarmBlasts.add(bl); g.battle.onDanger?.(bl.x, bl.y); }
+      g.alarm.tick();
+      const selected = g.units[g.selected];
+      if (g.mode && selected && !weaponAvailable(selected, g.mode)) g.mode = null;
+      g.sound.tick({ alarmVolume: g.alarm.volume, camX: g.camX, camY: g.camY, tracers: g.battle.tracers, blasts: g.demo.blasts, voices: g.battle.takeVoices(), end: g.result ? (g.result.victory ? 'win' : 'lose') : null });
       destroyLinkedHouses(g.houses, g.demo.destroyed);
       tickWorld(g);
       for (const h of g.houses) h.tick();
@@ -1015,7 +1026,7 @@ function drawScope(ctx: CanvasRenderingContext2D, g: Game): void {
 }
 
 /** ¿Se puede disparar la mirilla al punto bajo el cursor? (alcance de la mirilla y línea libre; un soldado o barril apuntan a su posición). */
-function scopeInRange(g: Game): boolean {
+function scopeInRange(g: Game, weapon: 'MIRILLA' | 'ARPON' = 'MIRILLA'): boolean {
   const sel = g.units[g.selected]?.unit;
   if (!sel || !stage) return true;
   const z = zoom();
@@ -1026,18 +1037,19 @@ function scopeInRange(g: Game): boolean {
   const foe = g.soldiers.find((s) => !s.soldier.dead && near(project(s.soldier.x, s.soldier.y, s.soldier.unit.z).px, project(s.soldier.x, s.soldier.y, s.soldier.unit.z).py));
   const spot = foe ? { x: foe.soldier.x, y: foe.soldier.y } : g.sectors?.pick(mx, my);
   if (!spot) return false;
-  return Math.hypot(spot.x - sel.body.x, spot.y - sel.body.y) <= RANGE.MIRILLA && lineClear(g.sectors, sel.body.x, sel.body.y, spot.x, spot.y);
+  return Math.hypot(spot.x - sel.body.x, spot.y - sel.body.y) <= RANGE[weapon] && lineClear(g.sectors, sel.body.x, sel.body.y, spot.x, spot.y);
 }
 
 /** Cursor del mouse según el arma elegida (engine/cursors.ts); en el HUD vuelve a la flecha. */
 function updateCursor(g: Game): void {
   if (!stage || !g.cursors) return;
   const hudOver = g.hud !== null && overHud(cursor.x, cursor.y, stage.width, g.hudLeft);
-  const mode: CursorMode | null = hudOver ? null : g.planting === 'TABACO' ? 'TABACO' : g.use ?? g.mode;
+  const mode: CursorMode | null = hudOver ? null : g.visionPicking ? 'OJO' : g.planting === 'TABACO' ? 'TABACO' : g.use ?? g.mode;
   const planting = !hudOver && g.planting !== null && g.planting !== 'TABACO';
-  const spec = cursorFor(mode, planting, mode !== null && cursor.inside && overTarget(g));
+  const applicable = mode !== null && cursor.inside && (mode === 'ARPON' ? scopeInRange(g, 'ARPON') : overTarget(g));
+  const spec = cursorFor(mode, planting, applicable, g.ticks);
   const scope = spec.sprite === SCOPE; // la retícula la dibuja `drawScope` sobre la escena (efecto de lente del exe), no el cursor del sistema
-  const key = scope ? 'scope' : `${spec.sprite}|${spec.hot}`;
+  const key = scope ? 'scope' : `${spec.sprite}|${spec.hot}|${spec.x?.toString() ?? ''}|${spec.y?.toString() ?? ''}`;
   if (key === cursorKey && stage.style.cursor) return;
   cursorKey = key;
   stage.style.cursor = scope ? 'none' : g.cursors.cssFor(spec);
@@ -1078,7 +1090,12 @@ function draw(g: Game, briefing = false): void {
     ctx.strokeStyle = g.lift.moving ? '#c9a24a' : '#888';
     ctx.strokeRect(q.px - 22 + 0.5, q.py - 10 + 0.5, 43, 19);
   }
-  if (g.showCones) for (const s of g.soldiers) if (!s.soldier.dead) drawCone(ctx, g, s.soldier);
+  if (g.visionTarget) for (const entry of g.soldiers) {
+    const s = entry.soldier;
+    if (s.dead) continue;
+    const t = g.visionTarget;
+    if ('soldier' in t ? t.soldier === s : sees({ x: s.x, y: s.y, z: s.unit.z, eye: s.unit.eye, sector: s.unit.sector, heading: s.unit.body.ang + s.headAngle, range: s.reach, angle: s.aperture }, { ...t, radius: 0, low: false }, g.sectors)) drawCone(ctx, g, s);
+  }
   // Personajes y objetos entre los volúmenes del mapa (FUN_005D1C40): se ordenan juntos y, si un edificio va después, se repinta encima.
   interface Drawable {
     actor: Actor;
@@ -1169,9 +1186,10 @@ function draw(g: Game, briefing = false): void {
     }
   }
   for (const tr of g.battle.tracers) {
+    if (tr.enemy) continue;
     const a = project(tr.fromX, tr.fromY, 25);
     const b = project(tr.toX, tr.toY, 25);
-    ctx.strokeStyle = tr.enemy ? '#ff5a4a' : '#ffe066';
+    ctx.strokeStyle = '#ffe066';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(a.px, a.py);
@@ -1196,7 +1214,7 @@ function draw(g: Game, briefing = false): void {
   }
   ctx.restore();
   if (briefing) return;
-  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => hudUnit(u, g.bag)), g.selected, (i) => g.faces.of(i), g.hudLeft, litItems(g));
+  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => hudUnit(u, g.bag)), g.selected, (i) => g.faces.of(i), g.hudLeft, litItems(g), g.alarm.volume > 0);
   updateCursor(g);
   drawHud(ctx, g);
   drawScope(ctx, g);
@@ -1279,8 +1297,12 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   });
   const sel = g.units[g.selected];
   ctx.fillStyle = '#d9dde3';
-  ctx.fillText(`Arma: ${g.planting ? `${g.planting.toLowerCase()} (clic donde ponerlo)` : (g.mode ?? 'ninguna (clic = mover)')}  ·  F pistola · R fusil · C cuchillo · G agacharse · N bucear · Esc mover · E subir al bote · V conos`, 10, top + 14 + rows * 34);
-  if (sel) ctx.fillText(`Disponibles: ${sel.weapons.map((w) => (sel.unit.ammo[w] === undefined ? w : `${w} (${Math.max(0, sel.unit.ammo[w] ?? 0).toString()})`)).join(', ') || '—'}`, 10, top + 30 + rows * 34);
+  const shortcuts = sel ? ([['PISTOLA', 'F pistola'], ['MIRILLA', 'R fusil'], ['CUCHILLO', 'C cuchillo']] as const).filter(([w]) => weaponAvailable(sel, w)).map(([, label]) => label) : [];
+  ctx.fillText(`Arma: ${g.planting ? `${g.planting.toLowerCase()} (clic donde ponerlo)` : (g.mode ?? 'ninguna (clic = mover)')} · ${[...shortcuts, 'G agacharse', ...(sel?.canDive ? ['N bucear'] : []), 'Esc cancelar', 'E bote', 'V ojo'].join(' · ')}`, 10, top + 14 + rows * 34);
+  if (sel) {
+    const hud = hudUnit(sel, g.bag);
+    ctx.fillText(`Disponibles: ${sel.weapons.filter((w) => weaponAvailable(sel, w)).map((w) => (sel.unit.ammo[w] === undefined ? w : `${w} (${Math.max(0, sel.unit.ammo[w] ?? 0).toString()})`)).join(', ') || '—'} · Objetos: ${visibleItems(hud.items, hud.inVehicle, hud.diving).map((i) => i.wad).join(', ') || '—'}`, 10, top + 30 + rows * 34);
+  }
   const right = ctx.canvas.width - (g.hud && !g.hudLeft ? HUD_COLUMN : 0);
   let oy = top + 14;
   ctx.fillStyle = 'rgba(0,0,0,.55)';
@@ -1358,11 +1380,13 @@ function onRightUp(e: MouseEvent): void {
       say('Soltaste al alemán: queda esposado donde está.');
       return;
     }
-    if (g.mode || g.planting || g.use) {
+    if (g.mode || g.planting || g.use || g.visionPicking || g.visionTarget) {
       // el botón derecho también baja el arma o ítem en la mano (la mirilla, la piedra, el botiquín…), como Esc
       g.mode = null;
       g.planting = null;
       g.use = null;
+      g.visionPicking = false;
+      g.visionTarget = null;
       return;
     }
     const u = g.units[g.selected]?.unit;
@@ -1424,14 +1448,21 @@ function teleportAction(g: Game): void {
 const WEAPON_OF_WAD: Readonly<Record<string, Weapon>> = { ARPON: 'ARPON', PISTOLA: 'PISTOLA', MIRILLA: 'MIRILLA', CUCHILLO: 'CUCHILLO', PUNO: 'PUNO', ESPOSAS: 'ESPOSAS', PIEDRA: 'PIEDRA' };
 
 /** Datos del comando para el HUD (caras, mochila, balas). */
+function weaponAvailable(v: UnitView, w: Weapon): boolean {
+  return !v.unit.dead && !v.unit.diving && (!v.unit.boat || w === 'MIRILLA') && v.weapons.includes(w) && (v.unit.ammo[w] === undefined || (v.unit.ammo[w] ?? 0) > 0);
+}
+
 function hudUnit(v: UnitView, bag: ReadonlyMap<string, readonly BagItem[]>): HudUnit {
   const u = v.unit;
-  return { token: u.token, energy: u.energy, max: v.maxEnergy, dead: u.dead, items: (bag.get(u.token) ?? []).filter((i) => i.token !== 'IT_TABACO' || u.tobacco > 0), inVehicle: u.boat !== null, bullets: v.weapons.includes('MIRILLA') ? Math.max(0, u.ammo['MIRILLA'] ?? 0) : 0 };
+  return { token: u.token, energy: u.energy, max: v.maxEnergy, dead: u.dead, items: (bag.get(u.token) ?? []).filter((i) => (i.token !== 'IT_TABACO' || u.tobacco > 0) && (i.wad !== 'BOTIQUIN' || u.medkits > 0) && (i.wad !== 'MIRILLA' || weaponAvailable(v, 'MIRILLA')) && (!u.diving || i.wad === 'TRAJEBU')), inVehicle: u.boat !== null, diving: u.diving, bullets: !u.diving && v.weapons.includes('MIRILLA') ? Math.max(0, u.ammo['MIRILLA'] ?? 0) : 0 };
 }
 
 function armWeapon(g: Game, w: Weapon): void {
   const u = g.units[g.selected];
-  if (u?.weapons.includes(w)) {
+  if (u && weaponAvailable(u, w)) {
+    const draw = w === 'PISTOLA' ? 'DESENFUNDAPISTOLA' : w === 'MIRILLA' ? 'DESENFUNDARIFLE' : w === 'ARPON' ? 'DESENFUNDAARPON' : '';
+    // shortcut: no se sincroniza la espera de desenfundado con todas las órdenes; completar la máquina de AUDisparar.
+    if (g.mode !== w && !u.unit.boat && draw && u.unit.anim.has(draw)) u.unit.anim.set(draw);
     g.mode = w;
     g.use = null;
     g.planting = null;
@@ -1664,6 +1695,8 @@ function useItem(g: Game, it: BagItem): void {
   else if (it.wad === 'TABACO') tobaccoAction(g);
   else if (it.wad === 'BOTIQUIN') medkitAction(g);
   else if (it.wad === 'CONTROLA') controlAction(g);
+  // shortcut: AuCoger solo recoge tabaco de cadáveres; completar categorías de AuCoger al portar sus receptores.
+  else if (it.wad === 'MANO') { g.use = 'MANO'; g.mode = null; g.planting = null; say('Mano: elegí un objeto disponible.'); }
   else say(`${it.token}: todavía no está implementado.`);
 }
 
@@ -1679,6 +1712,7 @@ function litItems(g: Game): Set<string> {
   if (g.planting === 'TABACO') lit.add('TABACO');
   if (g.use === 'BOTIQUIN') lit.add('BOTIQUIN');
   if (g.use === 'CONTROL') lit.add('CONTROLA');
+  if (g.use === 'MANO') lit.add('MANO');
   if (v.unit.diving) lit.add('TRAJEBU');
   if (cursor.inside) {
     const it = g.hud.itemAt(cursor.x, cursor.y, stage.width, stage.height, hudUnit(v, g.bag), g.hudLeft);
@@ -1744,6 +1778,12 @@ function onMouse(e: MouseEvent): void {
     if (hitSpot) return hitSpot;
     return g.sectors ? null : { ...unproject(mx, my, sel?.z ?? 0), z: sel?.z ?? 0, sector: null };
   };
+  if (e.button === 0 && g.visionPicking) {
+    const spot = foe ? null : spotAt();
+    g.visionTarget = foe ? { soldier: foe.soldier } : spot ? { x: spot.x, y: spot.y, z: spot.z } : null;
+    g.visionPicking = false;
+    return;
+  }
   const live = e.button === 0 && sel && !sel.dead && !sel.boat;
   if (live && g.control && !g.mode && !g.planting && !g.use) {
     // controlás al alemán: el clic lo manda a él (anillo de radio 400 alrededor del comando)
@@ -1775,6 +1815,11 @@ function onMouse(e: MouseEvent): void {
     return;
   }
   const corpse = corpseAt(g, mx, my);
+  if (live && g.use === 'MANO') {
+    if (corpse && sel.tobacco <= 0) { g.use = null; stealTobacco(g, sel, corpse); }
+    else say('No hay un objeto que pueda recoger ahí.');
+    return;
+  }
   if (live && corpse && !g.mode && !g.planting && sel.tobacco <= 0 && hit < 0) {
     stealTobacco(g, sel, corpse);
     return;
@@ -1916,6 +1961,8 @@ window.addEventListener('keydown', (e) => {
   }
   if (k === 'f' || k === 'r' || k === 'c') armWeapon(g, k === 'f' ? 'PISTOLA' : k === 'r' ? 'MIRILLA' : 'CUCHILLO');
   if (k === 'escape') {
+    g.visionPicking = false;
+    g.visionTarget = null;
     g.mode = null;
     g.planting = null;
     g.use = null;
@@ -1947,7 +1994,7 @@ window.addEventListener('keydown', (e) => {
       cur.board(bt, seat);
     }
   }
-  if (k === 'v') g.showCones = !g.showCones;
+  if (k === 'v') { g.visionPicking = true; g.visionTarget = null; g.mode = null; g.use = null; g.planting = null; }
   if (k === 'home') {
     const u = g.units[g.selected]?.unit;
     if (u) {

@@ -16,4 +16,13 @@ describe('cursorFor', () => {
   it('plantar una bomba usa el cursor del explosivo, aunque haya un arma elegida', () => {
     expect(cursorFor('PISTOLA', true, false).sprite).toBe('C_PETA.RLE');
   });
+
+  it('usa la mira del arpón y anima mano y ojo según la tabla del exe', () => {
+    expect(cursorFor('ARPON', false, true)).toEqual({ sprite: 'C_MIRA1.RLE', hot: 'center', x: 8, y: 8 });
+    expect(cursorFor('ARPON', false, false).sprite).toBe('C_NMIRA1.RLE');
+    expect(cursorFor('MANO', false, true, 0).sprite).toBe('C_MANO1.RLE');
+    expect(cursorFor('MANO', false, true, 2).sprite).toBe('C_MANO2.RLE');
+    expect(cursorFor('OJO', false, true, 2).sprite).toBe('C_OJO2.RLE');
+    expect(cursorFor('OJO', false, false, 2).sprite).toBe('C_OJO1.RLE');
+  });
 });

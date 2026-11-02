@@ -7,6 +7,20 @@ const view = (voices: SoundView['voices']): SoundView => ({ camX: 0, camY: 0, tr
 const buffer = { duration: 1 } as AudioBuffer;
 
 describe('voces de la misión', () => {
+  it('inicia la sirena en bucle, actualiza el volumen y la detiene', async () => {
+    const handle = { setVolume: vi.fn(), stop: vi.fn() };
+    const fake = { decode: vi.fn(() => Promise.resolve(buffer)), loop: vi.fn(() => handle), stopMusic: vi.fn() };
+    const effect = vi.fn(() => new Uint8Array([1]));
+    const sound = new GameSound(fake as unknown as Sfx, { effect, music: () => Promise.resolve(undefined) }, (x, y) => ({ px: x, py: y }));
+    sound.tick({ ...view([]), alarmVolume: 0.75 });
+    await vi.waitFor(() => { expect(fake.loop).toHaveBeenCalledWith(buffer, 0.75); });
+    expect(effect).toHaveBeenCalledWith('SIRENA01.WAV');
+    sound.tick({ ...view([]), alarmVolume: 0.5 });
+    expect(handle.setVolume).toHaveBeenCalledWith(0.5);
+    sound.tick(view([]));
+    expect(handle.stop).toHaveBeenCalledOnce();
+    sound.stop();
+  });
   it('reproduce una vez el WAV propio de cada explosión, incluso las encadenadas', async () => {
     const fake = { decode: vi.fn(() => Promise.resolve(buffer)), play: vi.fn(), stopMusic: vi.fn() };
     const effect = vi.fn((name: string) => name ? new Uint8Array([1]) : undefined);

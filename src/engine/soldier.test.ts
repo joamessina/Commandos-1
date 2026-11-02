@@ -87,6 +87,18 @@ const run = (s: Soldier, w: SoldierWorld, n: number): void => {
 };
 
 describe('Soldier', () => {
+  it('respeta DEMORA y detiene el barrido con período o amplitud no positivos', () => {
+    const w = mkWorld([]).world;
+    const active = new Soldier('S', unit(0, 0), null, { sweep: 40, sweepPeriod: 20 });
+    const stopped = new Soldier('S', unit(0, 0), null, { sweepPeriod: 0 });
+    const noAngle = new Soldier('S', unit(0, 0), null, { sweep: 0 });
+    active.tick(w); stopped.tick(w); noAngle.tick(w);
+    const first = active.headAngle;
+    run(active, w, 10);
+    expect(active.headAngle).toBeCloseTo(-first);
+    expect(stopped.headAngle).toBe(0);
+    expect(noAngle.headAngle).toBe(0);
+  });
   it('una patrulla que espera evento empieza la ruta que recibe por TRIGGER_REACT', () => {
     const a = { ...route(100), name: 'A' };
     const b = { ...route(200), name: 'B' };

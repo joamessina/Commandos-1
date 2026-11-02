@@ -33,6 +33,4 @@ Lectura del ejecutable raíz y contraste de recursos del `WAR_MP.DIR` raíz. Es 
 
 ## Estado del port
 
-El `raise` de `src/app/main.ts` ya entrega `REAC` a rutas y patrullas, y `Battle.onDanger` consulta las zonas; no conserva el estado de la alarma global. `GameSound` conoce la tabla `SIRN`, pero todavía no reproduce la sirena por la alarma, y `Hud` no dibuja la linterna. Las explosiones de `Demolition` tienen su propio aviso a soldados: falta verificar su enlace al sensor antes de prometer que toda explosión encienda la alarma. No se implementó nada en esta investigación.
-
-Para portar: estado separado de la propagación de eventos, reproducción en bucle de `SIRENA01.WAV` con caída y parada, y linterna del banco `GLOBAL.WAD`; probar activación, segundo evento, apagado y ausencia de recursos. La posición depende del contexto de dibujo y la cadencia de la presentación; queda contrastar esas condiciones con el juego original y verificar otros posibles emisores indirectos.
+El port conecta los sonidos de peligro y las explosiones `XPLO`/`EBAR` al sensor de zona, conserva el permiso y el volumen de la alarma, reproduce `SIRENA01.WAV` en bucle y dibuja la linterna de `GLOBAL.WAD`. En M0 se comprobó con los sectores reales que un soldado en CAMPAMENTO activa el sensor. La cadencia visual sigue el pintado del navegador, cuya frecuencia puede diferir de la presentación original; falta contrastar en juego el resto de emisores indirectos.

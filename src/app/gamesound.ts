@@ -11,6 +11,7 @@ import type { Blast } from '../engine/demolition.ts';
 
 /** Lo que `GameSound` necesita de la partida en cada ciclo. */
 export interface SoundView {
+  readonly alarmVolume?: number;
   readonly camX: number;
   readonly camY: number;
   readonly tracers: readonly { readonly fromX: number; readonly fromY: number; readonly tag?: string }[];
@@ -37,6 +38,9 @@ export class GameSound {
   private voiceTail: Promise<void> = Promise.resolve();
   private ended = false;
   private alive = true;
+  private alarmVolume = 0;
+  private alarmPending = false;
+  private alarmLoop: ReturnType<Sfx['loop']> = null;
 
   /** Falso tras `stop()`; un método para que las comprobaciones tras un `await` no se den por siempre verdaderas. */
   private isLive(): boolean {
@@ -81,6 +85,8 @@ export class GameSound {
   /** Corta todo (cambio de misión). */
   stop(): void {
     this.alive = false;
+    this.alarmLoop?.stop();
+    this.alarmLoop = null;
     this.sfx.stopMusic();
   }
 
@@ -104,6 +110,18 @@ export class GameSound {
 
   /** Un ciclo de juego: ambiente, disparos nuevos, explosiones nuevas y el jingle de fin. */
   tick(v: SoundView): void {
+    this.alarmVolume = v.alarmVolume ?? 0;
+    if (this.alarmVolume <= 0) {
+      this.alarmLoop?.stop();
+      this.alarmLoop = null;
+    } else if (this.alarmLoop) this.alarmLoop.setVolume(this.alarmVolume);
+    else if (!this.alarmPending) {
+      this.alarmPending = true;
+      this.tag('SIRN').then((buffer) => {
+        this.alarmPending = false;
+        if (buffer && this.isLive() && this.alarmVolume > 0) this.alarmLoop = this.sfx.loop(buffer, this.alarmVolume);
+      }).catch(() => { this.alarmPending = false; });
+    }
     for (const a of this.ambient) {
       const r = a.source.tick();
       if (!r) continue;

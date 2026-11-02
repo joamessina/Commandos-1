@@ -104,6 +104,7 @@ describe('parseInterface', () => {
     expect(visibleItems(bag.get('FRANCOT') ?? [], false).map((i) => i.wad)).toEqual(['MANO', 'PISTOLA', 'MIRILLA', 'BOTIQUIN']);
     expect(visibleItems(bag.get('FRANCOT') ?? [], true).map((i) => i.wad)).toEqual(['MIRILLA']);
     expect(visibleItems(bag.get('LANCHERO') ?? [], true).map((i) => i.wad)).toEqual(['TRAJEBU']);
+    expect(visibleItems(bag.get('LANCHERO') ?? [], false, true).map((i) => i.wad)).toEqual(['TRAJEBU']);
   });
 
   it('la posición en pantalla se espeja con la mochila a la izquierda y las balas van en fila de a 15 px', () => {

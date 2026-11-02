@@ -38,6 +38,20 @@ export class Sfx {
     return src;
   }
 
+  loop(buffer: AudioBuffer, volume: number): { setVolume: (v: number) => void; stop: () => void } | null {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running') return null;
+    const src = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    src.buffer = buffer;
+    src.loop = true;
+    const setVolume = (v: number): void => { gain.gain.value = v * this.volEffects; };
+    setVolume(volume);
+    src.connect(gain).connect(ctx.destination);
+    src.start();
+    return { setVolume, stop: () => { src.stop(); } };
+  }
+
   /** Música de la misión (o jingle de fin con `loop = false`): corta la anterior sin fundido, como el original (docs/lectura/sonido.md S2.3). */
   playMusic(buffer: AudioBuffer, loop: boolean): void {
     this.stopMusic();

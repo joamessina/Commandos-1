@@ -253,7 +253,7 @@ export function bagItems(iface: ReadonlyMap<string, HudCommando>): Map<string, B
 const IN_VEHICLE: ReadonlySet<string> = new Set(['MIRILLA', 'TRAJEBU', 'PALANCA', 'MALETIN']);
 
 /** Ítems de la mochila que se ven: en un vehículo solo los permitidos en vehículos. */
-export const visibleItems = (items: readonly BagItem[], inVehicle: boolean): BagItem[] => (inVehicle ? items.filter((i) => IN_VEHICLE.has(i.wad)) : [...items]);
+export const visibleItems = (items: readonly BagItem[], inVehicle: boolean, diving = false): BagItem[] => (diving ? items.filter((i) => i.wad === 'TRAJEBU') : inVehicle ? items.filter((i) => IN_VEHICLE.has(i.wad)) : [...items]);
 
 /**
  * Esquina sup. izq. del dibujo en pantalla (`FUN_006F4150`): con la mochila a la derecha `x = mochila.x + ox`; a la izquierda se espeja, `mochila.x + ancho_mochila − ancho − ox`.
