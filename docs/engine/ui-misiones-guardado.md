@@ -12,13 +12,13 @@ Objeto principal del juego = `ClassEngineJuego` (global `DAT_0083d658`, 0x1448 B
 |---|---|---|
 | 0 | `5c47d0` | **partida en juego** (ciclo por fotograma, 20 ciclos/s, ver `exe-lectura.md`) |
 | 1 | `5b9ce0` | menú principal (`G+0x13a8` = ClassGestorMenus; `+8 = 1` lo reactiva) |
-| 2 | `5b9a40` | pausa/espera: limita con `QueryPerformanceCounter`+`Sleep` a `1000/MAXFPS` y muestra FPS si `G+0x13dc` |
+| 2 | `5b9a40` | créditos: actualiza y dibuja `ClassCreditos`, limita a `1000/MAXFPS` y restaura resolución al finalizar; ver `docs/lectura/menu-principal.md` |
 | 3 | `5bc660` | arranque: si `COMANDO.CFG` no fija tamaño usa **1280x720x32** (`5ba6e0(0x500,0x2d0,0x20)`); pasa a estado 1 |
 | 4..8 | `5b9e90` | pantallas modales de `ClassIntroduccion`/briefing (`F_00571080(estado)`; `G+0x13c4`) |
 | 9 | `5b9fd0` | idem, al terminar vuelve a estado 1 |
 | 10, 11, 12 | `5ba030` | **vídeo final** (`MSG_MODOVIDEOFINAL`, `4_V.AVI`) |
 | 0x13 (19) | `5b9f50` | `ClassHelpSystem`/sistema `006b0da0` (G+0x13c0) |
-| 0x15 (21) | `5b9be0` | `G+0x1390` (créditos/pantalla con `COMANDO.FNT`) |
+| 0x15 (21) | `5b9be0` | pantalla de ayuda (`G+0x1390`, botones y recursos `SYSTEM/MISC/HELP`); ver `docs/lectura/menu-principal.md` |
 | 0x12, 0x14, 0x16..0x1a, 0x0d..0x11 | varios | `0x12`=`521000`(G+0x13b8); `0x16/0x17/0x18/0x19` = `60e520(0)` (diálogos: 0x17→0x15, 0x18→menú, 0x19→`5bb7d0`); `0x1a`=`5962a0`; `0x0d..0x10` = editores internos (`5c86c0/5c86f0/5c8720/5c8750`), `0x11` stub |
 Tras el estado, `5c7160` atiende banderas: `G+0xd38` ⇒ **guardar** (`5c0500`); `G+0xe3c` ⇒ **cargar** (`5c64b0`→`5c34a0`); `G+0xf40`/`G+0x1050`/`G+0x1264` ⇒ **cargar misión** (`5c6f80` con la dificultad `G+0x45c` o `G+0x1258`); `G+0x528` pendiente ⇒ `5bf6b0`.
 Arranque (`5c2790`) **[hecho]**: carga `GLOBAL\CURSORES.WAD` y `GLOBAL\<ancho>X<alto>.WAD`; lee `COMANDO.CFG`; en locale alemán (LCID 0x407/0x1407) con `G.cfg+0x58==0` muestra un MessageBox (cadenas `EINI/NALM`); `MISIONES.DAT`; `USER.CFG`; `START.DAT`; fuentes `COMANDP`, `COMAND2`, `COMANDO` y `COMANDO.FNT`.
