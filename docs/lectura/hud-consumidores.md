@@ -1,5 +1,11 @@
 # HUD compartido: consumidores y correcciones (2026-10-30)
 
+## Mochila: área de clic y bombona (2026-11-02)
+
+`FUN_006C61B0` (`fn_006c0000.c:3594–3641`) recorre los controles visibles y comprueba sus rectángulos. Solo si el control tiene polígono en `+0x60` llama a `FUN_0062CC00` para restringir el punto; la transparencia del sprite no es la prueba de clic. `FUN_005B8C00` crea los ítems normales pasando un polígono nulo a `FUN_00512AC0`/`00512980`; `FUN_006F4200` entrega el polígono del registro al botón mediante `FUN_006C6460`. Por eso el port usa el rectángulo para los ítems habituales y no deja pasar a movimiento los clics del fondo de la mochila.
+
+`FUN_0068E210` (`fn_00680000.c:9501–9696`) consulta la disponibilidad de cada acción por el virtual `+0x48`. Para `ClassAuBucear` ese slot es `0x402658 → FUN_004E9730`, que llama a `FUN_004E95A0`: la lista de sectores pisados debe ser no vacía y todos deben ser de tipo 1; además bloquea la acción con `ficha+0x824 & 0x4000`. En vehículo el mismo productor usa su otra rama y filtra los ítems permitidos. En el port la bombona aparece en el bote o en agua somera; no aparece en tierra firme ni en agua profunda. **Límite:** el port usa el sector del centro y aún no reproduce la lista completa de sectores pisados ni todos los flags de acción; cerca de un borde puede diferir del original.
+
 Las líneas citadas corresponden a `D:/Joaquin/research-c1/ghidra/all2/`. Lectura del exe original y del `WAR_MP.DIR` raíz. No se modificó el port. Este informe prevalece sobre las hipótesis históricas de `hud.md`.
 
 ## 1. Caras, barra de vida y ranuras [hecho]

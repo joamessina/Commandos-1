@@ -3,8 +3,8 @@
  * de sangre, marco de selección, y los iconos de la esquina (ojo, ayuda, cámara). Todo a 1:1 con el WAD de interfaz que cabe en la ventana.
  * shortcut: si la ventana es más ancha/alta que el WAD, la tira y la columna se alargan repitiendo su último tramo (el exe solo corre a resoluciones fijas).
  */
-import { BAG, bagRect, BULLET, bulletX, bloodHeight, columnX, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, itemPos, SLOT, slotRect, visibleItems, type BagItem } from '../engine/hud.ts';
-import { TRANSPARENT, type Sprite, type Wad } from '../formats/wad.ts';
+import { BAG, bagRect, BULLET, bulletX, bloodHeight, columnX, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, itemContains, itemPos, SLOT, slotRect, visibleItems, type BagItem } from '../engine/hud.ts';
+import { type Sprite, type Wad } from '../formats/wad.ts';
 import { SpriteCache } from './sprites.ts';
 
 export interface HudUnit {
@@ -55,7 +55,7 @@ export class Hud {
     for (let px = x + c.width; px < to; px += tile) ctx.drawImage(c, c.width - tile, 0, tile, c.height, px, y, Math.min(tile, to - px), c.height);
   }
 
-  /** Ítem de la mochila bajo el punto (el de más arriba cuya parte opaca lo contiene), o null. */
+  /** Ítem de la mochila bajo el punto (el control superior cuyo rectángulo lo contiene). */
   itemAt(x: number, y: number, width: number, height: number, unit: HudUnit, left: boolean): BagItem | null {
     const bag = bagRect(width, height, left);
     const list = visibleItems(unit.items, unit.inVehicle, unit.diving);
@@ -63,10 +63,7 @@ export class Hud {
       const it = list[i];
       const art = it ? this.items.get(it.wad)?.wad.byName.get(it.sprite) : undefined;
       if (!it || !art) continue;
-      const at = itemPos(it, art.width, bag, left);
-      const lx = Math.floor(x - at.x);
-      const ly = Math.floor(y - at.y);
-      if (lx >= 0 && ly >= 0 && lx < art.width && ly < art.height && art.mode[ly * art.width + lx] !== TRANSPARENT) return it;
+      if (itemContains(it, art.width, art.height, bag, left, x, y)) return it;
     }
     return null;
   }

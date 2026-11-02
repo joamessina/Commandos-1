@@ -23,7 +23,7 @@ import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engin
 import { Boat, boatShares, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, Traps } from '../engine/traps.ts';
 import { eventList, ExitSchedule, formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
-import { groundZ, isWater, SectorMap } from '../engine/sectors.ts';
+import { groundZ, isWater, SectorMap, TYPE_WATER } from '../engine/sectors.ts';
 import { canThrow, type Pack, type Throwable } from '../engine/throwing.ts';
 import { norm360 } from '../engine/walk.ts';
 import { parseRoutes } from '../engine/patrol.ts';
@@ -31,7 +31,7 @@ import { Order, Soldier } from '../engine/soldier.ts';
 import { Alarm } from '../engine/alarm.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
-import { type BagItem, bagItems, FaceAnim, photoRect, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, parseInterface, slotAt, viewRect, visibleItems } from '../engine/hud.ts';
+import { type BagItem, bagItems, bagRect, diveItemVisible, FaceAnim, inRect, photoRect, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, parseInterface, slotAt, viewRect, visibleItems } from '../engine/hud.ts';
 import { cursorFor, type CursorMode } from '../engine/cursors.ts';
 import { Cursors } from '../render/cursors.ts';
 import { Hud, type HudUnit } from '../render/hud.ts';
@@ -1045,7 +1045,8 @@ function scopeInRange(g: Game, weapon: 'MIRILLA' | 'ARPON' = 'MIRILLA'): boolean
 /** Cursor del mouse según el arma elegida (engine/cursors.ts); en el HUD vuelve a la flecha. */
 function updateCursor(g: Game): void {
   if (!stage || !g.cursors) return;
-  const hudOver = g.hud !== null && overHud(cursor.x, cursor.y, stage.width, g.hudLeft);
+  const v = g.units[g.selected];
+  const hudOver = g.hud !== null && (overHud(cursor.x, cursor.y, stage.width, g.hudLeft) || inRect(cursor.x, cursor.y, bagRect(stage.width, stage.height, g.hudLeft)) || (v !== undefined && g.hud.itemAt(cursor.x, cursor.y, stage.width, stage.height, hudUnit(v, g.bag), g.hudLeft) !== null));
   const mode: CursorMode | null = hudOver ? null : g.visionPicking ? 'OJO' : g.planting === 'TABACO' ? 'TABACO' : g.use ?? g.mode;
   const planting = !hudOver && g.planting !== null && g.planting !== 'TABACO';
   const applicable = mode !== null && cursor.inside && (mode === 'ARPON' ? scopeInRange(g, 'ARPON') : overTarget(g));
@@ -1457,7 +1458,9 @@ function weaponAvailable(v: UnitView, w: Weapon): boolean {
 
 function hudUnit(v: UnitView, bag: ReadonlyMap<string, readonly BagItem[]>): HudUnit {
   const u = v.unit;
-  return { token: u.token, energy: u.energy, max: v.maxEnergy, dead: u.dead, items: (bag.get(u.token) ?? []).filter((i) => (i.token !== 'IT_TABACO' || u.tobacco > 0) && (i.wad !== 'BOTIQUIN' || u.medkits > 0) && (i.wad !== 'MIRILLA' || weaponAvailable(v, 'MIRILLA')) && (!u.diving || i.wad === 'TRAJEBU')), inVehicle: u.boat !== null, diving: u.diving, bullets: !u.diving && v.weapons.includes('MIRILLA') ? Math.max(0, u.ammo['MIRILLA'] ?? 0) : 0 };
+  // shortcut: se usa el sector central; FUN_004E95A0 exige que todos los sectores pisados sean agua somera.
+  const diveAvailable = diveItemVisible(u.boat !== null, u.sector?.type === TYPE_WATER);
+  return { token: u.token, energy: u.energy, max: v.maxEnergy, dead: u.dead, items: (bag.get(u.token) ?? []).filter((i) => (i.token !== 'IT_TABACO' || u.tobacco > 0) && (i.wad !== 'BOTIQUIN' || u.medkits > 0) && (i.wad !== 'MIRILLA' || weaponAvailable(v, 'MIRILLA')) && (i.wad !== 'TRAJEBU' || diveAvailable) && (!u.diving || i.wad === 'TRAJEBU')), inVehicle: u.boat !== null, diving: u.diving, bullets: !u.diving && v.weapons.includes('MIRILLA') ? Math.max(0, u.ammo['MIRILLA'] ?? 0) : 0 };
 }
 
 function armWeapon(g: Game, w: Weapon): void {
@@ -1728,18 +1731,18 @@ function litItems(g: Game): Set<string> {
 function bagClick(g: Game, sx: number, sy: number): boolean {
   const v = g.units[g.selected];
   if (!g.hud || !stage || !v || v.unit.dead) return false;
+  const it = g.hud.itemAt(sx, sy, stage.width, stage.height, hudUnit(v, g.bag), g.hudLeft);
+  if (it) { useItem(g, it); return true; }
   const ph = photoRect(stage.width, stage.height, g.hudLeft);
   if (sx >= ph.x && sx < ph.x + ph.w && sy >= ph.y && sy < ph.y + ph.h) {
     // la foto grande solo existe en un vehículo (a pie los botones `IT_CARA_*` están ocultos, flag `+0x124` = 1)
-    if (!v.unit.boat) return false;
-    g.battle.cancel(v.unit);
-    say(v.unit.disembark() ? `${v.unit.token} baja del bote.` : 'El bote debe estar parado y con una orilla a mano para bajar.');
-    return true;
+    if (v.unit.boat) {
+      g.battle.cancel(v.unit);
+      say(v.unit.disembark() ? `${v.unit.token} baja del bote.` : 'El bote debe estar parado y con una orilla a mano para bajar.');
+      return true;
+    }
   }
-  const it = g.hud.itemAt(sx, sy, stage.width, stage.height, hudUnit(v, g.bag), g.hudLeft);
-  if (!it) return false;
-  useItem(g, it);
-  return true;
+  return inRect(sx, sy, bagRect(stage.width, stage.height, g.hudLeft));
 }
 
 function onMouse(e: MouseEvent): void {

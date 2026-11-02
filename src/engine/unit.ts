@@ -15,7 +15,7 @@ import { Animator } from './anim.ts';
 import type { Boat } from './boat.ts';
 import { CLIMB_DOWN_MIN, CLIMB_UP_MIN, newClimb, reverse, stepClimb, wallXY, type Climb, type Ladder } from './ladder.ts';
 import { navFor, type Nav } from './path.ts';
-import { COS50, groundZ, isWater, SIN50, simBlocked, stepOk, TYPE_DEEPWATER, validTarget, type SectorMap } from './sectors.ts';
+import { COS50, groundZ, isWater, SIN50, simBlocked, stepOk, TYPE_DEEPWATER, TYPE_WATER, validTarget, type SectorMap } from './sectors.ts';
 import { newBody, norm360, runSpeed, stepBody, WALK_SPEED, type Body, type Vec } from './walk.ts';
 
 export { COS50, SIN50 };
@@ -250,7 +250,8 @@ export class Unit {
       this.anim.set(this.anim.has('REPOSO') ? 'REPOSO' : 'ANDAR');
       return false;
     }
-    if (!isWater(this.sector)) return false;
+    // shortcut: solo el sector central; FUN_004E95A0 consulta todos los sectores pisados.
+    if (this.sector?.type !== TYPE_WATER) return false;
     this.diving = true;
     this.stop();
     if (this.anim.has('BUCEAR')) this.anim.set('BUCEAR');

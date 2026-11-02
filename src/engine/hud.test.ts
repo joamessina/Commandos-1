@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BAG, BAG_POS, BULLET, bagItems, bulletX, itemPos, photoRect, visibleItems, bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, ITEM_WAD, overHud, parseInterface, slotAt, slotRect, viewRect } from './hud.ts';
+import { BAG, BAG_POS, BULLET, bagItems, bulletX, diveItemVisible, inRect, itemContains, itemPos, photoRect, visibleItems, bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, ITEM_WAD, overHud, parseInterface, slotAt, slotRect, viewRect } from './hud.ts';
 
 describe('hud', () => {
   it('elige el WAD de interfaz más grande que cabe', () => {
@@ -94,6 +94,9 @@ describe('parseInterface', () => {
   });
 
   it('en un vehículo solo se ven los ítems permitidos en vehículos (el francotirador en el bote: solo la mirilla)', () => {
+    expect(diveItemVisible(true, false)).toBe(true);
+    expect(diveItemVisible(false, true)).toBe(true);
+    expect(diveItemVisible(false, false)).toBe(false);
     const iface = new Map([['FRANCOT', { items: [
       { token: 'IT_MANO', available: true },
       { token: 'IT_PISTOLA', available: true },
@@ -116,5 +119,16 @@ describe('parseInterface', () => {
     expect([0, 1, 4].map((k) => bulletX(k, left, true))).toEqual([13, 28, 73]);
     expect(bulletX(0, right, false)).toBe(1168 + BAG.w - BULLET.w - BULLET.x0);
     expect(photoRect(1280, 720, false)).toEqual({ x: 1210, y: 569, w: 71, h: 91 });
+  });
+
+  it('la zona de clic del ítem usa su rectángulo, también en la mochila espejada', () => {
+    const it = { token: 'IT_ARPON', wad: 'ARPON', sprite: 'ARPON.RLE', x: 67, y: 5 };
+    const right = bagRect(640, 480, false);
+    const left = bagRect(640, 480, true);
+    expect(itemContains(it, 25, 30, right, false, right.x + 67, right.y + 5)).toBe(true);
+    expect(itemContains(it, 25, 30, right, false, right.x + 92, right.y + 5)).toBe(false);
+    expect(itemContains(it, 25, 30, left, true, left.x + 20, left.y + 5)).toBe(true);
+    expect(inRect(right.x, right.y, right)).toBe(true);
+    expect(inRect(right.x - 1, right.y, right)).toBe(false);
   });
 });

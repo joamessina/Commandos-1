@@ -160,6 +160,7 @@ describe('Unit: buceo (AuBucear)', () => {
     expect(u.diving).toBe(false);
     expect(u.anim.name).toBe('REPOSO');
     const deep = at(250);
+    expect(deep.toggleDive()).toBe(false); // no se inicia en agua profunda
     deep.diving = true;
     expect(deep.toggleDive()).toBe(true); // no se sale en agua profunda
     expect(new Unit('X', anmD, 0, 0, 0, 0, sectors).toggleDive()).toBe(false); // sin sector

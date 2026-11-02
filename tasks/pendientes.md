@@ -4,6 +4,8 @@
 
 **Arpón (2026-11-02):** corregido el clic sobre el icono de la mochila que coincidía con la columna, y corregidos impacto letal, munición y recarga. Selección y disparo verificados en navegador con M0; la recarga se muestra en el texto de depuración.
 
+**Mochila (2026-11-02):** los controles normales toman clics por rectángulo y la mochila no deja pasar clics al terreno. La bombona se filtra por bote o agua somera; el límite de sectores pisados queda en `verificacion-exe.md`.
+
 **Menú e introducción (2026-11-02):** primera versión navegable, guion audiovisual de la primera misión y ficha de objetivos Alt+B conectados, con recursos del jugador y resolución aplicada en menú, presentación y partida. Quedan contraste audiovisual, comandos exclusivos de otros guiones y el resto de opciones; ver atajos en `verificacion-exe.md` y `docs/lectura/intro-briefing.md`.
 
 Última actualización: 2026-10-30 (tras HUD, armas, cursores, balsa, refuerzos y lectura de los 19 .MIS y 96 .MAC). Marcá `[x]` lo que quede hecho. Reglas: nada inventado (lo no leído del exe se marca `shortcut:` en el código), solo commits locales hasta tener algo estable, el usuario hace las pruebas en el juego.

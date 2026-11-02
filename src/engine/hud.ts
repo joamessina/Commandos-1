@@ -85,6 +85,7 @@ export const overHud = (x: number, y: number, width: number, left = false): bool
  */
 export const BAG = { w: 112, h: 149, photoDx: 42, photoDy: -2, photoW: 71, photoH: 91 } as const;
 export const bagRect = (width: number, height: number, left: boolean): Rect => ({ x: left ? 0 : width - BAG.w, y: height - BAG.h, w: BAG.w, h: BAG.h });
+export const inRect = (x: number, y: number, r: Rect): boolean => x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h;
 
 /** Foto grande del comando seleccionado (en el bote, un clic sobre ella lo hace bajar). */
 export const photoRect = (width: number, height: number, left: boolean): Rect => {
@@ -252,6 +253,9 @@ export function bagItems(iface: ReadonlyMap<string, HudCommando>): Map<string, B
 /** Ítems que el exe deja ver en un vehículo (`BPERMITIDOENVEHICULOS`, `+0x90` del registro: MIRILLA, TRAJEBUZO, INTERRUPTOR_ASCENSOR, MALETIN), por archivo de `OPCIONES/`. */
 const IN_VEHICLE: ReadonlySet<string> = new Set(['MIRILLA', 'TRAJEBU', 'PALANCA', 'MALETIN']);
 
+/** FUN_0068E210 / FUN_004E9730: en balsa o al poder bucear. */
+export const diveItemVisible = (inVehicle: boolean, waterUnderfoot: boolean): boolean => inVehicle || waterUnderfoot;
+
 /** Ítems de la mochila que se ven: en un vehículo solo los permitidos en vehículos. */
 export const visibleItems = (items: readonly BagItem[], inVehicle: boolean, diving = false): BagItem[] => (diving ? items.filter((i) => i.wad === 'TRAJEBU') : inVehicle ? items.filter((i) => IN_VEHICLE.has(i.wad)) : [...items]);
 
@@ -260,6 +264,11 @@ export const visibleItems = (items: readonly BagItem[], inVehicle: boolean, divi
  * shortcut: el espejo sale del código, no se comparó con una captura de la mochila a la izquierda con un comando a pie.
  */
 export const itemPos = (it: BagItem, w: number, bag: Rect, left: boolean): { x: number; y: number } => ({ x: left ? bag.x + bag.w - w - it.x : bag.x + it.x, y: bag.y + it.y });
+
+/** FUN_006C61B0: el control acepta su rectángulo; solo un polígono opcional lo restringe. */
+export function itemContains(it: BagItem, w: number, h: number, bag: Rect, left: boolean, x: number, y: number): boolean {
+  return inRect(x, y, { ...itemPos(it, w, bag, left), w, h });
+}
 
 /** Balas que le quedan al francotirador: una `BALA0000` de 15 px por bala, en fila (medido con la mochila a la izquierda: x = 13 + 15·k, y = 110). */
 export const BULLET = { w: 15, x0: 13, y: 110 } as const;
