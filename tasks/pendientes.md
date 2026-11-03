@@ -10,6 +10,8 @@
 
 **Buceo y minas (2026-11-03):** `au-jugador.md` precisa la prueba geométrica del cambio de modo y la contrasta con dos puntos de la costa real; falta la lista de sectores pisados. `obj-explosivos.md` verifica la masa 100 de los cuatro aliados, el umbral 60 de las 22 minas y corrige que la igualdad también activa el contacto; falta comprobar la entrega efectiva de la colisión por contexto.
 
+**Minas y Zodiac, continuación:** las dos macros declaran `CHOC`, el cargador registra ambas en la lista de colisión y la mina se retira de esa lista al explotar. Se contrastaron masas, cilindros y posiciones declaradas; siguen pendientes cambios de estado y posiciones en ejecución.
+
 **Visión y trazado de disparos (2026-11-03):** `organos.md` precisa que cero significa visión despejada y documenta la particularidad de los retornos recursivos de volúmenes; `au-disparar.md` corrige el filtro de candidatos y el retorno del trazado de cuerpos. Falta contrastar la distribución de obstáculos en el árbol y el efecto posterior de cada arma.
 
 **Vista y disparos (2026-11-02):** corregida la lectura del barrido vacío y conectada `.VIGILARDEF` para patrullas; los soldados reales de M0 barren con su amplitud configurada. Armas de fuego: una orden por clic, incluido terreno y agua, sin repetición automática; los límites de cadencia y raycast están en `verificacion-exe.md`.
