@@ -16,6 +16,8 @@
 
 **Banderas de explosión y salpicadura:** `render.md` documenta la traducción en ensamblador de la bandera del ANM: bit 1 refleja y bit 2 activa el flag interno `0x08` de suma. En los recursos reales, los 14 fotogramas de explosión llevan 2; el agua lleva ocho 2 y un 0 al final. La suma está confirmada en las rutas RLE normales y con zoom, con y sin mapa de luz. El parser del port pierde esa distinción; falta contrastar el resultado en pantalla.
 
+**Partículas de agua:** `obj-explosivos.md` incorpora selección de los dos tipos, velocidades iniciales, integración con gravedad, factor individual y construcción de tablas de color. Falta reproducir la precisión y comparar el efecto en ejecución.
+
 **Visión y trazado de disparos (2026-11-03):** `organos.md` precisa que cero significa visión despejada y documenta la particularidad de los retornos recursivos de volúmenes; `au-disparar.md` corrige el filtro de candidatos y el retorno del trazado de cuerpos. Falta contrastar la distribución de obstáculos en el árbol y el efecto posterior de cada arma.
 
 **Vista y disparos (2026-11-02):** corregida la lectura del barrido vacío y conectada `.VIGILARDEF` para patrullas; los soldados reales de M0 barren con su amplitud configurada. Armas de fuego: una orden por clic, incluido terreno y agua, sin repetición automática; los límites de cadencia y raycast están en `verificacion-exe.md`.
