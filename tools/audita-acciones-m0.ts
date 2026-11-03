@@ -24,6 +24,7 @@ function recorrer(nodos: readonly Node[], contexto: readonly string[] = []): voi
   if (typeof macro === 'string' && macro.toUpperCase() === 'MINASUB') {
     minas++;
     if (find(nodos, '.PESOACT') !== undefined) minasConPeso++;
+    console.log('MINA', token, 'XYZ', JSON.stringify(find(nodos, '.XYZ')));
   }
   if (String(find(nodos, '.CLASS')).toUpperCase() === 'BICHOALIADO') {
     console.log('ALIADO', token, 'CONTEXTO', actual.join(' > '), 'XYZ', JSON.stringify(find(nodos, '.XYZ')), 'MASA', find(nodos, '.MASA'));
@@ -37,3 +38,9 @@ console.log('MINASUB', minas, 'CON_PESOACT', minasConPeso);
 const macroMina = parseContainer(datos).find((e) => e.path.toUpperCase().endsWith('/MINASUB.MAC'));
 if (!macroMina) throw new Error('Falta MINASUB.MAC');
 console.log('MINASUB_MAC_DECLARA_PESOACT', /\.PESOACT\b/i.test(new TextDecoder('windows-1252').decode(entryBytes(datos, macroMina))));
+for (const nombre of ['MINASUB.MAC', 'ZODIAC5.MAC']) {
+  const entrada = parseContainer(datos).find((e) => e.path.toUpperCase().endsWith('/' + nombre));
+  if (!entrada) throw new Error(`Falta ${nombre}`);
+  const nodos = parseClave(new TextDecoder('windows-1252').decode(entryBytes(datos, entrada)));
+  console.log(nombre, 'MASA', find(nodos, '.MASA'), 'VOLCOLISION', JSON.stringify(find(nodos, '.VOLCOLISION')));
+}
