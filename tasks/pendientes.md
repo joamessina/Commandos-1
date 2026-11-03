@@ -6,6 +6,8 @@
 
 **Cerebros y alarma (2026-11-03):** `audita-vtables-bap.py` contrasta los 44 slots de BAP1/BANPE1 y BAP2/BANPE2; `alerta-m0.md` identifica el receptor y las voces de `AcMetrallero` de los nidos, distintos de `AcBunker`. Falta cerrar las ramas de apuntado y comprobarlas en ejecución.
 
+**Artillero y contacto (2026-11-03):** `obj-armas-fijas.md` identifica `CANONERODISPARA` y la secuencia real de 3 pasos × 24 direcciones; `q1-colision.md` sigue el mensaje 3 (`MSG_CHOQUE`) hasta ambas fichas y corrige una rama inalcanzable. Falta completar condiciones de disparo y de presencia en la búsqueda espacial.
+
 **Buceo y minas (2026-11-03):** `au-jugador.md` precisa la prueba geométrica del cambio de modo y la contrasta con dos puntos de la costa real; falta la lista de sectores pisados. `obj-explosivos.md` verifica la masa 100 de los cuatro aliados, el umbral 60 de las 22 minas y corrige que la igualdad también activa el contacto; falta comprobar la entrega efectiva de la colisión por contexto.
 
 **Visión y trazado de disparos (2026-11-03):** `organos.md` precisa que cero significa visión despejada y documenta la particularidad de los retornos recursivos de volúmenes; `au-disparar.md` corrige el filtro de candidatos y el retorno del trazado de cuerpos. Falta contrastar la distribución de obstáculos en el árbol y el efecto posterior de cada arma.
