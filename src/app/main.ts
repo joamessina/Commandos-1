@@ -51,7 +51,7 @@ import { playIntro, type TacticalIntro } from './intro.ts';
 import { showBriefing } from './briefing.ts';
 import { showLoading } from './loading.ts';
 import { IntroCamera } from '../engine/intro-camera.ts';
-import { canvasPoint, type Resolution } from './viewport.ts';
+import { canvasPoint, fitCanvas, type Resolution } from './viewport.ts';
 import type { AnmFrame } from '../formats/anm.ts';
 
 const byId = (id: string): HTMLElement => {
@@ -798,7 +798,7 @@ function stepWater(g: Game, w: WaterView): void {
 function setupStage(): void {
   if (!stage) {
     stage = document.createElement('canvas');
-    stage.style.cssText = 'display:block;max-width:100%;max-height:100%;width:auto;height:auto;margin:auto';
+    stage.style.cssText = 'margin:auto';
     stage.addEventListener('contextmenu', (e) => {
       e.preventDefault();
     });
@@ -825,6 +825,7 @@ function setupStage(): void {
     });
   }
   view.replaceChildren(stage);
+  fitCanvas(stage, view);
   resize();
   cancelAnimationFrame(loopId);
   let last = performance.now();

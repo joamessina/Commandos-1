@@ -1,7 +1,7 @@
 /** Menú y fuentes del exe: docs/lectura/menu-principal.md, FUN_006015C0 y FUN_00600090. */
 import { parseWad, type Sprite, type Wad } from '../formats/wad.ts';
 import { SpriteCache } from '../render/sprites.ts';
-import type { Resolution } from './viewport.ts';
+import { fitCanvas, type Resolution } from './viewport.ts';
 
 type Page = 'main' | 'new' | 'skill' | 'options' | 'video';
 interface Row { key: string; action: string; enabled?: boolean; label?: string }
@@ -54,10 +54,11 @@ export async function showMenu(view: HTMLElement, read: (path: string) => Uint8A
     backgrounds.set(n, await createImageBitmap(new Blob([b.slice().buffer], { type: 'image/bmp' })));
   }
   const canvas = document.createElement('canvas');
-  canvas.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;margin:auto;object-fit:contain';
+  canvas.style.cssText = 'margin:auto';
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No se pudo crear el canvas del menú');
   view.replaceChildren(canvas);
+  fitCanvas(canvas, view);
   let page: Page = 'main';
   let selected = 0;
   // shortcut: abrir a 640×480 hasta portar la configuración guardada; 1280 o más usan el fondo 1024 estirado hasta resolver MENU1280.

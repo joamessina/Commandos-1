@@ -4,7 +4,7 @@ import { parseIntro, type IntroCommand } from '../formats/intro.ts';
 import { parseZom, type ZoomBitmap } from '../formats/zom.ts';
 import { zoomPixels } from '../render/zom.ts';
 import { convertIntroVideo } from './intro-video.ts';
-import type { Resolution } from './viewport.ts';
+import { fitCanvas, type Resolution } from './viewport.ts';
 
 export interface TacticalIntro {
   draw(canvas: HTMLCanvasElement): void;
@@ -72,7 +72,7 @@ export async function playIntro(view: HTMLElement, script: string, read: (path: 
   report(missing.length ? `Presentación: faltan ${missing.length.toString()} archivos sueltos; Escape saltea la sección.` : 'Presentación original. Escape saltea la sección.');
   const canvas = document.createElement('canvas');
   canvas.width = resolution[0]; canvas.height = resolution[1];
-  canvas.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;margin:auto';
+  canvas.style.cssText = 'margin:auto';
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No se pudo crear el canvas de la presentación');
   const scratch = document.createElement('canvas');
@@ -80,6 +80,7 @@ export async function playIntro(view: HTMLElement, script: string, read: (path: 
   video.playsInline = true;
   video.style.display = 'none';
   view.replaceChildren(canvas, video);
+  fitCanvas(canvas, view);
   const channels = new Map<string, HTMLAudioElement>();
   const levels = new Map<string, number>();
   let videoActive = false;

@@ -1,13 +1,13 @@
 /** Pantalla de carga de misión: FUN_006EC8E0, FUN_005C64B0 y FUN_00506170. */
 import { parseRleBitmap } from '../formats/rle-bmp.ts';
 import { SpriteCache } from '../render/sprites.ts';
-import type { Resolution } from './viewport.ts';
+import { fitCanvas, type Resolution } from './viewport.ts';
 
 export function showLoading(view: HTMLElement, read: (path: string) => Uint8Array | undefined, resolution: Resolution): (progress: number) => void {
   const canvas = document.createElement('canvas');
   canvas.width = resolution[0]; canvas.height = resolution[1];
   canvas.dataset['loading'] = 'true';
-  canvas.style.cssText = 'display:block;max-width:100%;max-height:100%;width:auto;height:auto;margin:auto';
+  canvas.style.cssText = 'margin:auto';
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No se pudo crear la pantalla de carga');
   const asset = (name: string): HTMLCanvasElement | null => {
@@ -21,6 +21,7 @@ export function showLoading(view: HTMLElement, read: (path: string) => Uint8Arra
   const bar = asset('LOAD0001.RLE');
   const label = asset('LOAD0002.RLE');
   view.replaceChildren(canvas);
+  fitCanvas(canvas, view);
   return (progress: number): void => {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (!background) return;

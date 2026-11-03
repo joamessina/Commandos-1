@@ -1,6 +1,7 @@
 /** Ficha de objetivos: FUN_005207F0, FUN_00520D50 y FUN_0060EC70. */
 import { parseFont, type FontGlyph, type GameFont } from '../formats/font.ts';
 import { rgb565 } from '../formats/wad.ts';
+import { fitCanvas } from './viewport.ts';
 
 function strings(text: string): Map<string, string> {
   const out = new Map<string, string>();
@@ -56,10 +57,11 @@ export async function showBriefing(view: HTMLElement, width: number, height: num
   const values = strings(missionStrings);
   const canvas = document.createElement('canvas');
   canvas.width = width; canvas.height = height;
-  canvas.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;margin:auto';
+  canvas.style.cssText = 'margin:auto';
   const ctx = canvas.getContext('2d');
   if (!ctx) { background.close(); throw new Error('No se pudo crear la ficha de misión'); }
   view.replaceChildren(canvas);
+  fitCanvas(canvas, view);
   ctx.fillStyle = 'black'; ctx.fillRect(0, 0, width, height);
   const x = Math.floor((width - background.width) / 2);
   const y = Math.floor((height - background.height) / 2);
