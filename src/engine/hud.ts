@@ -30,6 +30,9 @@ export function hudMode(width: number, height: number): readonly [number, number
   return HUD_MODES.find(([w, h]) => w <= width && h <= height) ?? (HUD_MODES[HUD_MODES.length - 1] as readonly [number, number]);
 }
 
+/** Factor con que se agranda el HUD en pantallas mayores que 1280×720 (de a medios, para no dejar el arte diminuto); 1 en las demás. Los WAD del juego no llegan a más resolución. */
+export const hudScale = (width: number, height: number): number => Math.max(1, Math.floor(Math.min(width / 1280, height / 720) * 2) / 2);
+
 /** Zona del mundo: lo que queda bajo la tira superior y al lado de la columna (que va a la derecha o, con la tecla de lado, a la izquierda). */
 export const viewRect = (width: number, height: number, left = false): Rect => ({ x: left ? HUD_COLUMN : 0, y: HUD_BAR, w: Math.max(1, width - HUD_COLUMN), h: Math.max(1, height - HUD_BAR) });
 

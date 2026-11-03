@@ -31,7 +31,7 @@ import { Order, Soldier } from '../engine/soldier.ts';
 import { Alarm } from '../engine/alarm.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
-import { type BagItem, bagItems, bagRect, diveItemVisible, FaceAnim, inRect, photoRect, HUD_BAR, HUD_COLUMN, HUD_MODES, overHud, parseInterface, slotAt, viewRect, visibleItems } from '../engine/hud.ts';
+import { type BagItem, bagItems, bagRect, diveItemVisible, FaceAnim, inRect, photoRect, HUD_BAR, HUD_COLUMN, HUD_MODES, hudScale, overHud, parseInterface, slotAt, viewRect, visibleItems } from '../engine/hud.ts';
 import { cursorFor, type CursorMode } from '../engine/cursors.ts';
 import { Cursors } from '../render/cursors.ts';
 import { Hud, type HudUnit } from '../render/hud.ts';
@@ -232,7 +232,24 @@ const ZOOM_MAX = 3.4; // docs/research/q1-camara.md §Cierre
 function vp(g: Game | null): Rect {
   const w = stage?.width ?? 0;
   const h = stage?.height ?? 0;
-  return g?.hud ? viewRect(w, h, g.hudLeft) : { x: 0, y: 0, w, h };
+  if (!g?.hud) return { x: 0, y: 0, w, h };
+  const k = hudK();
+  const r = viewRect(w / k, h / k, g.hudLeft);
+  return { x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k };
+}
+
+/** Factor del HUD en este lienzo (engine/hud.ts `hudScale`). */
+const hudK = (): number => (stage ? hudScale(stage.width, stage.height) : 1);
+
+/** Punto (x, y) del lienzo en unidades del HUD y tamaño del lienzo en esas unidades: la geometría de engine/hud.ts se calcula sin escalar. */
+function hudSpace(x: number, y: number): { x: number; y: number; w: number; h: number } {
+  const k = hudK();
+  return { x: x / k, y: y / k, w: (stage?.width ?? 0) / k, h: (stage?.height ?? 0) / k };
+}
+
+function overHudAt(g: Game, x: number, y: number): boolean {
+  const s = hudSpace(x, y);
+  return g.hud !== null && overHud(s.x, s.y, s.w, g.hudLeft);
 }
 
 function setZoom(next: number): void {
@@ -1020,7 +1037,7 @@ const SCOPE = 'C_MIRILL.RLE';
  */
 function drawScope(ctx: CanvasRenderingContext2D, g: Game): void {
   if (g.mode !== 'MIRILLA' || !cursor.inside || !stage || !g.cursors) return;
-  if (g.hud && overHud(cursor.x, cursor.y, stage.width, g.hudLeft)) return;
+  if (overHudAt(g, cursor.x, cursor.y)) return;
   const sprite = g.cursors.canvasOf(SCOPE);
   if (!sprite) return;
   const cx = Math.round(cursor.x);
@@ -1067,7 +1084,8 @@ function scopeInRange(g: Game, weapon: 'MIRILLA' | 'ARPON' = 'MIRILLA'): boolean
 function updateCursor(g: Game): void {
   if (!stage || !g.cursors) return;
   const v = g.units[g.selected];
-  const hudOver = g.hud !== null && (overHud(cursor.x, cursor.y, stage.width, g.hudLeft) || inRect(cursor.x, cursor.y, bagRect(stage.width, stage.height, g.hudLeft)) || (v !== undefined && g.hud.itemAt(cursor.x, cursor.y, stage.width, stage.height, hudUnit(v, g.bag), g.hudLeft) !== null));
+  const s = hudSpace(cursor.x, cursor.y);
+  const hudOver = g.hud !== null && (overHud(s.x, s.y, s.w, g.hudLeft) || inRect(s.x, s.y, bagRect(s.w, s.h, g.hudLeft)) || (v !== undefined && g.hud.itemAt(s.x, s.y, s.w, s.h, hudUnit(v, g.bag), g.hudLeft) !== null));
   const mode: CursorMode | null = hudOver ? null : g.visionPicking ? 'OJO' : g.planting === 'TABACO' ? 'TABACO' : g.use ?? g.mode;
   const planting = !hudOver && g.planting !== null && g.planting !== 'TABACO';
   const applicable = mode !== null && cursor.inside && (mode === 'ARPON' ? scopeInRange(g, 'ARPON') : overTarget(g));
@@ -1236,7 +1254,13 @@ function draw(g: Game, briefing = false): void {
   }
   ctx.restore();
   if (briefing) return;
-  g.hud?.draw(ctx, stage.width, stage.height, g.units.map((u) => hudUnit(u, g.bag)), g.selected, (i) => g.faces.of(i), g.hudLeft, litItems(g), g.alarm.volume > 0);
+  if (g.hud) {
+    const k = hudK();
+    ctx.save();
+    ctx.scale(k, k);
+    g.hud.draw(ctx, stage.width / k, stage.height / k, g.units.map((u) => hudUnit(u, g.bag)), g.selected, (i) => g.faces.of(i), g.hudLeft, litItems(g), g.alarm.volume > 0);
+    ctx.restore();
+  }
   updateCursor(g);
   drawHud(ctx, g);
   drawScope(ctx, g);
@@ -1299,7 +1323,7 @@ function drawCone(ctx: CanvasRenderingContext2D, g: Game, s: Soldier): void {
 
 function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   ctx.font = '12px system-ui';
-  const top = g.hud ? HUD_BAR + 8 : 0; // con HUD, los textos van bajo la tira superior
+  const top = g.hud ? HUD_BAR * hudK() + 8 : 0; // con HUD, los textos van bajo la tira superior
   const rows = g.hud ? 0 : g.units.length;
   (g.hud ? [] : g.units).forEach((u, i) => {
     const x = 10;
@@ -1326,7 +1350,7 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
     const hud = hudUnit(sel, g.bag);
     ctx.fillText(`Disponibles: ${sel.weapons.filter((w) => weaponAvailable(sel, w)).map((w) => (sel.unit.ammo[w] === undefined ? w : `${w} (${Math.max(0, sel.unit.ammo[w] ?? 0).toString()})`)).join(', ') || '—'} · Objetos: ${visibleItems(hud.items, hud.inVehicle, hud.diving).map((i) => i.wad).join(', ') || '—'}`, 10, top + 30 + rows * 34);
   }
-  const right = ctx.canvas.width - (g.hud && !g.hudLeft ? HUD_COLUMN : 0);
+  const right = ctx.canvas.width - (g.hud && !g.hudLeft ? HUD_COLUMN * hudK() : 0);
   let oy = top + 14;
   ctx.fillStyle = 'rgba(0,0,0,.55)';
   ctx.fillRect(right - 210, top + 8, 200, 20 + g.demo.objectives.size * 15 + 18);
@@ -1773,7 +1797,8 @@ function litItems(g: Game): Set<string> {
   if (g.use === 'MANO') lit.add('MANO');
   if (v.unit.diving) lit.add('TRAJEBU');
   if (cursor.inside) {
-    const it = g.hud.itemAt(cursor.x, cursor.y, stage.width, stage.height, hudUnit(v, g.bag), g.hudLeft);
+    const s = hudSpace(cursor.x, cursor.y);
+    const it = g.hud.itemAt(s.x, s.y, s.w, s.h, hudUnit(v, g.bag), g.hudLeft);
     if (it) lit.add(it.wad);
   }
   return lit;
@@ -1783,10 +1808,10 @@ function litItems(g: Game): Set<string> {
 function bagClick(g: Game, sx: number, sy: number): boolean {
   const v = g.units[g.selected];
   if (!g.hud || !stage || !v || v.unit.dead) return false;
-  const it = g.hud.itemAt(sx, sy, stage.width, stage.height, hudUnit(v, g.bag), g.hudLeft);
+  const s = hudSpace(sx, sy);
+  const it = g.hud.itemAt(s.x, s.y, s.w, s.h, hudUnit(v, g.bag), g.hudLeft);
   if (it) { useItem(g, it); return true; }
-  const ph = photoRect(stage.width, stage.height, g.hudLeft);
-  if (sx >= ph.x && sx < ph.x + ph.w && sy >= ph.y && sy < ph.y + ph.h) {
+  if (inRect(s.x, s.y, photoRect(s.w, s.h, g.hudLeft))) {
     // la foto grande solo existe en un vehículo (a pie los botones `IT_CARA_*` están ocultos, flag `+0x124` = 1)
     if (v.unit.boat) {
       g.battle.cancel(v.unit);
@@ -1794,7 +1819,7 @@ function bagClick(g: Game, sx: number, sy: number): boolean {
       return true;
     }
   }
-  return inRect(sx, sy, bagRect(stage.width, stage.height, g.hudLeft));
+  return inRect(s.x, s.y, bagRect(s.w, s.h, g.hudLeft));
 }
 
 function onMouse(e: MouseEvent): void {
@@ -1806,9 +1831,10 @@ function onMouse(e: MouseEvent): void {
   const sx = point.x;
   const sy = point.y;
   if (e.button === 0 && bagClick(g, sx, sy)) return;
-  if (g.hud && overHud(sx, sy, stage.width, g.hudLeft)) {
+  if (overHudAt(g, sx, sy)) {
     // clic sobre el HUD: la cara de un comando lo selecciona; el resto de la tira y la columna aún no hacen nada
-    const slot = e.button === 0 ? slotAt(sx, sy, g.units.length) : -1;
+    const h = hudSpace(sx, sy);
+    const slot = e.button === 0 ? slotAt(h.x, h.y, g.units.length) : -1;
     if (slot >= 0) g.selected = slot;
     return;
   }

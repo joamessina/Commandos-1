@@ -1,6 +1,7 @@
 /**
  * Dibujo del HUD de misión (docs/lectura/hud.md, engine/hud.ts): tira superior (BARRA01 + BARRA02), columna derecha (BARS0000 + BARS0001), caras de los comandos con su barra
- * de sangre, marco de selección, y los iconos de la esquina (ojo, ayuda, cámara). Todo a 1:1 con el WAD de interfaz que cabe en la ventana.
+ * de sangre, marco de selección, y los iconos de la esquina (ojo, ayuda, cámara). Todo a 1:1 con el WAD de interfaz que cabe en la ventana; el llamador lo agranda con `ctx.scale`
+ * (engine/hud.ts `hudScale`) cuando la pantalla supera 1280×720, y entonces `width`/`height` llegan ya divididos por ese factor.
  * shortcut: si la ventana es más ancha/alta que el WAD, la tira y la columna se alargan repitiendo su último tramo (el exe solo corre a resoluciones fijas).
  */
 import { BAG, bagRect, BULLET, bulletX, bloodHeight, columnX, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, itemContains, itemPos, SLOT, slotRect, visibleItems, type BagItem } from '../engine/hud.ts';

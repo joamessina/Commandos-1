@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BAG, BAG_POS, BULLET, bagItems, bulletX, diveItemVisible, inRect, itemContains, itemPos, photoRect, visibleItems, bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, ITEM_WAD, overHud, parseInterface, slotAt, slotRect, viewRect } from './hud.ts';
+import { BAG, BAG_POS, BULLET, bagItems, bulletX, diveItemVisible, inRect, itemContains, itemPos, photoRect, visibleItems, bagRect, bloodHeight, columnX, FaceAnim, faceNumber, HUD_BAR, HUD_COLUMN, hudMode, hudScale, ITEM_WAD, overHud, parseInterface, slotAt, slotRect, viewRect } from './hud.ts';
 
 describe('hud', () => {
   it('elige el WAD de interfaz más grande que cabe', () => {
@@ -7,6 +7,12 @@ describe('hud', () => {
     expect(hudMode(1568, 640)).toEqual([800, 600]);
     expect(hudMode(1100, 800)).toEqual([1024, 768]);
     expect(hudMode(300, 200)).toEqual([512, 384]);
+  });
+
+  it('el HUD se agranda de a medios solo en pantallas mayores que 1280×720', () => {
+    expect([hudScale(640, 480), hudScale(1024, 768), hudScale(1280, 720), hudScale(1366, 768)]).toEqual([1, 1, 1, 1]);
+    expect([hudScale(1920, 1080), hudScale(2560, 1440), hudScale(3840, 2160)]).toEqual([1.5, 2, 3]);
+    expect(hudScale(2560, 1080)).toBe(1.5); // manda el lado que menos crece
   });
 
   it('el mundo ocupa lo que dejan la tira superior y la columna', () => {
