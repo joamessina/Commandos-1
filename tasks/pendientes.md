@@ -1,6 +1,6 @@
 # Pendientes (lista maestra para ir tachando)
 
-**Sonido de derrumbes de M0 (2026-11-03):** `obj-explosivos.md` identifica los tres tags seleccionados por radio y `.SONFIS`; la antena declara radio 100 y corresponde a `XCA1`/`DERRUMBE`. Queda seguir los nueve edificios generados por `AUTOEXPCASAS` y contrastar el resultado en el original.
+**Sonido de derrumbes de M0 (2026-11-03):** `obj-explosivos.md` identifica los tags seleccionados por radio y `.SONFIS`; la antena y los seis edificios principales de `AUTOEXPCASAS` seleccionan `XCA1`/`DERRUMBE` con sus geometrías declaradas. Los otros tres volúmenes transmiten impactos a su edificio principal. Falta comprobar creación, posición de emisión y audio en el original.
 
 **Rutas de escalera de M0 (2026-11-03):** [`mision0-rutas-escaleras.md`](../docs/lectura/mision0-rutas-escaleras.md) contrasta las cuatro instancias reales con el filtro de soldados y verifica en ensamblador el costo de A*. El costo ya estaba leído; sigue pendiente integrar las aristas especiales al buscador y comparar trayectos con el original. No implica cierre de las demás áreas de M0.
 
