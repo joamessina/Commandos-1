@@ -6,6 +6,8 @@
 
 **Cerebros y alarma (2026-11-03):** `audita-vtables-bap.py` contrasta los 44 slots de BAP1/BANPE1 y BAP2/BANPE2; `alerta-m0.md` identifica el receptor y las voces de `AcMetrallero` de los nidos, distintos de `AcBunker`. Falta cerrar las ramas de apuntado y comprobarlas en ejecución.
 
+**Buceo y minas (2026-11-03):** `au-jugador.md` precisa la prueba geométrica del cambio de modo y la contrasta con dos puntos de la costa real; falta la lista de sectores pisados. `obj-explosivos.md` verifica la masa 100 de los cuatro aliados, el umbral 60 de las 22 minas y corrige que la igualdad también activa el contacto; falta comprobar la entrega efectiva de la colisión por contexto.
+
 **Vista y disparos (2026-11-02):** corregida la lectura del barrido vacío y conectada `.VIGILARDEF` para patrullas; los soldados reales de M0 barren con su amplitud configurada. Armas de fuego: una orden por clic, incluido terreno y agua, sin repetición automática; los límites de cadencia y raycast están en `verificacion-exe.md`.
 
 **Arpón (2026-11-02):** corregido el clic sobre el icono de la mochila que coincidía con la columna, y corregidos impacto letal, munición y recarga. Selección y disparo verificados en navegador con M0; la recarga se muestra en el texto de depuración.
