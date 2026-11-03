@@ -11,6 +11,12 @@ const guardias = new Map<string, number>();
 let minas = 0;
 let minasConPeso = 0;
 function recorrer(nodos: readonly Node[], contexto: readonly string[] = []): void {
+  for (let indice = 0; indice < nodos.length; indice++) {
+    const nodo = nodos[indice];
+    if (typeof nodo === 'string' && /^\.(?:TIPOPOLYSEL|ALAM\w*)$/i.test(nodo)) {
+      console.log('ALAMBRADA_CLAVE', nodo, JSON.stringify(nodos[indice + 1]));
+    }
+  }
   const token = find(nodos, '.TOKEN');
   const actual = typeof token === 'string' ? [...contexto, token] : contexto;
   const macro = find(nodos, '.MACRO');
