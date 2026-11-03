@@ -8,6 +8,7 @@ const entradas = parseContainer(datos).filter((e) => e.path.toUpperCase().endsWi
 if (entradas.length !== 1 || !entradas[0]) throw new Error('Se esperaba un solo MAPA0000.MIS');
 const raiz = parseClave(new TextDecoder('windows-1252').decode(entryBytes(datos, entradas[0])));
 const guardias = new Map<string, number>();
+const macrosUsadas = new Set<string>();
 let minas = 0;
 let minasConPeso = 0;
 function recorrer(nodos: readonly Node[], contexto: readonly string[] = []): void {
@@ -20,6 +21,7 @@ function recorrer(nodos: readonly Node[], contexto: readonly string[] = []): voi
   const token = find(nodos, '.TOKEN');
   const actual = typeof token === 'string' ? [...contexto, token] : contexto;
   const macro = find(nodos, '.MACRO');
+  if (typeof macro === 'string') macrosUsadas.add(macro.toUpperCase());
   if (typeof macro === 'string' && /^(BAP1|BAP2|BANPE1|BANPE2)$/i.test(macro)) {
     const nombre = macro.toUpperCase();
     guardias.set(nombre, (guardias.get(nombre) ?? 0) + 1);
@@ -53,4 +55,12 @@ for (const nombre of ['MINASUB.MAC', 'ZODIAC5.MAC']) {
   const nodos = parseClave(new TextDecoder('windows-1252').decode(entryBytes(datos, entrada)));
   console.log(nombre, 'MASA', find(nodos, '.MASA'), 'VOLCOLISION', JSON.stringify(find(nodos, '.VOLCOLISION')),
     'LISTAS', JSON.stringify(find(nodos, '.LISTAS')));
+}
+console.log('MACROS_DIRECTAS_AUDITADAS', macrosUsadas.size);
+for (const nombre of macrosUsadas) {
+  const entrada = parseContainer(datos).find((e) => e.path.toUpperCase().endsWith('/' + nombre + '.MAC'));
+  if (!entrada) { console.log('MACRO_NO_LOCALIZADA', nombre); continue; }
+  const texto = new TextDecoder('windows-1252').decode(entryBytes(datos, entrada));
+  const coincidencias = [...texto.matchAll(/\.(?:TIPOPOLYSEL|ALAM\w*)\b|\bAuAlicate\b/gi)].map((m) => m[0]);
+  if (coincidencias.length > 0) console.log('ALAMBRADA_MACRO', nombre, JSON.stringify(coincidencias));
 }
