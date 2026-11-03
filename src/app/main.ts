@@ -21,7 +21,7 @@ import { BLAST_CYCLES, Demolition, parseSites, type Barrel, type Mine, type Plan
 import { destroyLinkedHouses, House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatShares, boatSlots, freeSeat } from '../engine/boat.ts';
-import { type Cepo, type Decoy, Traps } from '../engine/traps.ts';
+import { type Cepo, type Decoy, decoyItem, Traps } from '../engine/traps.ts';
 import { eventList, ExitSchedule, formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
 import { groundZ, isWater, SectorMap, TYPE_WATER } from '../engine/sectors.ts';
 import { canThrow, type Pack, type Throwable } from '../engine/throwing.ts';
@@ -569,8 +569,10 @@ async function load(introduction = false): Promise<void> {
   const p = first ? project(first.body.x, first.body.y, first.z) : { px: img.width / 2, py: img.height / 2 };
   const battle = new Battle(soldiers.map((s) => s.soldier), units.map((u) => u.unit), sectors);
   const iface = parseInterface(misText);
-  // IT_TABACO sale `.DISPONIBLE NO` hasta que el comando roba un cigarrillo (contador `ficha+0x8E0`): `hudUnit` lo oculta mientras tabaco = 0
-  const bag = bagItems(new Map([...iface].map(([t, c]) => [t, { items: c.items.map((i) => (i.token === 'IT_TABACO' ? { ...i, available: true } : i)) }])));
+  // IT_TABACO sale `.DISPONIBLE NO` hasta que el comando roba un cigarrillo (contador `ficha+0x8E0`): `hudUnit` lo oculta mientras tabaco = 0.
+  // Los interruptores del señuelo también: se muestran según el estado del señuelo (`decoyItem`), no por `.DISPONIBLE`.
+  const dynamic = new Set(['IT_TABACO', 'IT_ACTSENUELOOFF', 'IT_ACTSENUELOON']);
+  const bag = bagItems(new Map([...iface].map(([t, c]) => [t, { items: c.items.map((i) => (dynamic.has(i.token) ? { ...i, available: true } : i)) }])));
   for (const u of units) if (iface.get(u.unit.token)?.items.some((i) => i.token === 'IT_TABACO' && i.available)) u.unit.tobacco = 1;
   const { sites, objectives, escape, kills } = parseSites(misText, vol, elems);
   const demo = new Demolition(sites, objectives, { soldiers: battle.soldiers, commandos: battle.commandos }, bombCount, { sectors, kills });
@@ -1103,7 +1105,7 @@ function updateCursor(g: Game): void {
   if (!stage || !g.cursors) return;
   const v = g.units[g.selected];
   const s = hudSpace(cursor.x, cursor.y);
-  const hudOver = g.hud !== null && (overHud(s.x, s.y, s.w, g.hudLeft) || inRect(s.x, s.y, bagRect(s.w, s.h, g.hudLeft)) || (v !== undefined && g.hud.itemAt(s.x, s.y, s.w, s.h, hudUnit(v, g.bag), g.hudLeft) !== null));
+  const hudOver = g.hud !== null && (overHud(s.x, s.y, s.w, g.hudLeft) || inRect(s.x, s.y, bagRect(s.w, s.h, g.hudLeft)) || (v !== undefined && g.hud.itemAt(s.x, s.y, s.w, s.h, hudUnit(v, g), g.hudLeft) !== null));
   const mode: CursorMode | null = hudOver ? null : g.visionPicking ? 'OJO' : g.planting === 'TABACO' ? 'TABACO' : g.use ?? g.mode;
   const planting = !hudOver && g.planting !== null && g.planting !== 'TABACO';
   const applicable = mode !== null && cursor.inside && (mode === 'ARPON' ? scopeInRange(g, 'ARPON') : overTarget(g));
@@ -1276,7 +1278,7 @@ function draw(g: Game, briefing = false): void {
     const k = hudK();
     ctx.save();
     ctx.scale(k, k);
-    g.hud.draw(ctx, stage.width / k, stage.height / k, g.units.map((u) => hudUnit(u, g.bag)), g.selected, (i) => g.faces.of(i), g.hudLeft, litItems(g), g.alarm.volume > 0);
+    g.hud.draw(ctx, stage.width / k, stage.height / k, g.units.map((u) => hudUnit(u, g)), g.selected, (i) => g.faces.of(i), g.hudLeft, litItems(g), g.alarm.volume > 0);
     ctx.restore();
   }
   updateCursor(g);
@@ -1365,7 +1367,7 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
   const modeText = g.mode === 'ARPON' && sel && sel.unit.coolDown > 0 ? `ARPON (recargando ${(sel.unit.coolDown / 20).toFixed(1)} s)` : (g.mode ?? 'ninguna (clic = mover)');
   ctx.fillText(`Arma: ${g.planting ? `${g.planting.toLowerCase()} (clic donde ponerlo)` : modeText} · ${[...shortcuts, 'G agacharse', ...(sel?.canDive ? ['N bucear'] : []), 'Esc cancelar', 'E bote', 'V ojo'].join(' · ')}`, 10, top + 14 + rows * 34);
   if (sel) {
-    const hud = hudUnit(sel, g.bag);
+    const hud = hudUnit(sel, g);
     ctx.fillText(`Disponibles: ${sel.weapons.filter((w) => weaponAvailable(sel, w)).map((w) => (sel.unit.ammo[w] === undefined ? w : `${w} (${Math.max(0, sel.unit.ammo[w] ?? 0).toString()})`)).join(', ') || '—'} · Objetos: ${visibleItems(hud.items, hud.inVehicle, hud.diving).map((i) => i.wad).join(', ') || '—'}`, 10, top + 30 + rows * 34);
   }
   const right = ctx.canvas.width - (g.hud && !g.hudLeft ? HUD_COLUMN * hudK() : 0);
@@ -1446,6 +1448,43 @@ function recoverBomb(g: Game, u: Unit, bomb: PlantedBomb): void {
     u.body.ang = norm360((Math.atan2(bomb.y - u.body.y, bomb.x - u.body.x) * 180) / Math.PI);
     u.playOnce('PONEBOMBA', () => { if (g.demo.recover(bomb)) say('Bomba recogida.'); }, 0, true);
   }, sector)) say('No hay camino hasta esa bomba.');
+}
+
+/** shortcut: selección por el rectángulo del sprite del señuelo (como `bombAt`); mejorar al portar el picking de volúmenes. */
+function decoyAt(g: Game, x: number, y: number): Decoy | null {
+  return g.traps.decoys.find((d) => {
+    const prop = g.trapProps.get(d);
+    if (!prop) return false;
+    const p = project(prop.x, prop.y, prop.z);
+    const r = prop.sprites.bounds(prop.anim.frame(prop.ang), p.px, p.py);
+    return r !== null && x >= r.x0 && x < r.x1 && y >= r.y0 && y < r.y1;
+  }) ?? null;
+}
+
+/**
+ * Recoger el señuelo con la mano (`AUCoger` bit 4 → `MSG_SOY_UN_SEGNUELO` → `AuManejaSegnuelo`: camina, gira y anima `PONEBOMBA` a la inversa); vuelve a la mochila: reaparece el ítem del señuelo
+ * y el interruptor se oculta (`FUN_004FC990` estado 3).
+ */
+function recoverDecoy(g: Game, u: Unit, decoy: Decoy): void {
+  const view = g.units.find((x) => x.unit === u);
+  if (!view?.canDecoy || !g.kit.decoy) { say('Solo el boina verde puede recoger ese señuelo.'); return; }
+  const kit = g.kit.decoy;
+  g.battle.cancel(u);
+  u.stop();
+  const sector = g.sectors?.atZ(decoy.x, decoy.y, g.trapProps.get(decoy)?.z ?? u.z) ?? null;
+  if (!u.doAt(decoy, () => {
+    if (!g.traps.decoys.includes(decoy)) return;
+    u.body.ang = norm360((Math.atan2(decoy.y - u.body.y, decoy.x - u.body.x) * 180) / Math.PI);
+    u.playOnce('PONEBOMBA', () => {
+      if (!g.traps.decoys.includes(decoy)) return;
+      g.traps.removeDecoy(decoy);
+      const prop = g.trapProps.get(decoy);
+      if (prop) g.props.splice(g.props.indexOf(prop), 1);
+      g.trapProps.delete(decoy);
+      kit.left++;
+      say('Señuelo recogido: está otra vez en la mochila.');
+    }, 0, true);
+  }, sector)) say('No hay camino hasta ese señuelo.');
 }
 
 /** Punto (en píxeles de la ventana) donde se apretó el botón derecho: arrastrar dibuja el rectángulo de selección (FUN_005BA260/5BA2F0/0069AAD0). */
@@ -1534,6 +1573,8 @@ function teleportAction(g: Game): void {
   say(`${v.unit.token}: teletransportado${v.unit.boat ? ' con el bote' : ''}.`);
 }
 
+/** Los tres ítems del señuelo: él en la mochila y su interruptor apagado y encendido (se ve uno a la vez, `decoyItem`). */
+const DECOY_ITEMS: ReadonlySet<string> = new Set(['IT_SEGNUELO', 'IT_ACTSENUELOOFF', 'IT_ACTSENUELOON']);
 const WEAPON_OF_WAD: Readonly<Record<string, Weapon>> = { ARPON: 'ARPON', PISTOLA: 'PISTOLA', MIRILLA: 'MIRILLA', CUCHILLO: 'CUCHILLO', PUNO: 'PUNO', ESPOSAS: 'ESPOSAS', PIEDRA: 'PIEDRA' };
 
 /** Datos del comando para el HUD (caras, mochila, balas). */
@@ -1541,11 +1582,13 @@ function weaponAvailable(v: UnitView, w: Weapon): boolean {
   return !v.unit.dead && !v.unit.diving && (!v.unit.boat || w === 'MIRILLA') && v.weapons.includes(w) && (v.unit.ammo[w] === undefined || (v.unit.ammo[w] ?? 0) > 0);
 }
 
-function hudUnit(v: UnitView, bag: ReadonlyMap<string, readonly BagItem[]>): HudUnit {
+function hudUnit(v: UnitView, g: Game): HudUnit {
   const u = v.unit;
   // shortcut: se usa el sector central; FUN_004E95A0 exige que todos los sectores pisados sean agua somera.
   const diveAvailable = diveItemVisible(u.boat !== null, u.sector?.type === TYPE_WATER);
-  return { token: u.token, energy: u.energy, max: v.maxEnergy, dead: u.dead, items: (bag.get(u.token) ?? []).filter((i) => (i.token !== 'IT_TABACO' || u.tobacco > 0) && (i.wad !== 'BOTIQUIN' || u.medkits > 0) && (i.wad !== 'MIRILLA' || weaponAvailable(v, 'MIRILLA')) && (i.wad !== 'TRAJEBU' || diveAvailable) && (!u.diving || i.wad === 'TRAJEBU')), inVehicle: u.boat !== null, diving: u.diving, bullets: !u.diving && v.weapons.includes('MIRILLA') ? Math.max(0, u.ammo['MIRILLA'] ?? 0) : 0 };
+  // señuelo (AUManejaSegnuelo): un solo ítem a la vez entre el señuelo y su interruptor; sin la habilidad se deja el señuelo como estaba
+  const decoy = v.canDecoy ? decoyItem((g.kit.decoy?.left ?? 1) > 0, g.traps.decoys[g.traps.decoys.length - 1] ?? null) : 'IT_SEGNUELO';
+  return { token: u.token, energy: u.energy, max: v.maxEnergy, dead: u.dead, items: (g.bag.get(u.token) ?? []).filter((i) => (i.token !== 'IT_TABACO' || u.tobacco > 0) && (!DECOY_ITEMS.has(i.token) || i.token === decoy) && (i.wad !== 'BOTIQUIN' || u.medkits > 0) && (i.wad !== 'MIRILLA' || weaponAvailable(v, 'MIRILLA')) && (i.wad !== 'TRAJEBU' || diveAvailable) && (!u.diving || i.wad === 'TRAJEBU')), inVehicle: u.boat !== null, diving: u.diving, bullets: !u.diving && v.weapons.includes('MIRILLA') ? Math.max(0, u.ammo['MIRILLA'] ?? 0) : 0 };
 }
 
 function armWeapon(g: Game, w: Weapon): void {
@@ -1597,14 +1640,16 @@ function cepoAction(g: Game): void {
   }
 }
 
-/** Ítem SEÑUELO (`AuManejaSegnuelo`): la primera vez lo coloca (queda encendido); después alterna encendido/apagado. */
-function decoyAction(g: Game): void {
+/**
+ * Ítems del señuelo (`AuManejaSegnuelo`): `IT_SEGNUELO` lo coloca (queda apagado); el interruptor (`IT_ACTSENUELOOFF`/`ON`, que aparece en la mochila al soltarlo) lo enciende y apaga
+ * al instante (órdenes `ACTIVA`/`DESACTIVA`, `FUN_004FCBB0`).
+ */
+function decoyAction(g: Game, token: string): void {
   const v = g.units[g.selected];
   if (!v || v.unit.dead || v.unit.boat) return;
-  const placed = g.traps.decoys[g.traps.decoys.length - 1];
-  if (placed) {
-    placed.on = !placed.on;
-    say(placed.on ? 'Señuelo encendido: hace ruido y atrae a los soldados.' : 'Señuelo apagado.');
+  if (token !== 'IT_SEGNUELO') {
+    const d = g.traps.switchDecoy();
+    if (d) say(d.on ? 'Señuelo encendido: hace ruido y atrae a los soldados.' : 'Señuelo apagado.');
   } else if (!v.canDecoy || !g.kit.decoy) say(`${v.unit.token} no lleva señuelos.`);
   else if (g.kit.decoy.left <= 0) say('No te quedan señuelos.');
   else {
@@ -1628,7 +1673,7 @@ function placeTrap(g: Game, u: Unit, spot: { x: number; y: number; sector: Param
         const prop: Prop = { elem: kit.elem, anim, sprites: kit.sprites, x: u.body.x, y: u.body.y, z: u.z, ang: 0 };
         g.props.push(prop);
         g.trapProps.set(kind === 'CEPO' ? g.traps.placeCepo(u.body.x, u.body.y) : g.traps.placeDecoy(u.body.x, u.body.y), prop);
-        say(kind === 'CEPO' ? 'Cepo colocado.' : 'Señuelo colocado y encendido.');
+        say(kind === 'CEPO' ? 'Cepo colocado.' : 'Señuelo colocado, apagado: el interruptor de la mochila lo enciende. Con la mano se recoge.');
       });
     },
     spot.sector,
@@ -1791,7 +1836,7 @@ function useItem(g: Game, it: BagItem): void {
   else if (it.wad === 'CARTUCHO') bombAction(g);
   else if (it.wad === 'ACTIVADO') detonateAction(g);
   else if (it.wad === 'CEPO') cepoAction(g);
-  else if (it.wad === 'SENUELO') decoyAction(g);
+  else if (it.wad === 'SENUELO') decoyAction(g, it.token);
   else if (it.wad === 'TABACO') tobaccoAction(g);
   else if (it.wad === 'BOTIQUIN') medkitAction(g);
   else if (it.wad === 'CONTROLA') controlAction(g);
@@ -1816,7 +1861,7 @@ function litItems(g: Game): Set<string> {
   if (v.unit.diving) lit.add('TRAJEBU');
   if (cursor.inside) {
     const s = hudSpace(cursor.x, cursor.y);
-    const it = g.hud.itemAt(s.x, s.y, s.w, s.h, hudUnit(v, g.bag), g.hudLeft);
+    const it = g.hud.itemAt(s.x, s.y, s.w, s.h, hudUnit(v, g), g.hudLeft);
     if (it) lit.add(it.wad);
   }
   return lit;
@@ -1827,7 +1872,7 @@ function bagClick(g: Game, sx: number, sy: number): boolean {
   const v = g.units[g.selected];
   if (!g.hud || !stage || !v || v.unit.dead) return false;
   const s = hudSpace(sx, sy);
-  const it = g.hud.itemAt(s.x, s.y, s.w, s.h, hudUnit(v, g.bag), g.hudLeft);
+  const it = g.hud.itemAt(s.x, s.y, s.w, s.h, hudUnit(v, g), g.hudLeft);
   if (it) { useItem(g, it); return true; }
   if (inRect(s.x, s.y, photoRect(s.w, s.h, g.hudLeft))) {
     // la foto grande solo existe en un vehículo (a pie los botones `IT_CARA_*` están ocultos, flag `+0x124` = 1)
@@ -1919,7 +1964,9 @@ function onMouse(e: MouseEvent): void {
   const corpse = corpseAt(g, mx, my);
   if (live && g.use === 'MANO') {
     const bomb = bombAt(g, mx, my);
+    const decoy = decoyAt(g, mx, my);
     if (bomb) { g.use = null; recoverBomb(g, sel, bomb); }
+    else if (decoy) { g.use = null; recoverDecoy(g, sel, decoy); }
     else if (corpse && sel.tobacco <= 0) { g.use = null; stealTobacco(g, sel, corpse); }
     else say('No hay un objeto que pueda recoger ahí.');
     return;

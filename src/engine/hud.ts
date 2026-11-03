@@ -130,7 +130,8 @@ export function parseInterface(misText: string): Map<string, HudCommando> {
 
 /**
  * Archivo de `OPCIONES/` con el dibujo de cada ítem del catálogo (el exe arma el nombre con `"%s%s%s.WAD"` y `OPCIONES\`; la tabla ítem→archivo no se leyó, se emparejó por nombre).
- * Sin entrada = el ítem no tiene dibujo propio hallado (GOLPEAR, ACTSENUELOON/OFF, LEVANTARSE, AGACHARSE, MANOCHICA, PUTADISTRAE, BOMBATIEMPO…).
+ * Sin entrada = el ítem no tiene dibujo propio hallado (GOLPEAR, LEVANTARSE, AGACHARSE, MANOCHICA, PUTADISTRAE, BOMBATIEMPO…). El interruptor del señuelo (ACTSENUELOOFF/ON, `hud-items-tabla.md`)
+ * vive en `SENUELO.WAD` junto al señuelo: `INTERRUP.RLE` apagado y `P_IN0000.RLE` encendido.
  */
 export const ITEM_WAD: Readonly<Record<string, string>> = {
   IT_PISTOLA: 'PISTOLA',
@@ -160,6 +161,8 @@ export const ITEM_WAD: Readonly<Record<string, string>> = {
   IT_ACTIVADOR: 'ACTIVADO',
   IT_LANZALLAMAS: 'LANZALLA',
   IT_SEGNUELO: 'SENUELO',
+  IT_ACTSENUELOOFF: 'SENUELO',
+  IT_ACTSENUELOON: 'SENUELO',
   IT_ALICATE: 'ALICATE',
   IT_INSIGNIA: 'INSIGNIA',
   IT_UNIFORME: 'UNIFORME',
@@ -194,6 +197,10 @@ export const BAG_POS: Readonly<Record<string, Readonly<Record<string, { readonly
     PISTOLA: { sprite: 'PISTOLA.RLE', x: 59, y: 45 },
     PIEDRA: { sprite: 'PIEDRA.RLE', x: 43, y: 18 },
     SENUELO: { sprite: 'SENUEL.RLE', x: 63, y: 66 },
+    // shortcut: posición del interruptor sin medir (la memoria del original solo se leyó con el señuelo en la mochila): se centra donde estaba el señuelo (59×89 en (63, 66)), ya que nunca
+    //           se ven a la vez (`decoyItem`); el interruptor mide 42×68. Cuándo mejorar: con una captura del original con el señuelo puesto en el suelo.
+    SENUELOOFF: { sprite: 'INTERRUP.RLE', x: 72, y: 77 },
+    SENUELOON: { sprite: 'P_IN0000.RLE', x: 72, y: 77 },
     ESPOSAS: { sprite: 'ESPOSAS.RLE', x: 24, y: 91 },
     CONTROLA: { sprite: 'CONTROLA.RLE', x: -20, y: 79 },
     TABACO: { sprite: 'TABACO.RLE', x: 25, y: 36 },
@@ -239,6 +246,9 @@ export interface BagItem {
   readonly y: number;
 }
 
+/** Ítems que comparten archivo de `OPCIONES/` pero no dibujo ni posición (el interruptor del señuelo, apagado y encendido): su clave en `BAG_POS`. */
+const POS_KEY: Readonly<Record<string, string>> = { IT_ACTSENUELOOFF: 'SENUELOOFF', IT_ACTSENUELOON: 'SENUELOON' };
+
 /** Ítems que se dibujan en la mochila de cada comando (disponibles, con archivo y con posición medida), por token de comando. */
 export function bagItems(iface: ReadonlyMap<string, HudCommando>): Map<string, BagItem[]> {
   const out = new Map<string, BagItem[]>();
@@ -246,7 +256,7 @@ export function bagItems(iface: ReadonlyMap<string, HudCommando>): Map<string, B
     const pos = BAG_POS[token] ?? {};
     out.set(token, c.items.flatMap((i) => {
       const wad = ITEM_WAD[i.token];
-      const at = wad === undefined ? undefined : pos[wad];
+      const at = wad === undefined ? undefined : pos[POS_KEY[i.token] ?? wad];
       return i.available && wad !== undefined && at ? [{ token: i.token, wad, sprite: at.sprite, x: at.x, y: at.y }] : [];
     }));
   }

@@ -99,6 +99,14 @@ describe('parseInterface', () => {
     expect(Object.keys(BAG_POS)).toEqual(['COMANDO', 'LANCHERO', 'FRANCOT', 'ARTIFIC']);
   });
 
+  it('el interruptor del señuelo, apagado y encendido, usa el archivo del señuelo con su propio dibujo y posición', () => {
+    const iface = new Map([['COMANDO', { items: [{ token: 'IT_ACTSENUELOOFF', available: true }, { token: 'IT_ACTSENUELOON', available: true }] }], ['ARTIFIC', { items: [{ token: 'IT_ACTSENUELOON', available: true }] }]]);
+    const [off, on] = bagItems(iface).get('COMANDO') ?? [];
+    expect([off?.wad, off?.sprite, on?.wad, on?.sprite]).toEqual(['SENUELO', 'INTERRUP.RLE', 'SENUELO', 'P_IN0000.RLE']);
+    expect([off?.x, off?.y]).toEqual([on?.x, on?.y]);
+    expect(bagItems(iface).get('ARTIFIC')).toEqual([]); // el zapador no tiene interruptor medido
+  });
+
   it('en un vehículo solo se ven los ítems permitidos en vehículos (el francotirador en el bote: solo la mirilla)', () => {
     expect(diveItemVisible(true, false)).toBe(true);
     expect(diveItemVisible(false, true)).toBe(true);
