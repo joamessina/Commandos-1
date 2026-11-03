@@ -43,6 +43,12 @@ En índice 2 activa flag de tile 0x10; lo limpia en los demás. El avance está 
 
 ## 3. CIRC: marcadores sobre el mundo [hecho]
 
+### Indicador verde `CUR20000` (2026-11-02)
+
+Inspección de `GLOBAL/GLOBAL.WAD` real: `CUR20000.RLE` mide **24 × 14** y contiene cuatro marcas verdes alrededor de un centro vacío; `CURS0000.RLE` es un triángulo verde de **5 × 3**. Son recursos distintos de `C_FLECHA.RLE`, la flecha normal del mouse. Por su aspecto, `CUR20000` es un candidato a lo que describe Joaquín; no se confirmó visualmente contra el original en marcha.
+
+`FUN_00697280` (`fn_00680000.c:15006`) carga `CUR20000.RLE` en un `ClassTile` y centra el recorte con `−ancho/2, −alto/2`; la interfaz crea un arreglo de estos objetos por subinterfaz (`FUN_0069AC60`, llamada al constructor vectorial `0x405457` → `00697280`). `FUN_00699AE0` caso `0x18` llama a `FUN_00697450` con XYZ del mensaje y `FUN_0069E650` inserta o retira esos objetos según el conteo activo. `FUN_00697450` los ubica en el mundo mediante `FUN_006BCDA0`. Solo se encontró un sprite `CUR20000`, por lo que no se puede afirmar que cambie de fotograma; falta identificar el productor exacto de ese mensaje, la circunstancia de aparición y si hay animación de posición o escala.
+
 `FUN_005C9FE0`, `fn_005c0000.c:5649–5675`, carga siete nombres `CIRC%04ld.RLE` a la tabla 0x84059C. `005C93C0` (:5152–5259) usa el índice +0x0C del marcador, proyecta XYZ con `00463450` y dibuja con desplazamiento **(-17,-95)**. No son indicadores de energía.
 
 `005CA9B0` (:6042–6074) crea `{x,y,z,frame=0,contador=1}` y lo agrega al vector de visor+0x150. `005C9620` (:5260–5293) avanza frame, pone contador 1 normalmente y 5 al salir del frame 5; al superar 6 marca XYZ=-1 y retorna finalizado. `005CA080` (:5676–5704) libera los marcadores terminados; `005CA110` (:5705–5728) dibuja los vivos. Los campos frame/contador son enteros: el tipo float inferido por Ghidra produce literales engañosos.
