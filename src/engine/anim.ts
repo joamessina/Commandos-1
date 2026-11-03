@@ -29,6 +29,7 @@ export class Animator {
   private accDist = 0;
   private accTime = 0;
   private finished = false;
+  private reverse = false;
 
   constructor(
     private readonly anm: Anm,
@@ -68,8 +69,9 @@ export class Animator {
   }
 
   /** Reinicia incluso si ya estaba seleccionada, para impactos o acciones repetidas. */
-  restart(name: string): void {
+  restart(name: string, reverse = false): void {
     this.seq = this.get(name);
+    this.reverse = reverse;
     this.accDist = 0;
     this.accTime = 0;
     this.finished = false;
@@ -91,6 +93,7 @@ export class Animator {
         this.accDist = 0;
         this.accTime = 0;
         this.finished = false;
+        this.reverse = false;
       } else this.finished = true;
     }
   }
@@ -101,12 +104,13 @@ export class Animator {
     const n = s.steps.length;
     if (n === 0) return 0;
     if (!s.cyclic) {
-      if (this.finished) return n - 1;
-      if (this.accDist <= 0 && this.accTime <= 0) return 0;
+      if (this.finished) return this.reverse ? 0 : n - 1;
+      if (this.accDist <= 0 && this.accTime <= 0) return this.reverse ? n - 1 : 0;
     }
     const t = s.b > 0 ? Math.trunc((n * this.accTime) / s.b) : 0;
     const d = s.a > 0 ? Math.trunc((n * this.accDist) / s.a) : 0;
-    return wrap(t + d, n);
+    const step = wrap(t + d, n);
+    return this.reverse ? n - 1 - step : step;
   }
 
   /** Fotograma a dibujar para el ángulo de mundo dado. */

@@ -324,11 +324,11 @@ export class Unit {
   }
 
   /** Reproduce una animación una vez, quieto, durante su período, y al terminar llama a `done`. */
-  playOnce(name: string, done: () => void, extraCycles = 0): void {
+  playOnce(name: string, done: () => void, extraCycles = 0, reverse = false): void {
     this.path = [];
     this.target = null;
     this.arrive = null;
-    if (this.anim.has(name)) this.anim.restart(name);
+    if (this.anim.has(name)) this.anim.restart(name, reverse);
     this.busy = Math.max(1, this.anim.period(name) + extraCycles);
     this.busyDone = done;
   }

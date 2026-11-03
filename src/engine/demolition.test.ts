@@ -79,6 +79,23 @@ describe('Demolition', () => {
     expect(d.detonate()).toBe(0);
   });
 
+  it('recoge una bomba plantada a su altura una sola vez y no la detona después', () => {
+    const { d } = mk(1);
+    expect(d.plant(150, 200, 65)).toBe(true);
+    const bomb = d.planted[0];
+    expect(bomb).toEqual({ x: 150, y: 200, z: 65 });
+    if (!bomb) throw new Error('bomba ausente');
+    expect(d.recover(bomb)).toBe(true);
+    expect([d.bombs, d.planted.length, d.detonate()]).toEqual([1, 0, 0]);
+    expect(d.recover(bomb)).toBe(false);
+    expect(d.bombs).toBe(1);
+    expect(d.plant(150, 200, 65)).toBe(true);
+    const detonated = d.planted[0];
+    if (!detonated) throw new Error('bomba ausente');
+    d.detonate();
+    expect(d.recover(detonated)).toBe(false);
+  });
+
   it('un barril explota con disparo (no con cuchillo), encadena barriles y bombas cercanos y alerta a los soldados a <1200', () => {
     const { d, s2 } = mk();
     const a = d.addBarrel('B1', 800, 205);

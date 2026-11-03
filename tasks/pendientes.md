@@ -6,6 +6,8 @@
 
 **Piedra e impactos (2026-11-02):** lanzamiento vuelve a reposo; efecto y sonido de caída reales, reacción `NSHERIDO` sin daño y `HERIDO1` con pausa de la animación. La pedrada y la herida emiten `HERI`; las pedradas repetidas también pueden emitir `AL01` según el cerebro. Detalles y límites en `armas-restantes.md`, `muerte.md` y `verificacion-exe.md`.
 
+**Bombas (2026-11-02):** el zapador recupera bombas plantadas con la mano y `PONEBOMBA` al revés; se dibujan con `CARTUCHO` a la altura del suelo. Comprobado en navegador con M0 y archivos reales.
+
 **Mochila (2026-11-02):** los controles normales toman clics por rectángulo y la mochila no deja pasar clics al terreno. La bombona se filtra por bote o agua somera; el límite de sectores pisados queda en `verificacion-exe.md`.
 
 **Carga y altura (2026-11-02):** pantalla de carga con recursos originales y barra durante la preparación. Pistola, mirilla y arpón comprueban alcance y desniveles; quedan volúmenes y cuerpos interpuestos (`docs/lectura/carga-armas-altura.md`).

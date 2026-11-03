@@ -171,10 +171,12 @@ export interface People {
   readonly commandos: readonly Unit[];
 }
 
+export interface PlantedBomb { readonly x: number; readonly y: number; readonly z: number }
+
 export class Demolition {
   readonly sites: Site[];
   readonly barrels: Barrel[] = [];
-  readonly planted: { x: number; y: number }[] = [];
+  readonly planted: PlantedBomb[] = [];
   readonly mines: Mine[] = [];
   /** El Zodiac se hundió con una mina: sus ocupantes murieron. */
   boatSunk = false;
@@ -243,10 +245,19 @@ export class Demolition {
   }
 
   /** Planta una bomba (AuManejaBomba, sin la animación) donde está el zapador. */
-  plant(x: number, y: number): boolean {
+  plant(x: number, y: number, z = 0): boolean {
     if (this.bombs <= 0) return false;
     this.bombs--;
-    this.planted.push({ x, y });
+    this.planted.push({ x, y, z });
+    return true;
+  }
+
+  /** FUN_004FAA60/004FA800: solo se devuelve una carga que todavía está plantada. */
+  recover(bomb: PlantedBomb): boolean {
+    const index = this.planted.indexOf(bomb);
+    if (index < 0) return false;
+    this.planted.splice(index, 1);
+    this.bombs++;
     return true;
   }
 

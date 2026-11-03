@@ -17,7 +17,7 @@ import { parseWad, type Wad } from '../formats/wad.ts';
 import { Animator } from '../engine/anim.ts';
 import { canFire, groundTarget, type Weapon } from '../engine/attack.ts';
 import { Battle } from '../engine/battle.ts';
-import { BLAST_CYCLES, Demolition, parseSites, type Barrel, type Mine } from '../engine/demolition.ts';
+import { BLAST_CYCLES, Demolition, parseSites, type Barrel, type Mine, type PlantedBomb } from '../engine/demolition.ts';
 import { destroyLinkedHouses, House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
 import { Boat, boatShares, boatSlots, freeSeat } from '../engine/boat.ts';
@@ -143,6 +143,7 @@ interface Game {
   readonly blastArt: { readonly anm: Anm; readonly sprites: SpriteCache } | null;
   readonly splashArt: { readonly anm: Anm; readonly sprites: SpriteCache } | null;
   readonly stoneArt: { readonly anm: Anm; readonly sprites: SpriteCache } | null;
+  readonly bombArt: { readonly anm: Anm; readonly sprites: SpriteCache } | null;
   readonly stoneEffects: { readonly prop: Prop; left: number }[];
   readonly splashes: { x: number; y: number; age: number }[];
   readonly seenSplashes: WeakSet<object>;
@@ -682,7 +683,7 @@ async function load(introduction = false): Promise<void> {
   }
   sound?.stop();
   sound = new GameSound(sfx, { effect: (name) => bytes(`DATOS/RECURSOS/SONIDO/WAVE/${name.toUpperCase()}`), music: async (name) => { const r = loaded?.music.get(name.toLowerCase()); return r ? new Uint8Array(await r()) : undefined; } }, project);
-  game = { alarm, seenAlarmBlasts: new WeakSet(), visionPicking: false, visionTarget: null, houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems, sectors), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), splashArt: asset('DISPFALL'), stoneArt: asset('CAEPIED'), stoneEffects: [], splashes: [], seenSplashes: new WeakSet(), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { alarm, seenAlarmBlasts: new WeakSet(), visionPicking: false, visionTarget: null, houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems, sectors), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), splashArt: asset('DISPFALL'), stoneArt: asset('CAEPIED'), bombArt: asset('CARTUCHO'), stoneEffects: [], splashes: [], seenSplashes: new WeakSet(), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
@@ -1177,11 +1178,9 @@ function draw(g: Game, briefing = false): void {
     }
   }
   for (const bm of g.demo.planted) {
-    const q = project(bm.x, bm.y, 0);
-    ctx.fillStyle = '#222';
-    ctx.fillRect(q.px - 5, q.py - 4, 10, 6);
-    ctx.fillStyle = '#e33';
-    ctx.fillRect(q.px - 1, q.py - 3, 3, 3);
+    const q = project(bm.x, bm.y, bm.z);
+    const frame = g.bombArt?.anm.sequences.get('DEJABOMBA')?.steps[0]?.[0];
+    if (frame) g.bombArt.sprites.draw(ctx, frame, q.px, q.py);
   }
   for (const bl of g.demo.blasts) {
     const sector = g.sectors?.at(bl.x, bl.y);
@@ -1375,11 +1374,35 @@ function plantBomb(g: Game, u: Unit, spot: { x: number; y: number; sector: Param
     spot,
     () => {
       u.playOnce('PONEBOMBA', () => {
-        say(g.demo.plant(u.body.x, u.body.y) ? 'Bomba plantada. X para detonar.' : 'No te quedan bombas.');
+        say(g.demo.plant(u.body.x, u.body.y, u.z) ? 'Bomba plantada. X para detonar.' : 'No te quedan bombas.');
       });
     },
     spot.sector,
   );
+}
+
+/** shortcut: selección por el rectángulo del sprite; mejorar al portar el picking de volúmenes. */
+function bombAt(g: Game, x: number, y: number): PlantedBomb | null {
+  const art = g.bombArt;
+  const frame = art?.anm.sequences.get('DEJABOMBA')?.steps[0]?.[0];
+  if (!art || !frame) return null;
+  return g.demo.planted.find((bomb) => {
+    const p = project(bomb.x, bomb.y, bomb.z);
+    const r = art.sprites.bounds(frame, p.px, p.py);
+    return r !== null && x >= r.x0 && x < r.x1 && y >= r.y0 && y < r.y1;
+  }) ?? null;
+}
+
+function recoverBomb(g: Game, u: Unit, bomb: PlantedBomb): void {
+  if (u.token !== 'ARTIFIC') { say('Solo el zapador puede recoger esa bomba.'); return; }
+  g.battle.cancel(u);
+  u.stop();
+  const sector = g.sectors?.atZ(bomb.x, bomb.y, bomb.z) ?? null;
+  if (!u.doAt(bomb, () => {
+    if (!g.demo.planted.includes(bomb)) return;
+    u.body.ang = norm360((Math.atan2(bomb.y - u.body.y, bomb.x - u.body.x) * 180) / Math.PI);
+    u.playOnce('PONEBOMBA', () => { if (g.demo.recover(bomb)) say('Bomba recogida.'); }, 0, true);
+  }, sector)) say('No hay camino hasta esa bomba.');
 }
 
 /** Punto (en píxeles de la ventana) donde se apretó el botón derecho: arrastrar dibuja el rectángulo de selección (FUN_005BA260/5BA2F0/0069AAD0). */
@@ -1729,7 +1752,7 @@ function useItem(g: Game, it: BagItem): void {
   else if (it.wad === 'TABACO') tobaccoAction(g);
   else if (it.wad === 'BOTIQUIN') medkitAction(g);
   else if (it.wad === 'CONTROLA') controlAction(g);
-  // shortcut: AuCoger solo recoge tabaco de cadáveres; completar categorías de AuCoger al portar sus receptores.
+  // shortcut: AuCoger recoge bombas y tabaco de cadáveres; completar las demás categorías al portar sus receptores.
   else if (it.wad === 'MANO') { g.use = 'MANO'; g.mode = null; g.planting = null; say('Mano: elegí un objeto disponible.'); }
   else say(`${it.token}: todavía no está implementado.`);
 }
@@ -1850,7 +1873,9 @@ function onMouse(e: MouseEvent): void {
   }
   const corpse = corpseAt(g, mx, my);
   if (live && g.use === 'MANO') {
-    if (corpse && sel.tobacco <= 0) { g.use = null; stealTobacco(g, sel, corpse); }
+    const bomb = bombAt(g, mx, my);
+    if (bomb) { g.use = null; recoverBomb(g, sel, bomb); }
+    else if (corpse && sel.tobacco <= 0) { g.use = null; stealTobacco(g, sel, corpse); }
     else say('No hay un objeto que pueda recoger ahí.');
     return;
   }

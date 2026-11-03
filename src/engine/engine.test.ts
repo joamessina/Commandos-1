@@ -295,4 +295,18 @@ describe('Unit: acciones con llegada y animación (ManejaBomba)', () => {
     expect(hecho).toBe(false);
     expect(u.anim.period('NOEXISTE')).toBe(0);
   });
+
+  it('al recoger reproduce PONEBOMBA al revés y termina después de 11 ciclos', () => {
+    const u = new Unit('ARTIFIC', anmB, 0, 0, 0, 0);
+    let done = false;
+    u.playOnce('PONEBOMBA', () => { done = true; }, 0, true);
+    expect(u.anim.step).toBe(3);
+    for (let i = 0; i < 6; i++) u.tick();
+    expect(u.anim.step).toBe(1);
+    expect(done).toBe(false);
+    for (let i = 0; i < 5; i++) u.tick();
+    expect([done, u.occupied]).toEqual([true, false]);
+    u.playOnce('PONEBOMBA', () => undefined);
+    expect(u.anim.step).toBe(0);
+  });
 });
