@@ -28,6 +28,13 @@ for (const entry of asList(find(root, '.AUTOEXPCASAS')) ?? []) {
   const y = poly.points.reduce((sum, point) => sum + point.y, 0) / poly.points.length;
   const radio = Math.max(...poly.points.map((point) => Math.hypot(point.x - x, point.y - y)));
   console.log('AUTO', JSON.stringify({ name, vertices: poly.points.length, radio }));
+  const base = name?.match(/^.{4}\d*/)?.[0];
+  const sufijo = name?.slice(base?.length ?? 0);
+  if (base && (sufijo === '' || sufijo === 'A')) {
+    const cambios = volume.polys.filter((p) => p.name.startsWith(base) && p.name.slice(base.length) !== 'EXP1');
+    const xyz = [0, 1, 2].map((axis) => cambios.reduce((sum, p) => sum + (p.header[axis] ?? 0), 0) / cambios.length);
+    console.log('CAMBIOS', JSON.stringify({ name, volumenes: cambios.map((p) => p.name), xyz }));
+  }
 }
 for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
   const elems = flatten(loadWorld(mission, { difficulty, macro: (name) => read(`${name}.MAC`) }));
