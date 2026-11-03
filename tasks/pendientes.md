@@ -14,6 +14,8 @@
 
 **Sectores pisados del buzo:** `hud-consumidores.md` identifica la lista del motor, su límite de ocho, eliminación de duplicados y alta del sector central y vecinos de contacto no bloqueante; faltan el orden completo de actualización y el contraste de bordes en ejecución.
 
+**Banderas de explosión y salpicadura:** `render.md` documenta la traducción en ensamblador de la bandera del ANM: bit 1 refleja y bit 2 activa el flag interno `0x08` de suma. En los recursos reales, los 14 fotogramas de explosión llevan 2; el agua lleva un 0 y ocho 2. El parser del port pierde esa distinción; queda por verificar el despacho de dibujo y el resultado en pantalla.
+
 **Visión y trazado de disparos (2026-11-03):** `organos.md` precisa que cero significa visión despejada y documenta la particularidad de los retornos recursivos de volúmenes; `au-disparar.md` corrige el filtro de candidatos y el retorno del trazado de cuerpos. Falta contrastar la distribución de obstáculos en el árbol y el efecto posterior de cada arma.
 
 **Vista y disparos (2026-11-02):** corregida la lectura del barrido vacío y conectada `.VIGILARDEF` para patrullas; los soldados reales de M0 barren con su amplitud configurada. Armas de fuego: una orden por clic, incluido terreno y agua, sin repetición automática; los límites de cadencia y raycast están en `verificacion-exe.md`.
