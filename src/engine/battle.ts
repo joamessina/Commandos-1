@@ -120,6 +120,7 @@ export class Battle {
     }
     for (const s of this.soldiers) {
       for (let n = s.takeImpactSounds(); n > 0; n--) this.effects.push({ tag: 'HERI', x: s.x, y: s.y, z: s.unit.z });
+      for (let n = s.takeStoneVoices(); n > 0; n--) this.effects.push({ tag: 'AL01', x: s.x, y: s.y, z: s.unit.z });
       s.tick({
         packs: this.packs,
         commandos: this.commandos,

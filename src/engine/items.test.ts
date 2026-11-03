@@ -74,10 +74,25 @@ describe('animaciones de impacto y lanzamiento', () => {
     expect(battle.stone(300, 0, shooter, 0, true)).toBe(false);
     expect(battle.stone(100, 0, shooter, 0, true)).toBe(true);
     expect(battle.takeEffects().map((e) => e.tag)).toEqual(['PEDL', 'PEDW', 'PEDL']);
+    battle.tick();
+    expect(battle.takeEffects().map((e) => e.tag)).toEqual(['HERI']);
     victim.hurt('PISTOLA', shooter);
     battle.tick();
     expect(battle.takeEffects().map((e) => e.tag)).toEqual(['HERI']);
     expect(battle.takeEffects()).toEqual([]);
+  });
+
+  it('la pedrada reproduce HERI sin daño y AL01 según la cantidad y familia', () => {
+    const shooter = mk(0, 0, 'T');
+    for (const walks of [false, true]) {
+      const victim = new Soldier('V', mk(100), null, { walks });
+      const battle = new Battle([victim], [], null);
+      const hit = (): string[] => { battle.stone(100, 0, shooter); battle.tick(); return battle.takeEffects().map((e) => e.tag); };
+      expect(hit()).toEqual(['PEDL', 'HERI']);
+      expect(hit()).toEqual(['PEDL', 'HERI', 'AL01']);
+      expect(hit()).toEqual(walks ? ['PEDL', 'HERI'] : ['PEDL', 'HERI', 'AL01']);
+      expect(victim.unit.energy).toBe(100);
+    }
   });
 });
 

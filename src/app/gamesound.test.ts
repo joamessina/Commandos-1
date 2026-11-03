@@ -11,9 +11,9 @@ describe('voces de la misión', () => {
     const fake = { decode: vi.fn(() => Promise.resolve(buffer)), play: vi.fn(), stopMusic: vi.fn() };
     const effect = vi.fn((name: string) => name ? new Uint8Array([1]) : undefined);
     const sound = new GameSound(fake as unknown as Sfx, { effect, music: () => Promise.resolve(undefined) }, (x, y) => ({ px: x, py: y }));
-    sound.tick({ ...view([]), effects: [{ tag: 'PEDL', x: 0, y: 0, z: 0 }, { tag: 'PEDW', x: 10, y: 0, z: 0 }, { tag: 'HERI', x: 20, y: 0, z: 0 }] });
-    await vi.waitFor(() => { expect(fake.play).toHaveBeenCalledTimes(3); });
-    expect(effect.mock.calls.map((args) => args[0])).toEqual(['PIEDTERR.WAV', 'PIEDAGUA.WAV', 'HERIDO.WAV']);
+    sound.tick({ ...view([]), effects: [{ tag: 'PEDL', x: 0, y: 0, z: 0 }, { tag: 'PEDW', x: 10, y: 0, z: 0 }, { tag: 'HERI', x: 20, y: 0, z: 0 }, { tag: 'AL01', x: 30, y: 0, z: 0 }] });
+    await vi.waitFor(() => { expect(fake.play).toHaveBeenCalledTimes(4); });
+    expect(effect.mock.calls.map((args) => args[0])).toEqual(['PIEDTERR.WAV', 'PIEDAGUA.WAV', 'HERIDO.WAV', 'ALE01.WAV']);
   });
   it('inicia la sirena en bucle, actualiza el volumen y la detiene', async () => {
     const handle = { setVolume: vi.fn(), stop: vi.fn() };

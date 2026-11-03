@@ -136,6 +136,7 @@ export class Soldier implements Target, Claimant {
   private smokeIn = -1;
   private standHeight = 0;
   private impactSounds = 0;
+  private stoneVoices = 0;
 
   /** Artillero de un nido: no se mueve (investiga girando, no caminando). */
   private readonly fixed: boolean;
@@ -239,6 +240,8 @@ export class Soldier implements Target, Claimant {
 
   takeImpactSounds(): number { const n = this.impactSounds; this.impactSounds = 0; return n; }
 
+  takeStoneVoices(): number { const n = this.stoneVoices; this.stoneVoices = 0; return n; }
+
   /** Atontado o esposado: no ve ni actúa. */
   get down(): boolean {
     return this.stun > 0 || this.cuffed;
@@ -291,9 +294,12 @@ export class Soldier implements Target, Claimant {
 
   /** `MSGA_PEDRADA` (sin daño): reacción según cuántas lleva (ver cabecera). El artillero del nido solo gira. */
   pedrada(from: Unit): void {
-    if (this.dead || this.down || this.controlled) return;
+    if (this.dead) return;
+    this.impactSounds++; // FUN_00484C20: HERI también en una pedrada sin daño.
+    if (this.down || this.controlled) return;
     this.pedradas++;
     const b = from.body;
+    if (this.order !== Order.Aim && this.order !== Order.Shoot && (this.walks ? this.pedradas === 2 : this.pedradas >= 2)) this.stoneVoices++;
     if (this.fixed) this.face(b.x, b.y);
     else if (this.order === Order.Aim || this.order === Order.Shoot) { this.unit.react('NSHERIDO'); return; }
     else if (this.pedradas >= 3 && this.walks) this.investigate(b.x, b.y);

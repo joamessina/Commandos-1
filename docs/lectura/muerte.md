@@ -19,7 +19,7 @@
 | `MSGA_SETMODE_TUTORIAL` | `+0x2C = 1` (tutorial: no baja la energía ni muere), `bicho+0x124 = 1`, `+0x10 = 0` del bloque `+0x13C` |
 | `MSGA_NO_DEJES_MANCHA_SANGRE` | `+0x38 = 0` |
 | **`MSGA_IMPACTO`** | solo si no es (aliado y `DAT_00840140`=modo trampa): si el bicho es aliado (`vtable+8 == 2`) avisa a la misión (`FUN_0059A2A0(9, bicho, daño)`: puntuación/eventos de "comando herido"). Por `impacto.tipo`: **1, 10, 13, 14** (BOMBA, APLASTAMIENTO, ARPON, CEPO): muerte inmediata si no es invencible (`FUN_00484600`: energía 0 → estado 3); **9** (JERINGUILLALETAL): `+0x44 = 1` ("sin sangre") y muerte inmediata (igual); **8** (JERINGUILLA): `FUN_00484540` (solo en estados 6/5, no invencible, no tutorial): `+0x44 = 1`, apaga las capas de acción `vtable+0x3C/+0x38`, `+0x48 = 100` → a los **100 ciclos** (estado 6, `+0x44≠0`, cuenta atrás de `+0x48`) energía 0 y estado 3 (muere); **cualquier otro tipo** (DISPARO, CUCHILLADA, ATROPELLO, MORDISCO, FUEGO…): `FUN_00484700`, ver §3 |
-| `MSGA_PEDRADA` | `FUN_00484C20`: herida sin daño (animación `NSHERIDO…`, sin sangre) |
+| `MSGA_PEDRADA` | `FUN_00484C20`: herida sin daño (animación `NSHERIDO…`, sin sangre) y sonido `HERI` (`HERIDO.WAV`) |
 | `MSGA_IMPACTO_SALVAJE` | `FUN_00484600` (muerte inmediata) |
 | `MSGA_MOTOR_YASOYQUITABLE` | `+0x40 &= ~1` |
 | `MSGA_FIN_TRANSMIGRACION` | re-registra el observador |
