@@ -12,9 +12,10 @@ const screens: Record<Page, Screen> = {
   skill: { title: 'SKIL', rows: [{ key: 'EASY', action: 'FACIL' }, { key: 'HARD', action: 'DIFICIL' }, { key: 'EXIT', action: 'new' }] },
   options: { title: 'OPTI', rows: [{ key: 'VOPT', action: 'video' }, { key: 'SOPT', action: '', enabled: false }, { key: '3PRE', action: '', enabled: false }, { key: 'EXIT', action: 'main' }] },
   // shortcut: GLOBAL.STR nombra otros tamaños que los aplicados por estas acciones; mostrar la resolución real hasta investigar la discrepancia.
-  video: { title: 'VOPT', rows: [{ key: 'OVI1', label: '640 X 480', action: '640' }, { key: 'OVI2', label: '800 X 600', action: '800' }, { key: 'OVI3', label: '1024 X 768', action: '1024' }, { key: 'OVI4', label: '1280 X 720', action: '1280' }, { key: 'EXIT', action: 'options' }] },
+  // 1920 y 2560 no existen en el juego original (su tope es 1280×720): se agregan para pantallas actuales, con el HUD de 1280×720 sin escalar.
+  video: { title: 'VOPT', rows: [{ key: 'OVI1', label: '640 X 480', action: '640' }, { key: 'OVI2', label: '800 X 600', action: '800' }, { key: 'OVI3', label: '1024 X 768', action: '1024' }, { key: 'OVI4', label: '1280 X 720', action: '1280' }, { key: 'OVI5', label: '1920 X 1080', action: '1920' }, { key: 'OVI6', label: '2560 X 1440', action: '2560' }, { key: 'EXIT', action: 'options' }] },
 };
-const sizes: Record<string, [number, number]> = { '640': [640, 480], '800': [800, 600], '1024': [1024, 768], '1280': [1280, 720] };
+const sizes: Record<string, [number, number]> = { '640': [640, 480], '800': [800, 600], '1024': [1024, 768], '1280': [1280, 720], '1920': [1920, 1080], '2560': [2560, 1440] };
 
 function glyph(wad: Wad, char: string): Sprite | undefined {
   const c = char.toUpperCase();
@@ -59,7 +60,7 @@ export async function showMenu(view: HTMLElement, read: (path: string) => Uint8A
   view.replaceChildren(canvas);
   let page: Page = 'main';
   let selected = 0;
-  // shortcut: abrir a 640×480 hasta portar la configuración guardada; 1280 usa el fondo 1024 escalado hasta resolver MENU1280.
+  // shortcut: abrir a 640×480 hasta portar la configuración guardada; 1280 o más usan el fondo 1024 estirado hasta resolver MENU1280.
   let size = 640;
   let frame = 0;
   let active = true;
@@ -75,7 +76,7 @@ export async function showMenu(view: HTMLElement, read: (path: string) => Uint8A
     if (!active) return;
     const [w, h] = sizes[String(size)] ?? [640, 480];
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-    const bg = backgrounds.get(size === 1280 ? 1024 : size);
+    const bg = backgrounds.get(size > 1024 ? 1024 : size);
     if (bg) ctx.drawImage(bg, 0, 0, w, h);
     const s = screens[page];
     const pos = layout();
