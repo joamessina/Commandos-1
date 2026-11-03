@@ -29,6 +29,7 @@ export function fitCanvas(canvas: HTMLCanvasElement, view: HTMLElement): void {
     const k = fitScale(view.clientWidth, view.clientHeight, canvas.width, canvas.height);
     canvas.style.width = `${(canvas.width * k).toString()}px`;
     canvas.style.height = `${(canvas.height * k).toString()}px`;
+    canvas.style.imageRendering = Number.isInteger(k) ? 'pixelated' : 'auto'; // con factor fraccionario el vecino más cercano da escalones irregulares
   };
   const resize = new ResizeObserver(apply);
   const attrs = new MutationObserver(apply);
