@@ -11,6 +11,8 @@ const read = (name: string): readonly Node[] => {
   return parseClave(new TextDecoder('windows-1252').decode(entryBytes(dir, file)));
 };
 const findBlocks = (nodes: readonly Node[]): void => {
+  const data = nodes.indexOf('.DATOSFICHEROSMISION');
+  if (data >= 0) console.log('DATOSFICHEROSMISION', JSON.stringify(nodes[data + 1]));
   for (const n of nodes) {
     if (!Array.isArray(n)) continue;
     const macro = n.indexOf('.MACRO');

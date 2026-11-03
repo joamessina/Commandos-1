@@ -1,5 +1,7 @@
 # Armas y objetos que faltaban: piedra, arpón, botiquín, granada del jugador y MANO (2026-10-31)
 
+Actualización 2026-11-03: la descripción antigua de la granada como «esfera» y de la lista de `FUN_005BC080` como desconocida queda corregida por `docs/engine/armas-danio.md` §7: son pruebas con cilindros y la segunda lista es la de detectores de explosión.
+
 Solo investigación (no se tocó `src/`). Marcas: **[hecho]** = leído con función + archivo + línea (decompilado `D:\Joaquin\research-c1\ghidra\all2\fn_00XX0000.c`, las mismas líneas que usan `cierre-70.md` y `au-disparar.md`; el directorio `all\` tiene otra numeración) o asm; **[hip]** = deducido; **NO LEÍDO** = falta. Datos de M0 salen de `tools/audita-acciones-m0.ts` y de volcados propios del `MAPA0000.MIS` / `*.ANM` de `WAR_MP.DIR` (raíz Steam).
 
 ## 0. Cadena común: de la orden al efecto (`AUDisparar`) [hecho]

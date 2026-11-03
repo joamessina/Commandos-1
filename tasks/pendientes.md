@@ -2,6 +2,8 @@
 
 **Rutas de escalera de M0 (2026-11-03):** [`mision0-rutas-escaleras.md`](../docs/lectura/mision0-rutas-escaleras.md) contrasta las cuatro instancias reales con el filtro de soldados y verifica en ensamblador el costo de A*. El costo ya estaba leído; sigue pendiente integrar las aristas especiales al buscador y comparar trayectos con el original. No implica cierre de las demás áreas de M0.
 
+**Colisión y objetivos de M0 (2026-11-03):** `q1-colision.md` corrige la interpretación de los tres intentos de movimiento y demuestra que el MIS no declara `CHOQ` separado; aún faltan contraste geométrico y dinámico. `refuerzos-m0.md` incorpora un auditor de los siete objetivos y los tres edificios de cuartel en ambas dificultades; no sustituye una partida completa.
+
 **Vista y disparos (2026-11-02):** corregida la lectura del barrido vacío y conectada `.VIGILARDEF` para patrullas; los soldados reales de M0 barren con su amplitud configurada. Armas de fuego: una orden por clic, incluido terreno y agua, sin repetición automática; los límites de cadencia y raycast están en `verificacion-exe.md`.
 
 **Arpón (2026-11-02):** corregido el clic sobre el icono de la mochila que coincidía con la columna, y corregidos impacto letal, munición y recarga. Selección y disparo verificados en navegador con M0; la recarga se muestra en el texto de depuración.
