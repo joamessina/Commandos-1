@@ -39,3 +39,19 @@ Parámetros del cañón (`FUN_00448840`): `TIEMPO_RECARGA` (+0x6C → se reinici
 ## Dudas abiertas
 - Valor físico exacto del paso de giro `0x794AC0` (unidad del ángulo normalizado del juego): solo se puede cerrar probando contra la partida; no cambia reglas (el arma gira hacia el objetivo y espera).
 - Tiempos de la máquina del artillero alemán (`AcCanonero`): las condiciones de transición entre sus 9 subestados se anotaron solo en estructura (idénticas a `AcBunker`); no afectan a las reglas jugables fuera del hecho de que ve, alerta y dispara.
+
+## Contraste de los tres nidos de M0 (2026-11-03)
+
+`node --experimental-transform-types tools/mision0-aristas.ts` lee directamente las instancias de `MAPA0000.MIS` en el DIR raíz:
+
+| Token | XYZ | Ángulo inicial | AngBarrido | Giro | Caja relativa de selección |
+|---|---|---:|---:|---:|---|
+| AMETRALLADORA1 | 736, 2149, 165 | 115 | 45 | 180 | −18, −28, 36, 32 |
+| AMETRALLADORA2 | 2168, 1524, 65 | 50 | 65 | 180 | −18, −28, 36, 32 |
+| AMETRALLADORA3 | 521, 1858, 165 | 60 | 45 | 180 | −18, −28, 36, 32 |
+
+Los tres usan macro `NIDOMET` y gráfico `CABO`; `AngBarrido` no debe confundirse con el `Giro` del arma: son campos distintos de las instancias. El primero se usa para la vigilancia del artillero y el segundo para el arco mecánico del arma, según las acciones de la macro.
+
+**Corrección de precisión de la sección 1:** `FUN_00488670` (`fn_00480000.c:4449–4524`) llama a `FUN_00488020` cuando el contador de la ráfaga es exactamente 10 o 3, antes de decrementarlo; en `FUN_00488020` (`fn_00480000.c:4210`) esos casos solicitan respectivamente `RAFAGANIDO` y `DISPARONIDO` si hay componente gráfico. El estado sin disparo solicita `NODISPARA`. No significa que el código reinicie la animación en cada uno de los ciclos con contador mayor que 3.
+
+La cadencia y el arco ya constaban leídos; el port sigue usando un soldado simplificado y no reproduce la máquina completa de `AcMetrallero` ni la interacción del comando con el habitáculo. La lectura anterior no constituye una comparación de estos tres nidos en ejecución.
