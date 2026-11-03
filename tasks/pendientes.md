@@ -1,5 +1,7 @@
 # Pendientes (lista maestra para ir tachando)
 
+**Sonido de derrumbes de M0 (2026-11-03):** `obj-explosivos.md` identifica los tres tags seleccionados por radio y `.SONFIS`; la antena declara radio 100 y corresponde a `XCA1`/`DERRUMBE`. Queda seguir los nueve edificios generados por `AUTOEXPCASAS` y contrastar el resultado en el original.
+
 **Rutas de escalera de M0 (2026-11-03):** [`mision0-rutas-escaleras.md`](../docs/lectura/mision0-rutas-escaleras.md) contrasta las cuatro instancias reales con el filtro de soldados y verifica en ensamblador el costo de A*. El costo ya estaba leído; sigue pendiente integrar las aristas especiales al buscador y comparar trayectos con el original. No implica cierre de las demás áreas de M0.
 
 **Colisión y objetivos de M0 (2026-11-03):** `q1-colision.md` corrige la interpretación de los tres intentos de movimiento y demuestra que el MIS no declara `CHOQ` separado; aún faltan contraste geométrico y dinámico. `refuerzos-m0.md` incorpora un auditor de los siete objetivos y los tres edificios de cuartel en ambas dificultades; no sustituye una partida completa.
