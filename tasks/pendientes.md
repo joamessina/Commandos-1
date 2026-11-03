@@ -4,6 +4,8 @@
 
 **Colisión y objetivos de M0 (2026-11-03):** `q1-colision.md` corrige la interpretación de los tres intentos de movimiento y demuestra que el MIS no declara `CHOQ` separado; aún faltan contraste geométrico y dinámico. `refuerzos-m0.md` incorpora un auditor de los siete objetivos y los tres edificios de cuartel en ambas dificultades; no sustituye una partida completa.
 
+**Cerebros y alarma (2026-11-03):** `audita-vtables-bap.py` contrasta los 44 slots de BAP1/BANPE1 y BAP2/BANPE2; `alerta-m0.md` identifica el receptor y las voces de `AcMetrallero` de los nidos, distintos de `AcBunker`. Falta cerrar las ramas de apuntado y comprobarlas en ejecución.
+
 **Vista y disparos (2026-11-02):** corregida la lectura del barrido vacío y conectada `.VIGILARDEF` para patrullas; los soldados reales de M0 barren con su amplitud configurada. Armas de fuego: una orden por clic, incluido terreno y agua, sin repetición automática; los límites de cadencia y raycast están en `verificacion-exe.md`.
 
 **Arpón (2026-11-02):** corregido el clic sobre el icono de la mochila que coincidía con la columna, y corregidos impacto letal, munición y recarga. Selección y disparo verificados en navegador con M0; la recarga se muestra en el texto de depuración.
