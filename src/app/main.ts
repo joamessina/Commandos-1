@@ -444,6 +444,7 @@ async function load(introduction = false): Promise<void> {
     return b ? new TextDecoder('latin1').decode(b) : undefined;
   };
   const elems = flatten(loadWorld(misText, { difficulty: diffSel.value as Difficulty, macro }));
+  const ladders = parseLadders(elems, sectors);
   const assets = new Map<string, { anm: Anm; sprites: SpriteCache } | null>();
   const asset = (name: string): { anm: Anm; sprites: SpriteCache } | null => {
     const key = name.toUpperCase();
@@ -514,6 +515,7 @@ async function load(introduction = false): Promise<void> {
       const nestHost = e.actions.some((x) => x.name.toUpperCase() === 'ACMETRALLERO') ? e.parent : null;
       const unit = new Unit(e.token, a.anm, nestHost?.x ?? e.x, nestHost?.y ?? e.y, nestHost?.z ?? e.z, nestHost?.angle ?? e.angle, sectors);
       if (e.height > 0) unit.height = e.height;
+      unit.ladders = ladders; // los soldados usan escaleras al buscar ruta (BUSCADOR_IRA)
       const pat = e.actions.find((x) => x.name.toUpperCase() === 'ACPATRULLA');
       const routes = pat ? parseRoutes(pat.params, diffSel.value as Difficulty) : [];
       const route = routes[0] ?? null;
@@ -610,7 +612,9 @@ async function load(introduction = false): Promise<void> {
       if (!a) return false;
       const f = i === 0 ? null : formationOf(i - 1, def.columns, def.n, def.formX);
       const follow = f ? { leader: () => { const lead = made[f.leader + 1]; return !lead || lead.dead ? null : { x: lead.x, y: lead.y, ang: lead.unit.body.ang, speed: lead.unit.speed }; }, lateral: f.lateral, back: def.formY } : undefined;
-      const s = new Soldier(`${def.token}_${i.toString()}_${soldiers.length.toString()}`, new Unit(`${def.token}_${i.toString()}`, a.anm, pos.x, pos.y, pos.z, def.angle, sectors), i === 0 ? def.route : null, { sweep: def.sweep, sweepPeriod: def.sweepPeriod, ...(follow ? { follow } : { alternateRoutes: def.routes.slice(1) }) });
+      const unit = new Unit(`${def.token}_${i.toString()}`, a.anm, pos.x, pos.y, pos.z, def.angle, sectors);
+      unit.ladders = ladders;
+      const s = new Soldier(`${def.token}_${i.toString()}_${soldiers.length.toString()}`, unit, i === 0 ? def.route : null, { sweep: def.sweep, sweepPeriod: def.sweepPeriod, ...(follow ? { follow } : { alternateRoutes: def.routes.slice(1) }) });
       made[i] = s;
       if (i === 0) groupLeaders.set(def.token, s);
       soldiers.push({ soldier: s, sprites: a.sprites });
@@ -710,7 +714,7 @@ async function load(introduction = false): Promise<void> {
   }
   sound?.stop();
   sound = new GameSound(sfx, { effect: (name) => bytes(`DATOS/RECURSOS/SONIDO/WAVE/${name.toUpperCase()}`), music: async (name) => { const r = loaded?.music.get(name.toLowerCase()); return r ? new Uint8Array(await r()) : undefined; } }, project);
-  game = { alarm, seenAlarmBlasts: new WeakSet(), visionPicking: false, visionTarget: null, houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders: parseLadders(elems, sectors), lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), splashArt: asset('DISPFALL'), stoneArt: asset('CAEPIED'), bombArt: asset('CARTUCHO'), stoneEffects: [], splashes: [], seenSplashes: new WeakSet(), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { alarm, seenAlarmBlasts: new WeakSet(), visionPicking: false, visionTarget: null, houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders, lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), splashArt: asset('DISPFALL'), stoneArt: asset('CAEPIED'), bombArt: asset('CARTUCHO'), stoneEffects: [], splashes: [], seenSplashes: new WeakSet(), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };

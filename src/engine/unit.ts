@@ -5,7 +5,11 @@
  * Con un SectorMap: suelo = plano del sector, destino y pasos validados (docs/research/q1-movimiento.md §R4); agua ×0.5.
  * Rutas (R3, docs/research/q1-rutas.md): `goTo` pide a `Nav` la cadena de sectores (atajo recto o A*) y camina por sus puntos de giro; sin camino la orden se rechaza.
  * Atasco: 9 ciclos sin avanzar (FUN_00629EF0) y la orden se abandona (TPathTool::abandona, FUN_006281A0: para el motor y, si faltan menos de 10 u al
- * destino, la da por cumplida; si no, resetea. NO re-planifica). shortcut: sin escaleras/PEscal (bit 4) en la ruta.
+ * destino, la da por cumplida; si no, resetea. NO re-planifica).
+ * Escaleras: quien tenga `ladders` (los soldados: `MSGA_BUSCADOR_IRA` deja `buscador+0x48 = 1` y el filtro del `TPathTool` admite las aristas de escalera, docs/lectura/buscador.md §1,
+ * q1-escaleras.md §4b) camina hasta el pie de la escalera, trepa con la misma máquina que los comandos y sigue al destino.
+ * shortcut: el A* del exe trata la escalera como una arista más y puede preferirla aunque haya camino a pie; aquí solo se usa si a pie no hay camino, y se elige la de menor recorrido
+ *           (la ruta antes y después de la escalera se calcula por separado, un solo salto). Cuándo mejorar: al leer el costo de la arista de escalera (`FUN_00624370`).
  * shortcut: al detenerse la secuencia queda en el paso donde estaba (no se leyó cómo el original elige la pose de reposo),
  *           cuándo mejorar: al leer REPOSO/AGACHARSE y el estado de animación del bicho.
  */
@@ -74,6 +78,12 @@ export class Unit {
   medkits = 0;
   /** Trepada en curso (escalera); null si no trepa. */
   climb: Climb | null = null;
+  /** Escaleras que usa al buscar ruta cuando a pie no hay camino (soldados); los comandos las usan solo con `useLadder`. */
+  ladders: readonly Ladder[] = [];
+  /** Tramo a pie hasta el pie de la escalera ya pedido: al llegar trepa y luego sigue al destino. */
+  private ladderPlan: { readonly ladder: Ladder; readonly dir: 1 | -1; readonly goal: Vec; readonly run: boolean; readonly to: Sector | null } | null = null;
+  /** Qué hacer al terminar la trepada (seguir al destino de la orden). */
+  private afterClimb: (() => void) | null = null;
   /** Altura del cuerpo (`.VOLCOLISION .H` = `bicho+0x58`). shortcut: 29 (la de los soldados) si el elemento no la trae. */
   height = 29;
   /** Altura del ojo: agachado o buceando es H×0,125 (`bicho+0x58`, AUAgacharse/AuBucear). */
@@ -125,24 +135,77 @@ export class Unit {
    * `to` = sector del destino: quien da la orden lo recibe del picking del cursor (SectorMap.pick, FUN_00628470 lo toma como parámetro).
    * shortcut: sin `to`, sale de atZ con la z del comando; cuándo mejorar: si algún llamador no pasa por el cursor.
    */
-  goTo(p: Vec, run: boolean, to: Sector | null = this.sectors?.atZ(p.x, p.y, this.z) ?? null): boolean {
+  goTo(p: Vec & { z?: number }, run: boolean, to: Sector | null = this.sectors?.atZ(p.x, p.y, p.z ?? this.z) ?? null): boolean {
     if (this.sectors && !validTarget(to, this.diving ? { water: true } : {})) return false;
     const goalZ = to ? groundZ(to, p.x, p.y) : this.z;
     let path: Vec3[] = [{ ...p, z: goalZ }];
+    let plan: Unit['ladderPlan'] = null;
     if (this.nav) {
       const route = this.sector ? this.nav.route(this.body, this.sector, p, to, false, this.diving) : null;
-      if (!route) return false;
-      if (route.length === 0) return true; // ya está a menos de 2 u: la orden se ignora
-      path = route;
+      if (route?.length === 0) return true; // ya está a menos de 2 u: la orden se ignora
+      if (route) path = route;
+      else {
+        const via = this.planLadder(p, to);
+        if (!via) return false;
+        plan = { ladder: via.ladder, dir: via.dir, goal: p, run, to };
+        path = via.first;
+      }
     }
     this.path = path;
+    this.ladderPlan = plan;
     this.stuck = 0;
     this.target = { ...p, z: goalZ };
     // agachado (0x23C & 0x40) el flag de correr se fuerza a 0 y solo cambia la animación (ARRASTRARSE); la velocidad es la de andar (FUN_004BC460, q1-movimiento.md)
     this.running = run && !this.crouched;
     const run1 = ['CORRE', 'CORRER'].find((n) => this.anim.has(n));
     this.anim.set(this.diving && this.anim.has('BUCEAR') ? 'BUCEAR' : this.crouched && this.anim.has('ARRASTRARSE') ? 'ARRASTRARSE' : this.running && run1 ? run1 : 'ANDAR');
+    if (plan && path.length === 0) this.startPlannedClimb(); // ya está al pie de la escalera
     return true;
+  }
+
+  /** Recorrido de una escalera de `ladders` hacia `p` cuando a pie no hay camino: a pie hasta su pie y, tras trepar, a pie hasta `p`. Elige la de menor recorrido total; null si ninguna sirve. */
+  private planLadder(p: Vec, to: Sector | null): { ladder: Ladder; dir: 1 | -1; first: Vec3[] } | null {
+    const nav = this.nav;
+    const here = this.sector;
+    if (!nav || !here || !this.sectors || this.diving) return null;
+    const length = (from: Vec, route: readonly Vec[]): number => {
+      let sum = 0;
+      let prev = from;
+      for (const q of route) {
+        sum += Math.hypot(q.x - prev.x, q.y - prev.y);
+        prev = q;
+      }
+      return sum;
+    };
+    let best: { ladder: Ladder; dir: 1 | -1; first: Vec3[]; cost: number } | null = null;
+    for (const ladder of this.ladders) {
+      if (ladder.disabled || ladder.high.z === ladder.low.z) continue; // el umbral de arranque de los soldados es 0 (`MotorAndante`), q1-escaleras.md §4c
+      for (const dir of [1, -1] as const) {
+        const start = dir > 0 ? ladder.low : ladder.high;
+        const end = dir > 0 ? ladder.high : ladder.low;
+        const startSector = this.sectors.atZ(start.x, start.y, start.z);
+        const endSector = this.sectors.atZ(end.x, end.y, end.z);
+        const first = startSector ? nav.route(this.body, here, start, startSector) : null;
+        const rest = first && endSector ? nav.route(end, endSector, p, to) : null;
+        if (!first || !rest) continue;
+        const cost = length(this.body, first) + Math.abs(ladder.high.z - ladder.low.z) + length(end, rest);
+        if (!best || cost < best.cost) best = { ladder, dir, first, cost };
+      }
+    }
+    return best;
+  }
+
+  /** Llegó al pie de la escalera de `ladderPlan`: empieza a trepar y, al terminar, sigue al destino de la orden. */
+  private startPlannedClimb(): void {
+    const plan = this.ladderPlan;
+    if (!plan) return;
+    this.ladderPlan = null;
+    this.beginClimb(plan.ladder, plan.dir);
+    this.afterClimb = () => {
+      this.path = [];
+      this.target = null;
+      this.goTo(plan.goal, plan.run, plan.to);
+    };
   }
 
   /**
@@ -237,6 +300,9 @@ export class Unit {
     this.climb = null;
     this.land();
     this.anim.set(this.anim.has('REPOSO') ? 'REPOSO' : 'ANDAR');
+    const next = this.afterClimb;
+    this.afterClimb = null;
+    next?.();
   }
 
   /**
@@ -295,6 +361,8 @@ export class Unit {
     this.path = [];
     this.target = null;
     this.arrive = null;
+    this.ladderPlan = null;
+    this.afterClimb = null;
     this.busy = 0;
     this.busyDone = null;
   }
@@ -476,7 +544,10 @@ export class Unit {
     this.land();
     if (wp && r.arrived) {
       this.path.shift();
-      if (this.path.length === 0) this.target = null;
+      if (this.path.length === 0) {
+        if (this.ladderPlan) this.startPlannedClimb(); // la orden sigue hasta el destino al otro lado: `target` no se libera
+        else this.target = null;
+      }
     } else if (wp) this.watchStuck(r.dx, r.dy);
     if (this.arrive && this.target === null && this.path.length === 0) {
       const a = this.arrive;
@@ -494,6 +565,7 @@ export class Unit {
     this.stuck = 0;
     this.path = [];
     this.target = null;
+    this.ladderPlan = null;
   }
 
   /** Puntos que faltan hasta el destino (para dibujar la ruta). */

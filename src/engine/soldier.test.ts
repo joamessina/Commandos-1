@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseAnm } from '../formats/anm.ts';
 import { parseSec, SectorFlag } from '../formats/sec.ts';
 import { anmSeq, bnm, secBytes } from '../testing/builders.ts';
+import { newClimb } from './ladder.ts';
 import { RouteType, type Route } from './patrol.ts';
 import { SectorMap } from './sectors.ts';
 import { lookRange, Order, Soldier, type Shot, type SoldierVoice, type SoldierWorld } from './soldier.ts';
@@ -315,6 +316,56 @@ describe('Soldier: cuerpos a distinta altura', () => {
     expect(sawBody(150, 0)).toBe(true);
     expect(sawBody(90, 65)).toBe(true);
     expect(sawBody(110)).toBe(true);
+  });
+});
+
+describe('Soldier: ruta que cruza una escalera', () => {
+  const verts: [number, number][] = [[0, 0], [100, 0], [100, 100], [0, 100], [100, 200], [0, 200]];
+  const sectors = new SectorMap(parseSec(secBytes({ verts, a: [{ verts: [0, 1, 2, 3], plane: [0, 0, 65] }, { verts: [3, 2, 4, 5] }], tw1: [[-1, -1, 1, -1], [0, -1, -1, -1]] })));
+  const rung = { token: 'L', low: { x: 50, y: 120, z: 0 }, high: { x: 50, y: 80, z: 65 }, box: null, diver: false, disabled: false };
+  const point = (y: number, z: number): Route['points'][number] => ({ x: 50, y, z, wait: 0, angle: 0, vel: 2 });
+
+  it('un punto de la patrulla en el piso de arriba se alcanza por la escalera', () => {
+    const u = new Unit('S', anm, 50, 180, 0, 0, sectors);
+    u.ladders = [rung];
+    const s = new Soldier('S', u, { name: 'r', type: RouteType.PingPong, points: [point(180, 0), point(20, 65)] });
+    const w = { ...mkWorld([]).world, sectors };
+    let climbed = false;
+    let top = 0;
+    for (let i = 0; i < 1500; i++) {
+      s.tick(w);
+      climbed ||= u.climb !== null;
+      top = Math.max(top, u.z);
+    }
+    expect(climbed).toBe(true);
+    expect(top).toBe(65);
+  });
+
+  it('al perder de vista a un comando del piso de arriba va a donde lo vio, subiendo por la escalera', () => {
+    const u = new Unit('S', anm, 50, 180, 0, 270, sectors);
+    u.ladders = [rung];
+    const s = new Soldier('S', u, null);
+    const c = new Unit('COMANDO', anm, 50, 60, 65, 0, sectors);
+    const w = { ...mkWorld([c]).world, sectors };
+    run(s, w, 10);
+    expect(s.order).toBe(Order.Aim);
+    c.hidden = true; // se esconde
+    let top = 0;
+    for (let i = 0; i < 1500; i++) {
+      s.tick(w);
+      top = Math.max(top, u.z);
+    }
+    expect(top).toBe(65);
+  });
+
+  it('en la escalera solo trepa: un comando a la vista no lo hace apuntar', () => {
+    const u = new Unit('S', anm, 50, 120, 0, 0, sectors);
+    u.climb = newClimb(rung, 1);
+    const s = new Soldier('S', u, null);
+    const w = { ...mkWorld([unit(150, 120, 0, 'COMANDO')]).world, sectors };
+    for (let i = 0; i < 5; i++) s.tick(w);
+    expect(s.order).toBe(Order.Patrol);
+    expect(u.z).toBeGreaterThan(0);
   });
 });
 

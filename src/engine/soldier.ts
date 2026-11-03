@@ -109,7 +109,7 @@ export class Soldier implements Target, Claimant {
   reach: number;
   target: Unit | null = null;
   private patrol: Patrol | null;
-  private readonly post: { x: number; y: number; ang: number };
+  private readonly post: { x: number; y: number; z: number; ang: number };
   private readonly range: number;
   private readonly angle: number;
   private phase: number;
@@ -119,7 +119,7 @@ export class Soldier implements Target, Claimant {
   private moving = false;
   private bodyAlertPending = false;
   private lookTurns = 0;
-  private spot: { x: number; y: number } | null = null;
+  private spot: { x: number; y: number; z?: number } | null = null;
   private readonly seenBodies = new Set<string>();
   /** Ciclos de atontado que faltan (cachiporrazo = puño); 0 = no está atontado. */
   stun = 0;
@@ -174,7 +174,7 @@ export class Soldier implements Target, Claimant {
     this.token = token;
     this.unit = unit;
     this.patrol = route && route.points.length > 0 ? new Patrol(route, opts.alternateRoutes, opts.waitRouteEvent) : null;
-    this.post = { x: unit.body.x, y: unit.body.y, ang: unit.body.ang };
+    this.post = { x: unit.body.x, y: unit.body.y, z: unit.z, ang: unit.body.ang };
     this.range = opts.range ?? DEFAULT_RANGE;
     this.reach = this.range;
     this.angle = opts.angle ?? DEFAULT_ANGLE;
@@ -382,7 +382,8 @@ export class Soldier implements Target, Claimant {
     this.idleAnim();
   }
 
-  private investigate(x: number, y: number): void {
+  /** Va a mirar (x, y); `z` = altura del punto si se conoce (un comando o un cuerpo visto en otro piso: se llega por escalera), si no la del propio soldado. */
+  private investigate(x: number, y: number, z?: number): void {
     if (this.fixed) {
       this.face(x, y); // el artillero del nido solo gira hacia el ruido
       return;
@@ -393,10 +394,10 @@ export class Soldier implements Target, Claimant {
     }
     this.releasePack();
     this.order = Order.Investigate;
-    this.spot = { x, y };
+    this.spot = { x, y, z: z ?? this.unit.z };
     this.timer = INVESTIGATE_WAIT;
     this.unit.speed = this.investigateSpeed;
-    this.unit.goTo({ x, y }, false);
+    this.unit.goTo({ x, y, z: z ?? this.unit.z }, false);
     this.moving = this.unit.target !== null;
     if (this.moving) this.unit.anim.set('ANDAR');
   }
@@ -446,6 +447,11 @@ export class Soldier implements Target, Claimant {
       if (!this.cuffed && --this.stun <= 0) this.getUp();
       return;
     }
+    if (this.unit.climb) {
+      // shortcut: en la escalera solo trepa (sin vista ni órdenes); AcBap2/AcMetrallero reciben MSGA_ENTRAS/SALES_DE_ESCALERA y no se leyó qué hacen. Cuándo mejorar: al leer sus manejadores.
+      this.unit.tick();
+      return;
+    }
     if (this.controlled) {
       if (this.moving && this.unit.target === null) {
         this.moving = false;
@@ -466,7 +472,7 @@ export class Soldier implements Target, Claimant {
     const seen = this.scan(w);
     if (seen) {
       this.lost = 0;
-      this.spot = { x: seen.body.x, y: seen.body.y };
+      this.spot = { x: seen.body.x, y: seen.body.y, z: seen.z };
     } else this.lost++;
 
     if (!seen && (this.order === Order.Patrol || this.order === Order.Return)) {
@@ -528,7 +534,7 @@ export class Soldier implements Target, Claimant {
       if (this.brain === 'base') w.onVoice?.(this, 'ALRM');
       if (this.brain) w.onVoice?.(this, 'VMUE');
       if (this.brain === 'route') this.bodyAlertPending = true;
-      this.investigate(body.x, body.y);
+      this.investigate(body.x, body.y, body.z);
       return;
     }
   }
@@ -623,7 +629,7 @@ export class Soldier implements Target, Claimant {
       this.face(seen.body.x, seen.body.y);
     }
     if (this.lost >= LOSE_CYCLES && this.spot) {
-      this.investigate(this.spot.x, this.spot.y);
+      this.investigate(this.spot.x, this.spot.y, this.spot.z);
       return;
     }
     if (--this.timer <= 0 && seen) {
@@ -634,7 +640,7 @@ export class Soldier implements Target, Claimant {
 
   private shooting(w: SoldierWorld, seen: Unit | null): void {
     if (!seen) {
-      if (this.lost >= LOSE_CYCLES && this.spot) this.investigate(this.spot.x, this.spot.y);
+      if (this.lost >= LOSE_CYCLES && this.spot) this.investigate(this.spot.x, this.spot.y, this.spot.z);
       return;
     }
     this.target = seen;
@@ -699,7 +705,7 @@ export class Soldier implements Target, Claimant {
   private returnToPost(): void {
     this.unit.speed = null;
     const p = this.patrol?.target ?? this.post;
-    this.unit.goTo({ x: p.x, y: p.y }, false);
+    this.unit.goTo({ x: p.x, y: p.y, z: p.z }, false); // con la z del punto: puede estar en otro piso (se llega por escalera)
     this.moving = this.unit.target !== null;
     if (this.moving) this.unit.anim.set('ANDAR');
     else this.finishReturn();
@@ -749,7 +755,7 @@ export class Soldier implements Target, Claimant {
     const s = this.patrol.step(arrived);
     if (s.kind === 'goto') {
       u.speed = s.point.vel;
-      u.goTo({ x: s.point.x, y: s.point.y }, false);
+      u.goTo({ x: s.point.x, y: s.point.y, z: s.point.z }, false);
       this.moving = true; // si ya estaba allí o no hay camino, target queda null y se da por llegado en el ciclo siguiente
       if (u.target !== null) u.anim.set('ANDAR');
     } else if (s.kind === 'event') w.onEvent?.(s.event);

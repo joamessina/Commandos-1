@@ -155,6 +155,75 @@ describe('Unit.useLadder', () => {
   });
 });
 
+describe('Unit: la escalera en la ruta de un soldado', () => {
+  // piso de arriba (y < 100, z 65) y de abajo (y > 100, z 0) unidos por una pared de 65: a pie no hay paso, la escalera va de (50,120,0) a (50,80,65)
+  const verts: [number, number][] = [[0, 0], [100, 0], [100, 100], [0, 100], [100, 200], [0, 200]];
+  const sectors = new SectorMap(parseSec(secBytes({ verts, a: [{ verts: [0, 1, 2, 3], plane: [0, 0, 65] }, { verts: [3, 2, 4, 5] }], tw1: [[-1, -1, 1, -1], [0, -1, -1, -1]] })));
+  const rung: Ladder = { token: 'L', low: { x: 50, y: 120, z: 0 }, high: { x: 50, y: 80, z: 65 }, box: null, diver: false, disabled: false };
+  const anm = parseAnm(bnm([{ type: 0, slots: [2] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8)]));
+  const soldier = (y: number, z: number, ladders: readonly Ladder[]): Unit => {
+    const u = new Unit('S', anm, 50, y, z, 0, sectors);
+    u.ladders = ladders;
+    return u;
+  };
+  const up = { x: 50, y: 20, z: 65 };
+  const down = { x: 50, y: 180, z: 0 };
+
+  /** Camina hasta que la orden termina; devuelve las direcciones de trepada vistas y comprueba que la orden seguía viva mientras trepaba. */
+  const walk = (u: Unit): number[] => {
+    const dirs: number[] = [];
+    for (let i = 0; i < 1000 && u.target !== null; i++) {
+      u.tick();
+      if (u.climb) {
+        expect(u.target).not.toBeNull();
+        if (dirs[dirs.length - 1] !== u.climb.dir) dirs.push(u.climb.dir);
+      }
+    }
+    return dirs;
+  };
+
+  it('sin camino a pie sube: va al pie, trepa con la orden viva y sigue hasta el destino de arriba', () => {
+    const u = soldier(180, 0, [rung]);
+    expect(u.goTo(up, false)).toBe(true);
+    expect(walk(u)).toEqual([1]);
+    expect(u.target).toBeNull();
+    expect(u.z).toBe(65);
+    expect(Math.hypot(u.body.x - up.x, u.body.y - up.y)).toBeLessThan(3);
+  });
+
+  it('desde arriba baja por la misma escalera', () => {
+    const u = soldier(40, 65, [rung]);
+    expect(u.goTo(down, false)).toBe(true);
+    expect(walk(u)).toEqual([-1]);
+    expect(u.z).toBe(0);
+    expect(Math.hypot(u.body.x - down.x, u.body.y - down.y)).toBeLessThan(3);
+  });
+
+  it('sin escaleras, con la escalera desactivada o sin desnivel no hay camino', () => {
+    expect(soldier(180, 0, []).goTo(up, false)).toBe(false);
+    expect(soldier(180, 0, [{ ...rung, disabled: true }]).goTo(up, false)).toBe(false);
+    expect(soldier(180, 0, [{ ...rung, high: { ...rung.high, z: 0 } }]).goTo(up, false)).toBe(false);
+  });
+
+  it('al pie de la escalera trepa de inmediato; stop() cancela el plan antes de trepar', () => {
+    const foot = soldier(120, 0, [rung]);
+    expect(foot.goTo(up, false)).toBe(true);
+    expect(foot.climb?.dir).toBe(1);
+    const far = soldier(180, 0, [rung]);
+    far.goTo(up, false);
+    far.stop();
+    for (let i = 0; i < 300; i++) far.tick();
+    expect(far.climb).toBeNull();
+    expect(far.target).toBeNull();
+  });
+
+  it('con otro destino alcanzable a pie no la usa', () => {
+    const u = soldier(180, 0, [rung]);
+    expect(u.goTo({ x: 20, y: 150, z: 0 }, false)).toBe(true);
+    expect(walk(u)).toEqual([]);
+  });
+});
+
 describe('Unit: sin trepada y montacargas', () => {
   const anm2 = parseAnm(bnm([{ type: 0, slots: [1] }, ...anmSeq(1, 'ANDAR', 2, 30, 0, 8)]));
   it('pausar o reanudar sin estar trepando no hace nada; sin animaciones de escalar usa la actual; carryBy/settle mueven y reubican', () => {

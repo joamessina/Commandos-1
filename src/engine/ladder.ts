@@ -2,7 +2,7 @@
  * Escaleras (`ESCALA.MAC`, `acEscala`) y montacargas (`AcAscensor`, `.RAIL`): docs/research/q1-escaleras.md §2-§4c y docs/lectura/obj-contenedores.md §4.
  * La trepada es la del `SimEscalador`: z exacta por ciclo (+2 subiendo, remate +4, bajando −4 y −3), el cuerpo pegado a la pared entre el punto de abajo y el de arriba.
  * shortcut: el giro previo a la escalera (subestado 6) y la rotación son instantáneos; bajar usa ESCALAR_CICLICO en vez de ESCALAR_FIN a velocidad −1 (el animador no
- *           corre al revés); los soldados no usan escaleras (el buscador con `IRA_CONESCALAS` no está portado); el umbral de arranque (subir > 15, bajar > 20) se aplica
+ *           corre al revés); los soldados las usan solo si a pie no hay camino (`Unit.ladders`, unit.ts) y no se porta el daño de 10 al comando con que chocan trepando (`FUN_004F3C70`); el umbral de arranque (subir > 15, bajar > 20) se aplica
  *           al desnivel de la escalera; el montacargas se mueve a STDVEL 8 u/ciclo (MotorRail, el 0,02 de `SETRAIL` no está interpretado) y se activa con la tecla A.
  */
 import { asList, asNumbers, asText, find, type Node } from '../formats/clave.ts';
