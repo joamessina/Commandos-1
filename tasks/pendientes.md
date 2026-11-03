@@ -14,7 +14,7 @@
 
 **Minas y Zodiac, continuación:** las dos macros declaran `CHOC`, el cargador registra ambas en la lista de colisión y la mina se retira de esa lista al explotar. Se contrastaron masas, cilindros y posiciones declaradas; siguen pendientes cambios de estado y posiciones en ejecución.
 
-**Sectores pisados del buzo:** `hud-consumidores.md` identifica la lista del motor, su límite de ocho, eliminación de duplicados y alta del sector central y vecinos de contacto no bloqueante; faltan el orden completo de actualización y el contraste de bordes en ejecución.
+**Sectores pisados del buzo:** `hud-consumidores.md` identifica la lista del motor, su límite de ocho y el orden de actualización: limpieza, vecinos por contactos no bloqueantes y finalmente sector central. Falta contrastar los bordes concretos y el momento de consulta del HUD en ejecución.
 
 **Banderas de explosión y salpicadura:** `render.md` documenta la traducción en ensamblador de la bandera del ANM: bit 1 refleja y bit 2 activa el flag interno `0x08` de suma. En los recursos reales, los 14 fotogramas de explosión llevan 2; el agua lleva ocho 2 y un 0 al final. La suma está confirmada en las rutas RLE normales y con zoom, con y sin mapa de luz. El parser del port pierde esa distinción; falta contrastar el resultado en pantalla.
 
