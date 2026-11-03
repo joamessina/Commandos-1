@@ -5,16 +5,19 @@ export function canvasPoint(clientX: number, clientY: number, rect: Pick<DOMRect
   return { x: (clientX - rect.left) * size[0] / rect.width, y: (clientY - rect.top) * size[1] / rect.height };
 }
 
-/** Factor con que un canvas `w`×`h` llena la caja `boxW`×`boxH`: entero si la ventana es mayor (píxeles parejos), fraccionario solo si no entra. */
-export function fitScale(boxW: number, boxH: number, w: number, h: number): number {
+/** Factor con que un canvas `w`×`h` llena la caja `boxW`×`boxH`: entero si la ventana es mayor (píxeles parejos), fraccionario solo si no entra; con `integer` falso, siempre el que llena (para los filtros de pantalla, que escalan bien con fracciones). */
+export function fitScale(boxW: number, boxH: number, w: number, h: number, integer = true): number {
   const s = Math.min(boxW / w, boxH / h);
-  return s >= 1 ? Math.floor(s) : s;
+  return integer && s >= 1 ? Math.floor(s) : s;
 }
 
 const watching = new WeakMap<HTMLCanvasElement, () => void>();
 
-/** Deja el canvas al mayor tamaño entero que cabe en `view`, y lo recalcula si cambia la ventana o el tamaño del canvas; se suelta solo al sacarlo de la página. Llamarlo otra vez reemplaza el anterior. */
-export function fitCanvas(canvas: HTMLCanvasElement, view: HTMLElement): void {
+/**
+ * Deja el canvas al mayor tamaño entero que cabe en `view` (o al que llena, si `integer()` da falso), y lo recalcula si cambia la ventana o el tamaño del canvas; se suelta solo al sacarlo de la página.
+ * Llamarlo otra vez reemplaza el anterior. Devuelve la función que recalcula, para cuando cambia `integer()`.
+ */
+export function fitCanvas(canvas: HTMLCanvasElement, view: HTMLElement, integer: () => boolean = () => true): () => void {
   watching.get(canvas)?.();
   const stop = (): void => {
     resize.disconnect();
@@ -26,7 +29,7 @@ export function fitCanvas(canvas: HTMLCanvasElement, view: HTMLElement): void {
       return;
     }
     if (view.clientWidth <= 0 || view.clientHeight <= 0) return;
-    const k = fitScale(view.clientWidth, view.clientHeight, canvas.width, canvas.height);
+    const k = fitScale(view.clientWidth, view.clientHeight, canvas.width, canvas.height, integer());
     canvas.style.width = `${(canvas.width * k).toString()}px`;
     canvas.style.height = `${(canvas.height * k).toString()}px`;
     canvas.style.imageRendering = Number.isInteger(k) ? 'pixelated' : 'auto'; // con factor fraccionario el vecino más cercano da escalones irregulares
@@ -37,4 +40,5 @@ export function fitCanvas(canvas: HTMLCanvasElement, view: HTMLElement): void {
   resize.observe(view);
   attrs.observe(canvas, { attributeFilter: ['width', 'height'] });
   apply();
+  return apply;
 }

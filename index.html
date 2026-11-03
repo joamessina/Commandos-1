@@ -14,7 +14,7 @@
       select, input[type='file'], button { background: #1d2026; color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; }
       #status { color: var(--muted); padding: 8px 16px; min-height: 2.4em; }
       #status.error { color: #e0826f; }
-      #view { overflow: hidden; flex: 1 1 0; min-height: 0; border-top: 1px solid var(--line); }
+      #view { position: relative; overflow: hidden; flex: 1 1 0; min-height: 0; border-top: 1px solid var(--line); }
       canvas { display: block; image-rendering: pixelated; }
       .hint { padding: 16px; color: var(--muted); max-width: 70ch; }
     </style>
@@ -28,6 +28,7 @@
       <label><input id="water" type="checkbox" /> ocultar agua</label>
       <label>Dificultad: <select id="diff"><option value="DIFICIL" selected>difícil</option><option value="FACIL">fácil</option></select></label>
       <label>Zoom: <select id="zoom"><option value="0.5">50 %</option><option value="1" selected>100 %</option><option value="2">200 %</option><option value="3.4">340 %</option></select> (o la rueda del mouse)</label>
+      <label>Filtro: <select id="filter"><option value="none" selected>ninguno</option><option value="sharp">sharp bilinear</option><option value="scale2x">scale2x</option></select></label>
     </header>
     <div id="status">Elegí la carpeta del juego. Los archivos no salen de tu navegador.</div>
     <div id="view"><div class="hint">Visor del mapa con los comandos animados. Mové la cámara con el mouse en el borde de la ventana, con las flechas o con WASD (Mayús = rápido, Ctrl = lento).</div></div>

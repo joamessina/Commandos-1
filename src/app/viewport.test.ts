@@ -13,4 +13,5 @@ it('agranda de a números enteros y solo achica si no entra', () => {
   expect(fitScale(3840, 2160, 1280, 720)).toBe(3);
   expect(fitScale(1280, 720, 1280, 720)).toBe(1);
   expect(fitScale(960, 540, 1280, 720)).toBe(0.75);
+  expect(fitScale(1920, 970, 1280, 720, false)).toBeCloseTo(1.347, 3); // con filtro llena la caja aunque no sea entero
 });

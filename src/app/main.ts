@@ -43,6 +43,7 @@ import { flatten, loadWorld, type Difficulty, type Elem } from '../engine/world.
 import { composeMap, paintPoly, repaintWater, waterBounds, type Clip, type MapImage, type MapOptions, type Rect } from '../render/map.ts';
 import { missionNames, parseCampaign, parseMissionFiles, parseMissionInfo } from '../engine/campaign.ts';
 import { Sfx } from '../render/audio.ts';
+import { parseFilterMode, ScreenFilter } from '../render/filter.ts';
 import { SpriteCache } from '../render/sprites.ts';
 import { SPLASH_CYCLES, waterSplash } from '../render/splash.ts';
 import { GameSound } from './gamesound.ts';
@@ -66,6 +67,15 @@ const mapSel = byId('map') as HTMLSelectElement;
 const waterBox = byId('water') as HTMLInputElement;
 const zoomSel = byId('zoom') as HTMLSelectElement;
 const diffSel = byId('diff') as HTMLSelectElement;
+const filterSel = byId('filter') as HTMLSelectElement;
+let screenFilter: ScreenFilter | null = null;
+let refitStage: (() => void) | null = null;
+try { filterSel.value = parseFilterMode(localStorage.getItem('filter')); } catch { /* sin almacenamiento: queda en ninguno */ }
+filterSel.addEventListener('change', () => {
+  screenFilter?.setMode(parseFilterMode(filterSel.value));
+  refitStage?.();
+  try { localStorage.setItem('filter', filterSel.value); } catch { /* no se recuerda la elección */ }
+});
 const status = byId('status');
 const view = byId('view');
 
@@ -816,6 +826,8 @@ function setupStage(): void {
   if (!stage) {
     stage = document.createElement('canvas');
     stage.style.cssText = 'margin:auto';
+    screenFilter = new ScreenFilter(stage);
+    screenFilter.setMode(parseFilterMode(filterSel.value));
     stage.addEventListener('contextmenu', (e) => {
       e.preventDefault();
     });
@@ -842,7 +854,8 @@ function setupStage(): void {
     });
   }
   view.replaceChildren(stage);
-  fitCanvas(stage, view);
+  screenFilter?.attach(view);
+  refitStage = fitCanvas(stage, view, () => parseFilterMode(filterSel.value) === 'none'); // con filtro el juego llena la ventana sin pasos enteros
   resize();
   cancelAnimationFrame(loopId);
   let last = performance.now();
@@ -913,6 +926,7 @@ function setupStage(): void {
     }
     scrollCamera(g, dt / TICK);
     draw(g);
+    screenFilter?.present();
     loopId = requestAnimationFrame(frame);
   };
   loopId = requestAnimationFrame(frame);
@@ -1108,7 +1122,7 @@ function draw(g: Game, briefing = false): void {
   g.camY = Math.max(vh / 2, Math.min(g.map.height - vh / 2, g.camY));
   const ox = g.camX - vw / 2;
   const oy = g.camY - vh / 2;
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = !Number.isInteger(z); // con zoom no entero el vecino más cercano da bloques de ancho irregular
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, stage.width, stage.height);
   ctx.save();
