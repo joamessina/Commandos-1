@@ -12,6 +12,8 @@
 
 **Minas y Zodiac, continuación:** las dos macros declaran `CHOC`, el cargador registra ambas en la lista de colisión y la mina se retira de esa lista al explotar. Se contrastaron masas, cilindros y posiciones declaradas; siguen pendientes cambios de estado y posiciones en ejecución.
 
+**Sectores pisados del buzo:** `hud-consumidores.md` identifica la lista del motor, su límite de ocho, eliminación de duplicados y alta del sector central y vecinos de contacto no bloqueante; faltan el orden completo de actualización y el contraste de bordes en ejecución.
+
 **Visión y trazado de disparos (2026-11-03):** `organos.md` precisa que cero significa visión despejada y documenta la particularidad de los retornos recursivos de volúmenes; `au-disparar.md` corrige el filtro de candidatos y el retorno del trazado de cuerpos. Falta contrastar la distribución de obstáculos en el árbol y el efecto posterior de cada arma.
 
 **Vista y disparos (2026-11-02):** corregida la lectura del barrido vacío y conectada `.VIGILARDEF` para patrullas; los soldados reales de M0 barren con su amplitud configurada. Armas de fuego: una orden por clic, incluido terreno y agua, sin repetición automática; los límites de cadencia y raycast están en `verificacion-exe.md`.
