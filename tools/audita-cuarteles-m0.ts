@@ -22,7 +22,8 @@ for (const p of asList(find(raiz, '.PATRULLAS')) ?? []) {
   console.log('PATRULLA', JSON.stringify(p));
   const row = asList(p) ?? [];
   console.log('ARMAS_PATRULLA', JSON.stringify({ token: asText(find(row, '.TOKEN')),
-    cabo: findAll(row, '.DISPARARCABO'), soldados: findAll(row, '.DISPARARSOLDADO') }));
+    cabo: findAll(row, '.DISPARARCABO'), soldados: findAll(row, '.DISPARARSOLDADO'),
+    recarga: findAll(row, '.TIEMPORECARGA') }));
 }
 const elems = flatten(loadWorld(mis, { difficulty: 'FACIL', macro: (name) => leer(name + '.MAC') }));
 for (const h of parseHouses(elems)) console.log('CASA', h.token, 'REGEN', h.regen, 'ENTRADA', h.entry, 'SALIDA', h.exit);

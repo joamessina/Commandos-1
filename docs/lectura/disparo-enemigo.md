@@ -67,5 +67,6 @@ Energía inicial: tabla `0x815198` (16 B/entrada `{nombre, energía int, vel. co
 (Para el port: un tiro enemigo = −30 de energía, determinista, siempre que el blanco esté en la lista de vistos del tirador en el ciclo del disparo; cadencia = `TIEMPORECARGA + rand%6` ciclos entre tiros de fusil/pistola; el fusil/pistola nunca falla por azar. Un comando agachado reduce el alcance de la vista del enemigo (`organos.md`: la mitad), pero no cambia el daño.)
 
 ## Dudas abiertas
-- Valor por defecto de `TIEMPORECARGA` y qué MAC/MIS usan `TIPOARMA METRALLETA` (ráfaga sin daño): no está en el exe (viene de los datos); verificar con los `.MAC` extraídos cuando se porte `AcDisparar`.
+- **Actualización M0:** `refuerzos-m0.md` cruza las cinco patrullas reales: sus soldados declaran `METRALLETA`, sus cabos leen `PISTOLA` y la recarga base de todas es 15. Las claves repetidas y las condiciones de la ráfaga están detalladas allí. La duda histórica siguiente sigue aplicando a otras misiones y macros, no a esas cinco patrullas.
+- Qué otras instancias de MAC/MIS usan `TIPOARMA METRALLETA` y qué valores de `TIEMPORECARGA` aplican: contrastar datos de cada misión cuando se porte `AcDisparar`.
 - Si algún MIS pisa la energía de un comando después de `FUN_00513D60` (`.ENEGIA` de un `AuX`): el orden en el exe es tabla-después-de-MAC, pero un parámetro de misión aplicado más tarde no se ha leído.
