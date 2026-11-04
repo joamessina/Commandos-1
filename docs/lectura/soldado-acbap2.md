@@ -50,7 +50,13 @@ Todas devuelven 1 si disparan. Las "ir a punto" usan `+0x84` (§6).
 | `+0x78` | `43A380` | `+0x674` y alerta < 8 | alerta **7**; va a `+0x6C0` (la máquina) |
 
 ### 4b. `FUN_0043B470` — sigue el sonido de peligro/pánico [hecho]
-Entra con el argumento = alerta (6 ó 0xC). Si `PERSIGUESONIDO (+0x660) != 0`: (si tiene sector `+0x134` y no está en orden 4: si está a más de `sqrt(0x7944FC = 160000)` = **400** unidades de su puesto `+0x2B4/+0x2B8` abandona; si no, traza línea de vista `FUN_005F9820` desde su altura de ojo hasta el punto del sonido (`+0x2C0`) y, si lo **ve**, no hace caso (sigue como `iVar5=0`)); si decide ir: orden `0xB`, `BUSCADOR_IRA` al punto `+0x2C0` (id `+0x414`), y si la alerta es 6 con un emisor `+0x374` guarda su posición en `+0x69C` (`+0x67C = 1`). Si no logra arrancar el camino: si el destino ya estaba alcanzado (`FUN_00426EA0`), orden **4** (vuelve al puesto) y alerta 0; si no, guarda el punto en `+0x6B4` y mira (orden 9, 100 ciclos). **Si `PERSIGUESONIDO == 0`** (hay que ponerlo a 0 en el script, el defecto es 1): solo se queda mirando el punto (orden 9, 100 ciclos). [hecho; el sentido de "ve el sonido = ignora" es lectura del código, no se contrastó en juego]
+Entra con el argumento = alerta (6 ó 0xC). `FUN_0043B470` (`fn_00400000.c:421901–421971`, asm `0x43B470–0x43B693`) limpia el sonido diferido `+0x554` y aplica estas ramas:
+
+1. Si `PERSIGUESONIDO (+0x660) == 0`, mira el punto `+0x2C0` con orden 9 durante 100 ciclos y conserva la alerta recibida.
+2. Si está habilitado y `+0x134 != 0`, estando fuera de la orden 4 compara la distancia horizontal al puesto `+0x2B4/+0x2B8`: a más de **400** unidades también pasa a mirar 100 ciclos. Para coordenadas finitas, exactamente 400 continúa a la prueba siguiente (`0x43B4D5–0x43B4E4`, constante 160000). En orden 4 no aplica este corte.
+3. En esa misma rama traza `FUN_005F9820` desde `(x,y,z + altura de ojo)` y el sector `bicho+0xE4` hasta `+0x2C0`. Si devuelve distinto de cero, pasa a mirar 100 ciclos; si devuelve cero, intenta perseguir. En ambos casos llama `00430CD0`, que reproduce `AL01` mediante `0067F9C0` (`fn_00400000.c:416408–416416`); esta llamada no establece por sí sola un estímulo de sonido para otros soldados. El trazado es el de **sectores** descrito en `organos.md`, no incluye por sí solo la prueba separada de volúmenes `0063E200`; no equivale a toda la visión del soldado.
+4. Si `+0x134 == 0`, omite tanto el corte por distancia como el trazado y la llamada a `AL01`, y sigue hacia la persecución. No está identificado aquí el significado completo de ese campo.
+5. Al intentar ir, fija orden `0xB` y llama `BUSCADOR_IRA` hacia `+0x2C0` con velocidad `+0x698` y sector/id `+0x414`. Con alerta 6 y emisor `+0x374`, guarda su posición en `+0x69C` y activa `+0x67C`. Si no arranca el camino y `00426EA0` considera alcanzado el destino, cambia a orden 4 y alerta 0; si no, guarda el punto en `+0x6B4` y mira 100 ciclos. La reacción no se contrastó todavía en partida.
 
 ## 5. Ir a coger un objeto recogible (`FUN_0043B270`, mensajes `ESTOY_YENDO_A_COGERTE`/`YA_NO_VOY_A_COGERTE`) [hecho]
 `+0x12C` lo pone la base al clasificar un objeto como código `0xB` (`FUN_00434460` manda `MSGA_PUEDO_IR_A_COGERTE`; es el objeto con bit `0x800`, la cajetilla de **tabaco** que lanza el comando —`AUTabaco` en `au-jugador.md`—). Con `+0x70==0` y alerta < 1:
@@ -82,7 +88,7 @@ Llegada (`+0x7C` = `FUN_0043A450`, llamado desde `BUSCADOR_LLEGADA`): si la orde
 - **`FUN_006283D0(x,y,z,sector,máscara,1)`**: pregunta de alcanzabilidad/camino; no se leyó (fuera de rango); en `AcBap2` solo se usa su resultado ≠ 0 = "puedo llegar".
 
 ## 8. Qué cambia para el juego [resumen]
-1. Un soldado `BAP2` **sale de su puesto** a investigar cuerpo (alerta 10), objeto (8/5), compañero caído (`0xB`), sonido (alerta 6/0xC, solo si `PERSIGUESONIDO`), cajetilla (1), casa con aliado (`0xE/0xF`), máquina (7). Al llegar **mira alrededor 3 veces** (0°, 180°, 90°, 30 ciclos cada una) y **vuelve al puesto** (orden `0x14`).
+1. Un soldado `BAP2` puede salir de su puesto a investigar cuerpo (alerta 10), objeto (8/5), compañero caído (`0xB`), sonido (alerta 6/0xC, sujeto a las condiciones de §4b), cajetilla (1), casa con aliado (`0xE/0xF`), máquina (7). Al llegar **mira alrededor 3 veces** (0°, 180°, 90°, 30 ciclos cada una) y **vuelve al puesto** (orden `0x14`).
 2. Si el estímulo es un sonido y tiene `PERSIGUESONIDO=0`, solo se queda mirando el punto 100 ciclos.
 3. Con ruta `RUTA` y tras 3 atenciones de máquina recorre sus puntos (`x,y,z`, `ANGULO`, `ESPERA`).
 
