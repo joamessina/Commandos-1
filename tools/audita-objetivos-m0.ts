@@ -59,6 +59,22 @@ function contactoPoligono(points: readonly Point[], center: Point, source: Point
   }
   return t;
 }
+function distanciaPoligono(points: readonly Point[], source: Point): number {
+  let inside = false;
+  let distance = Number.POSITIVE_INFINITY;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const a = points[j];
+    const b = points[i];
+    if (!a || !b) continue;
+    if ((a.y > source.y) !== (b.y > source.y) && source.x < (b.x - a.x) * (source.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const lengthSquared = dx * dx + dy * dy;
+    const t = lengthSquared > 0 ? Math.max(0, Math.min(1, ((source.x - a.x) * dx + (source.y - a.y) * dy) / lengthSquared)) : 0;
+    distance = Math.min(distance, Math.hypot(source.x - (a.x + t * dx), source.y - (a.y + t * dy)));
+  }
+  return inside ? 0 : distance;
+}
 function sectoresEnRadio(x: number, y: number): { sector: number; z: number; flags: number; margin: number }[] {
   return sec.sectors.flatMap((sector, index) => {
     if (x + 10 < sector.minX || x - 10 > sector.maxX || y + 10 < sector.minY || y - 10 > sector.maxY) return [];
@@ -128,6 +144,27 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
         return heights.length > 0 && heights.every((item) => Math.abs(item.z - candidate.z) < 20);
       });
       console.log('ANTENA_SUELO_NIVELADO_RADIO_10_APROX', JSON.stringify(level.slice(0, 5)));
+      const withoutDeclaredOverlap = level.filter((candidate) => !elems.some((elem) => {
+        const lists = find(elem.block, '.LISTAS');
+        if (!Array.isArray(lists) || !lists.some((item) => typeof item === 'string' && item.toUpperCase() === 'CHOC')) return false;
+        if (asText(find(elem.block, '.NOSOLIDO')) === '1' || elem.radius <= 0) return false;
+        return elem.z <= candidate.z + 5 && elem.z + elem.height >= candidate.z &&
+          Math.hypot(candidate.x - elem.x, candidate.y - elem.y) < 10 + elem.radius;
+      }));
+      console.log('ANTENA_NIVELADO_SIN_SOLAPE_DECLARADO_APROX', JSON.stringify(withoutDeclaredOverlap.slice(0, 5)));
+      const allPolys = parseVol(volume).polys;
+      const withMargin = withoutDeclaredOverlap.filter((candidate) => {
+        const own = sectoresEnRadio(candidate.x, candidate.y).find((item) => item.sector === candidate.sector);
+        if (!own || own.margin < 12) return false;
+        return !allPolys.some((poly) => {
+          const z = poly.header[2];
+          const h = poly.header[3];
+          if (z === undefined || h === undefined || z > candidate.z + 5 || z + h < candidate.z || poly.points.length === 0) return false;
+          const points = poly.points.map((point) => ({ x: point.x + (poly.header[0] ?? 0), y: point.y + (poly.header[1] ?? 0) }));
+          return distanciaPoligono(points, candidate) < 12;
+        });
+      });
+      console.log('ANTENA_CANDIDATOS_CON_MARGEN_APROX', JSON.stringify(withMargin.slice(0, 5)));
     }
     if (antenna) {
       let inside = false;
@@ -141,13 +178,37 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
       const target = { x: centerX + t * (antenna.x - centerX), y: centerY + t * (antenna.y - centerY) };
       const targetSector = map.at(target.x, target.y);
       console.log('CASA04_RAYO_CENTRADO_APROX', JSON.stringify({ t, target, sector: targetSector ? sec.sectors.indexOf(targetSector) : -1 }));
-      const source = { x: 1830, y: process.argv.includes('--antes') ? 946 : 956 };
+      const source = process.argv.includes('--margen') ? { x: 1940, y: 906 } :
+        { x: process.argv.includes('--otro') ? 1870 : 1830, y: process.argv.includes('--antes') ? 946 : 956 };
+      const nearbyVolumes = parseVol(volume).polys.flatMap((poly) => {
+        const z = poly.header[2];
+        const h = poly.header[3];
+        if (z === undefined || h === undefined || z > 360 || z + h < 355 || poly.points.length === 0) return [];
+        const polyPoints = poly.points.map((point) => ({ x: point.x + (poly.header[0] ?? 0), y: point.y + (poly.header[1] ?? 0) }));
+        const distance = distanciaPoligono(polyPoints, source);
+        return distance <= 25 ? [{ name: poly.name, z, h, distance }] : [];
+      });
+      console.log('CANDIDATO_VOLUMENES_CERCANOS_APROX', JSON.stringify(nearbyVolumes));
+      const nearbyElements = elems.flatMap((elem) => {
+        const distance = Math.hypot(source.x - elem.x, source.y - elem.y);
+        if (elem.radius <= 0 || distance > elem.radius + 25 || elem.z > 360 || elem.z + elem.height < 355) return [];
+        return [{ token: elem.token, macro: elem.macro, xyz: [elem.x, elem.y, elem.z], radius: elem.radius, height: elem.height,
+          distance, lists: find(elem.block, '.LISTAS'), noSolido: find(elem.block, '.NOSOLIDO') }];
+      });
+      console.log('CANDIDATO_ELEMENTOS_CERCANOS_DECLARADOS', JSON.stringify(nearbyElements));
       const engineer = { x: source.x, y: source.y + 21 };
       const engineerSector = map.at(engineer.x, engineer.y);
       console.log('CANDIDATO_ZAPADOR_21', JSON.stringify({ ...engineer,
         sector: engineerSector ? sec.sectors.indexOf(engineerSector) : -1,
         ground: engineerSector ? groundZ(engineerSector, engineer.x, engineer.y) : null,
         flags: engineerSector?.flags ?? null }));
+      console.log('CANDIDATO_ZAPADOR_SOLAPES_DECLARADOS', JSON.stringify(elems.flatMap((elem) => {
+        const lists = find(elem.block, '.LISTAS');
+        if (!Array.isArray(lists) || !lists.some((item) => typeof item === 'string' && item.toUpperCase() === 'CHOC')) return [];
+        if (asText(find(elem.block, '.NOSOLIDO')) === '1' || elem.radius <= 0 || elem.z > 395 || elem.z + elem.height < 355) return [];
+        const distance = Math.hypot(engineer.x - elem.x, engineer.y - elem.y);
+        return distance < 10 + elem.radius ? [{ token: elem.token, xyz: [elem.x, elem.y, elem.z], distance }] : [];
+      })));
       if (engineerSector) console.log('CANDIDATO_COLOCACION_SALIDA_APROX', JSON.stringify(salidaSector(engineerSector, engineer, source)));
       const overlapping = sectoresEnRadio(source.x, source.y);
       console.log('CANDIDATO_SECTORES_RADIO_10_APROX', JSON.stringify(overlapping));
