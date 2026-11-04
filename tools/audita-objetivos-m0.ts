@@ -54,6 +54,49 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
         const next = points[(index + 1) % points.length];
         return next ? Math.hypot(point.x - next.x, point.y - next.y) : 0;
       })));
+      let t = 0;
+      for (let i = 0; i < points.length; i++) {
+        const a = points[(i + points.length - 1) % points.length];
+        const b = points[i];
+        if (!a || !b) continue;
+        const ex = b.x - a.x;
+        const ey = b.y - a.y;
+        const dx = antenna.x - centerX;
+        const dy = antenna.y - centerY;
+        let den = dx * ey - dy * ex;
+        let edgeNumerator = dx * (centerY - a.y) - dy * (centerX - a.x);
+        let rayNumerator = ex * (centerY - a.y) - (centerX - a.x) * ey;
+        if (den < 0) { den = -den; edgeNumerator = -edgeNumerator; rayNumerator = -rayNumerator; }
+        if (edgeNumerator > 0 && rayNumerator > 0 && edgeNumerator < den && rayNumerator < den) {
+          t = Math.max(t, rayNumerator / den);
+        }
+      }
+      const target = { x: centerX + t * (antenna.x - centerX), y: centerY + t * (antenna.y - centerY) };
+      const targetSector = map.at(target.x, target.y);
+      console.log('CASA04_RAYO_CENTRADO_APROX', JSON.stringify({ t, target, sector: targetSector ? sec.sectors.indexOf(targetSector) : -1 }));
+      if (antennaSector && targetSector === antennaSector) {
+        const sx = target.x - antenna.x;
+        const sy = target.y - antenna.y;
+        const vertices = antennaSector.verts.map((index) => sec.verts[index]).filter((point) => point !== undefined);
+        let crossing: number | null = null;
+        for (let i = 0; i < vertices.length; i++) {
+          const a = vertices[i];
+          const b = vertices[(i + 1) % vertices.length];
+          if (!a || !b) continue;
+          const ax = a.x - antenna.x;
+          const ay = a.y - antenna.y;
+          const bx = b.x - antenna.x;
+          const by = b.y - antenna.y;
+          const before = -sx * ay + sy * ax;
+          const after = -sx * by + sy * bx;
+          const den = sy * (bx - ax) - sx * (by - ay);
+          if (before >= 0 && after < 0 && Math.abs(den) > 0.000001) {
+            crossing = (ay * (bx - ax) - ax * (by - ay)) / den;
+            break;
+          }
+        }
+        console.log('CASA04_RAYO_SALIDA_SECTOR_APROX', crossing);
+      }
       for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
         const a = points[i];
         const b = points[j];
