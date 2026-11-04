@@ -1,6 +1,6 @@
 # Pendientes (lista maestra para ir tachando)
 
-**BAP2 ante sonidos:** `soldado-acbap2.md` §4b precisa el límite horizontal de 400 unidades, la prueba de sectores y los casos en que emite `AL01` o mira el lugar durante 100 ciclos. Falta identificar el campo `+0x134` y contrastar la reacción en partida.
+**BAP2 ante sonidos:** `soldado-acbap2.md` §4b precisa el límite horizontal de 400 unidades, la prueba de sectores y los casos en que emite `AL01` o mira el lugar durante 100 ciclos. La marca `acción+0x134` se actualiza al oír atención según si el emisor es una piedra; falta contrastar la reacción en partida.
 
 **Sonido de derrumbes de M0 (2026-11-03):** `obj-explosivos.md` identifica los tags seleccionados por radio y `.SONFIS`; la antena y los seis edificios principales de `AUTOEXPCASAS` seleccionan `XCA1`/`DERRUMBE` con sus geometrías declaradas. Los otros tres volúmenes transmiten impactos al principal; se calcularon las posiciones de emisión a partir de los volúmenes reales. Falta comprobar creación y audio en el original.
 
