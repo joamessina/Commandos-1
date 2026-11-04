@@ -35,5 +35,27 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
   for (const name of ['CASA06A', 'CASA08', 'CASA05']) {
     console.log('CUARTEL_EDIFICIO', name, 'SITIOS', JSON.stringify(sites.filter((site) => site.name === name).map((site) => site.name)));
   }
+  const casa = parseVol(volume).polys.find((poly) => poly.name === 'CASA04');
+  if (casa && casa.points.length > 0) {
+    const centerX = (casa.header[0] ?? 0) + casa.points.reduce((sum, point) => sum + point.x, 0) / casa.points.length;
+    const centerY = (casa.header[1] ?? 0) + casa.points.reduce((sum, point) => sum + point.y, 0) / casa.points.length;
+    const map = new SectorMap(sec);
+    const antenna = elems.find((elem) => elem.token === 'EXPL_ANTENA');
+    const casaSector = map.at(centerX, centerY);
+    const antennaSector = antenna ? map.at(antenna.x, antenna.y) : null;
+    console.log('CASA04_CENTRO', JSON.stringify([centerX, centerY]), 'SECTOR', casaSector ? sec.sectors.indexOf(casaSector) : -1);
+    console.log('ANTENA_SECTOR', antennaSector ? sec.sectors.indexOf(antennaSector) : -1);
+    if (antenna) {
+      let inside = false;
+      const points = casa.points.map((point) => ({ x: point.x + (casa.header[0] ?? 0), y: point.y + (casa.header[1] ?? 0) }));
+      for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+        const a = points[i];
+        const b = points[j];
+        if (a && b && ((a.y > antenna.y) !== (b.y > antenna.y)) &&
+          antenna.x < (b.x - a.x) * (antenna.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+      }
+      console.log('ANTENA_DENTRO_POLIGONO_CASA04', inside);
+    }
+  }
   console.log('DETECTORES_DECLARADOS', JSON.stringify(elems.filter((elem) => asText(find(elem.block, '.DETECTAEXPLOSION')) === '1').map((elem) => elem.token)));
 }
