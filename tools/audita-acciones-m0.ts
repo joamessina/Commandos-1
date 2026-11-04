@@ -55,6 +55,7 @@ for (const nombre of ['MINASUB.MAC', 'ZODIAC5.MAC']) {
   const nodos = parseClave(new TextDecoder('windows-1252').decode(entryBytes(datos, entrada)));
   console.log(nombre, 'MASA', find(nodos, '.MASA'), 'VOLCOLISION', JSON.stringify(find(nodos, '.VOLCOLISION')),
     'LISTAS', JSON.stringify(find(nodos, '.LISTAS')));
+  if (nombre === 'ZODIAC5.MAC') console.log('ZODIAC5_ACCIONES', JSON.stringify(find(nodos, '.ACCIONES')));
 }
 console.log('MACROS_DIRECTAS_AUDITADAS', macrosUsadas.size);
 for (const nombre of macrosUsadas) {
