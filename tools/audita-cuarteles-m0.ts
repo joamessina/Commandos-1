@@ -1,7 +1,7 @@
 // Cruza patrullas y cuarteles de la misión real sin extraer recursos.
 import { readFileSync } from 'node:fs';
 import { entryBytes, parseContainer } from '../src/formats/container.ts';
-import { asList, find, parseClave } from '../src/formats/clave.ts';
+import { asList, asText, find, findAll, parseClave } from '../src/formats/clave.ts';
 import { parseHouses } from '../src/engine/house.ts';
 import { flatten, loadWorld } from '../src/engine/world.ts';
 
@@ -18,6 +18,11 @@ for (const key of ['EVENTO', 'ESPERAEVENTO', 'ENLAZAR', 'VELOCIDADTRAMO']) {
   console.log('CLAVE', key, JSON.stringify(matches));
 }
 const raiz = asList(find(parseClave(mis), '.MISSION')) ?? [];
-for (const p of asList(find(raiz, '.PATRULLAS')) ?? []) console.log('PATRULLA', JSON.stringify(p));
+for (const p of asList(find(raiz, '.PATRULLAS')) ?? []) {
+  console.log('PATRULLA', JSON.stringify(p));
+  const row = asList(p) ?? [];
+  console.log('ARMAS_PATRULLA', JSON.stringify({ token: asText(find(row, '.TOKEN')),
+    cabo: findAll(row, '.DISPARARCABO'), soldados: findAll(row, '.DISPARARSOLDADO') }));
+}
 const elems = flatten(loadWorld(mis, { difficulty: 'FACIL', macro: (name) => leer(name + '.MAC') }));
 for (const h of parseHouses(elems)) console.log('CASA', h.token, 'REGEN', h.regen, 'ENTRADA', h.entry, 'SALIDA', h.exit);
