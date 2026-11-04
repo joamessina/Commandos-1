@@ -10,7 +10,7 @@
 
 **Edificios de cuartel:** `refuerzos-m0.md` identifica la generación automática de volúmenes `CASA` en el exe, incluidos `CASA06A`, `CASA08` y `CASA05`, ausentes de los sitios creados por el port. Documenta sus impactos y sonidos según los radios; falta el contraste jugable y la implementación.
 
-**Antena y objetivo:** `refuerzos-m0.md` distingue `EXPL_ANTENA` del bicho `CASA04`, que se genera desde el VOL y es el objetivo y el disparador de `ESCALA02`. El port vincula ambos por cambio de tiles; falta comprobar impactos concretos y corregir la implementación.
+**Antena y objetivo:** `refuerzos-m0.md` distingue `EXPL_ANTENA` del bicho `CASA04`, que se genera desde el VOL y es el objetivo y el disparador de `ESCALA02`. El auditor cruza alturas, sectores y muestras aproximadas de colocación y propagación de una bomba; falta contrastar una colocación y sus impactos en ejecución y corregir la implementación, que vincula ambos por cambio de tiles.
 
 **Cerebros y alarma (2026-11-03):** `audita-vtables-bap.py` contrasta los 44 slots de BAP1/BANPE1 y BAP2/BANPE2; `alerta-m0.md` identifica el receptor y las voces de `AcMetrallero` de los nidos, distintos de `AcBunker`. Falta cerrar las ramas de apuntado y comprobarlas en ejecución.
 

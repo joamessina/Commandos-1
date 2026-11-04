@@ -20,6 +20,29 @@ if (!mission || !volume) throw new Error('Falta MAPA0000.MIS o MAPA0000.VOL');
 const sectorEntry = entries.find((item) => item.path.replaceAll('\\', '/').toUpperCase().endsWith('/MAPA0000.SEC'));
 if (!sectorEntry) throw new Error('Falta MAPA0000.SEC');
 const sec = parseSec(entryBytes(dir, sectorEntry));
+function sectoresEnRadio(x: number, y: number): { sector: number; z: number; flags: number; margin: number }[] {
+  return sec.sectors.flatMap((sector, index) => {
+    if (x + 10 < sector.minX || x - 10 > sector.maxX || y + 10 < sector.minY || y - 10 > sector.maxY) return [];
+    const vertices = sector.verts.map((vertex) => sec.verts[vertex]).filter((point) => point !== undefined);
+    let area = 0;
+    for (let i = 0; i < vertices.length; i++) {
+      const a = vertices[i];
+      const b = vertices[(i + 1) % vertices.length];
+      if (a && b) area += a.x * b.y - b.x * a.y;
+    }
+    if (area === 0) return [];
+    const distances = vertices.map((a, i) => {
+      const b = vertices[(i + 1) % vertices.length];
+      if (!b) return Number.NEGATIVE_INFINITY;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const length = Math.hypot(dx, dy);
+      return length > 0 ? Math.sign(area) * (dx * (y - a.y) - dy * (x - a.x)) / length : Number.NEGATIVE_INFINITY;
+    });
+    const margin = Math.min(...distances);
+    return margin >= -10 ? [{ sector: index, z: groundZ(sector, x, y), flags: sector.flags, margin }] : [];
+  });
+}
 for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
   const elems = flatten(loadWorld(mission, { difficulty, macro: (name) => read(`${name}.MAC`) }));
   const { sites, objectives, escape } = parseSites(mission, parseVol(volume), elems);
@@ -61,6 +84,11 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
       }
       candidates.sort((a, b) => a.distance - b.distance);
       console.log('ANTENA_SUELO_CANDIDATOS_APROX', JSON.stringify(candidates.slice(0, 5)));
+      const level = candidates.filter((candidate) => {
+        const heights = sectoresEnRadio(candidate.x, candidate.y);
+        return heights.length > 0 && heights.every((item) => Math.abs(item.z - candidate.z) < 20);
+      });
+      console.log('ANTENA_SUELO_NIVELADO_RADIO_10_APROX', JSON.stringify(level.slice(0, 5)));
     }
     if (antenna) {
       let inside = false;
@@ -90,6 +118,102 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
       const target = { x: centerX + t * (antenna.x - centerX), y: centerY + t * (antenna.y - centerY) };
       const targetSector = map.at(target.x, target.y);
       console.log('CASA04_RAYO_CENTRADO_APROX', JSON.stringify({ t, target, sector: targetSector ? sec.sectors.indexOf(targetSector) : -1 }));
+      const source = { x: 1830, y: process.argv.includes('--antes') ? 946 : 956 };
+      const engineer = { x: source.x, y: source.y + 21 };
+      const engineerSector = map.at(engineer.x, engineer.y);
+      console.log('CANDIDATO_ZAPADOR_21', JSON.stringify({ ...engineer,
+        sector: engineerSector ? sec.sectors.indexOf(engineerSector) : -1,
+        ground: engineerSector ? groundZ(engineerSector, engineer.x, engineer.y) : null,
+        flags: engineerSector?.flags ?? null }));
+      if (engineerSector) {
+        const dx = source.x - engineer.x;
+        const dy = source.y - engineer.y;
+        for (let i = 0; i < engineerSector.verts.length; i++) {
+          const a = sec.verts[engineerSector.verts[i] ?? -1];
+          const b = sec.verts[engineerSector.verts[(i + 1) % engineerSector.verts.length] ?? -1];
+          if (!a || !b) continue;
+          const ax = a.x - engineer.x;
+          const ay = a.y - engineer.y;
+          const bx = b.x - engineer.x;
+          const by = b.y - engineer.y;
+          const den = dy * (bx - ax) - dx * (by - ay);
+          if (-dx * ay + dy * ax >= 0 && -dx * by + dy * bx < 0 && Math.abs(den) > 0.000001) {
+            console.log('CANDIDATO_COLOCACION_SALIDA_APROX', JSON.stringify({ edge: i,
+              t: (ay * (bx - ax) - ax * (by - ay)) / den, neighbor: engineerSector.neighbors[i] }));
+            break;
+          }
+        }
+      }
+      const overlapping = sectoresEnRadio(source.x, source.y);
+      console.log('CANDIDATO_SECTORES_RADIO_10_APROX', JSON.stringify(overlapping));
+      const antennaFraction = 100 / Math.hypot(source.x - antenna.x, source.y - antenna.y);
+      const antennaTarget = { x: antenna.x + antennaFraction * (source.x - antenna.x),
+        y: antenna.y + antennaFraction * (source.y - antenna.y) };
+      const antennaTargetSector = map.at(antennaTarget.x, antennaTarget.y);
+      console.log('ANTENA_RAYO_CANDIDATO_APROX', JSON.stringify({ fraction: antennaFraction, target: antennaTarget,
+        sector: antennaTargetSector ? sec.sectors.indexOf(antennaTargetSector) : -1 }));
+      const bombSector = map.at(source.x, source.y);
+      if (bombSector) {
+        const dx = antennaTarget.x - source.x;
+        const dy = antennaTarget.y - source.y;
+        for (let i = 0; i < bombSector.verts.length; i++) {
+          const a = sec.verts[bombSector.verts[i] ?? -1];
+          const b = sec.verts[bombSector.verts[(i + 1) % bombSector.verts.length] ?? -1];
+          if (!a || !b) continue;
+          const ax = a.x - source.x;
+          const ay = a.y - source.y;
+          const bx = b.x - source.x;
+          const by = b.y - source.y;
+          const den = dy * (bx - ax) - dx * (by - ay);
+          if (-dx * ay + dy * ax >= 0 && -dx * by + dy * bx < 0 && Math.abs(den) > 0.000001) {
+            console.log('ANTENA_CANDIDATO_SALIDA_SECTOR_APROX', JSON.stringify({ edge: i,
+              t: (ay * (bx - ax) - ax * (by - ay)) / den, neighbor: bombSector.neighbors[i] }));
+            break;
+          }
+        }
+      }
+      console.log('CASA04_DISTANCIA_MAX_VERTICE_CANDIDATO', Math.max(...points.map((point) => Math.hypot(point.x - source.x, point.y - source.y))));
+      let candidateT = 0;
+      for (let i = 0; i < points.length; i++) {
+        const a = points[(i + points.length - 1) % points.length];
+        const b = points[i];
+        if (!a || !b) continue;
+        const ex = b.x - a.x;
+        const ey = b.y - a.y;
+        const dx = source.x - centerX;
+        const dy = source.y - centerY;
+        let den = dx * ey - dy * ex;
+        let edgeNumerator = dx * (centerY - a.y) - dy * (centerX - a.x);
+        let rayNumerator = ex * (centerY - a.y) - (centerX - a.x) * ey;
+        if (den < 0) { den = -den; edgeNumerator = -edgeNumerator; rayNumerator = -rayNumerator; }
+        if (edgeNumerator > 0 && rayNumerator > 0 && edgeNumerator < den && rayNumerator < den) {
+          candidateT = Math.max(candidateT, rayNumerator / den);
+        }
+      }
+      const candidateTarget = { x: centerX + candidateT * (source.x - centerX), y: centerY + candidateT * (source.y - centerY) };
+      const candidateSector = map.at(candidateTarget.x, candidateTarget.y);
+      console.log('CASA04_RAYO_CANDIDATO_APROX', JSON.stringify({ source, t: candidateT, target: candidateTarget,
+        sector: candidateSector ? sec.sectors.indexOf(candidateSector) : -1 }));
+      const sourceSector = map.at(source.x, source.y);
+      if (sourceSector) {
+        const dx = candidateTarget.x - source.x;
+        const dy = candidateTarget.y - source.y;
+        for (let i = 0; i < sourceSector.verts.length; i++) {
+          const a = sec.verts[sourceSector.verts[i] ?? -1];
+          const b = sec.verts[sourceSector.verts[(i + 1) % sourceSector.verts.length] ?? -1];
+          if (!a || !b) continue;
+          const ax = a.x - source.x;
+          const ay = a.y - source.y;
+          const bx = b.x - source.x;
+          const by = b.y - source.y;
+          const den = dy * (bx - ax) - dx * (by - ay);
+          if (-dx * ay + dy * ax >= 0 && -dx * by + dy * bx < 0 && Math.abs(den) > 0.000001) {
+            console.log('CASA04_CANDIDATO_SALIDA_SECTOR_APROX', JSON.stringify({ edge: i,
+              t: (ay * (bx - ax) - ax * (by - ay)) / den, neighbor: sourceSector.neighbors[i] }));
+            break;
+          }
+        }
+      }
       if (antennaSector && targetSector === antennaSector) {
         const sx = target.x - antenna.x;
         const sy = target.y - antenna.y;
