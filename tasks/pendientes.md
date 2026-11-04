@@ -6,6 +6,8 @@
 
 **Colisión y objetivos de M0 (2026-11-03):** `q1-colision.md` corrige la interpretación de los tres intentos de movimiento y demuestra que el MIS no declara `CHOQ` separado; aún faltan contraste geométrico y dinámico. `refuerzos-m0.md` incorpora un auditor de los siete objetivos y los tres edificios de cuartel en ambas dificultades; no sustituye una partida completa.
 
+**Edificios de cuartel:** `refuerzos-m0.md` identifica la generación automática de volúmenes `CASA` en el exe, incluidos `CASA06A`, `CASA08` y `CASA05`, ausentes de los sitios creados por el port. Documenta sus impactos y sonidos según los radios; falta el contraste jugable y la implementación.
+
 **Cerebros y alarma (2026-11-03):** `audita-vtables-bap.py` contrasta los 44 slots de BAP1/BANPE1 y BAP2/BANPE2; `alerta-m0.md` identifica el receptor y las voces de `AcMetrallero` de los nidos, distintos de `AcBunker`. Falta cerrar las ramas de apuntado y comprobarlas en ejecución.
 
 **Artillero y contacto (2026-11-03):** `obj-armas-fijas.md` identifica `CANONERODISPARA` y la secuencia real de 3 pasos × 24 direcciones; `q1-colision.md` sigue el mensaje 3 (`MSG_CHOQUE`) hasta ambas fichas y corrige una rama inalcanzable. Falta completar condiciones de disparo y de presencia en la búsqueda espacial.

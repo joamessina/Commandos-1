@@ -17,6 +17,14 @@ const root = asList(find(parseClave(mission), '.MISSION')) ?? [];
 const volText = read('MAPA0000.VOL');
 if (!volText) throw new Error('Falta MAPA0000.VOL');
 const volume = parseVol(volText);
+console.log('CASASFUERTES', JSON.stringify(find(root, '.CASASFUERTES') ?? null));
+for (const poly of volume.polys.filter((p) => p.name.startsWith('CASA'))) {
+  const x = poly.points.reduce((sum, point) => sum + point.x, 0) / poly.points.length;
+  const y = poly.points.reduce((sum, point) => sum + point.y, 0) / poly.points.length;
+  const radius = poly.points.length === 0 ? poly.radio : Math.max(...poly.points.map((p) => Math.hypot(p.x - x, p.y - y)));
+  console.log('CASA', JSON.stringify({ name: poly.name, xyz: poly.header.slice(0, 3),
+    vertices: poly.points.length, radioDeclarado: poly.radio, radioEstimado: radius }));
+}
 for (const entry of asList(find(root, '.AUTOEXPCASAS')) ?? []) {
   const name = asText(find(asList(entry) ?? [], '.MAP'));
   const poly = volume.polys.find((p) => p.name.toUpperCase() === name?.toUpperCase());
