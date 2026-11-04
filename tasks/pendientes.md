@@ -16,7 +16,7 @@
 
 **Buceo y minas (2026-11-03):** `au-jugador.md` precisa la prueba geométrica del cambio de modo y la contrasta con dos puntos de la costa real; falta la lista de sectores pisados. `obj-explosivos.md` verifica la masa 100 de los cuatro aliados, el umbral 60 de las 22 minas y corrige que la igualdad también activa el contacto; falta comprobar la entrega efectiva de la colisión por contexto.
 
-**Minas y Zodiac, continuación:** las dos macros declaran `CHOC`, el cargador registra ambas en la lista de colisión y la mina se retira de esa lista al explotar. Se contrastaron masas, cilindros y posiciones declaradas; siguen pendientes cambios de estado y posiciones en ejecución.
+**Minas y Zodiac, continuación:** las dos macros declaran `CHOC`, el cargador registra ambas y la mina se retira al explotar. Al embarcar, el pasajero se retira de `CHOC`; una vía de salida permite restaurarlo. Se contrastaron masas, cilindros y posiciones declaradas; siguen pendientes posiciones y daños en ejecución.
 
 **Sectores pisados del buzo:** `hud-consumidores.md` identifica la lista, su límite de ocho y el orden de actualización: limpieza, vecinos por contactos no bloqueantes y finalmente sector central. El HUD consulta después de la simulación en los ciclos y estados indicados. Falta contrastar los bordes concretos en ejecución.
 
