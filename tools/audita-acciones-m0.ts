@@ -54,8 +54,9 @@ for (const nombre of ['MINASUB.MAC', 'ZODIAC5.MAC', 'BOMBAACT.MAC']) {
   if (!entrada) throw new Error(`Falta ${nombre}`);
   const nodos = parseClave(new TextDecoder('windows-1252').decode(entryBytes(datos, entrada)));
   console.log(nombre, 'MASA', find(nodos, '.MASA'), 'VOLCOLISION', JSON.stringify(find(nodos, '.VOLCOLISION')),
-    'LISTAS', JSON.stringify(find(nodos, '.LISTAS')));
+    'LISTAS', JSON.stringify(find(nodos, '.LISTAS')), 'MOTOR', JSON.stringify(find(nodos, '.MOTOR')));
   if (nombre === 'ZODIAC5.MAC') console.log('ZODIAC5_ACCIONES', JSON.stringify(find(nodos, '.ACCIONES')));
+  if (nombre === 'BOMBAACT.MAC') console.log('BOMBAACT_ORGANOS', JSON.stringify(find(nodos, '.ORGANOS')));
 }
 console.log('MACROS_DIRECTAS_AUDITADAS', macrosUsadas.size);
 for (const nombre of macrosUsadas) {

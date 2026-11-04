@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { entryBytes, parseContainer } from '../src/formats/container.ts';
 import { parseVol } from '../src/formats/vol.ts';
-import { parseSec, SectorFlag } from '../src/formats/sec.ts';
+import { parseSec, SectorFlag, type Sector } from '../src/formats/sec.ts';
 import { asText, find } from '../src/formats/clave.ts';
 import { parseSites } from '../src/engine/demolition.ts';
 import { groundZ, SectorMap } from '../src/engine/sectors.ts';
@@ -20,6 +20,45 @@ if (!mission || !volume) throw new Error('Falta MAPA0000.MIS o MAPA0000.VOL');
 const sectorEntry = entries.find((item) => item.path.replaceAll('\\', '/').toUpperCase().endsWith('/MAPA0000.SEC'));
 if (!sectorEntry) throw new Error('Falta MAPA0000.SEC');
 const sec = parseSec(entryBytes(dir, sectorEntry));
+type Point = { x: number; y: number };
+function salidaSector(sector: Sector, source: Point, target: Point): { edge: number; t: number; neighbor: number | undefined } | null {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  for (let i = 0; i < sector.verts.length; i++) {
+    const a = sec.verts[sector.verts[i] ?? -1];
+    const b = sec.verts[sector.verts[(i + 1) % sector.verts.length] ?? -1];
+    if (!a || !b) continue;
+    const ax = a.x - source.x;
+    const ay = a.y - source.y;
+    const bx = b.x - source.x;
+    const by = b.y - source.y;
+    const den = dy * (bx - ax) - dx * (by - ay);
+    if (-dx * ay + dy * ax >= 0 && -dx * by + dy * bx < 0 && Math.abs(den) > 0.000001) {
+      return { edge: i, t: (ay * (bx - ax) - ax * (by - ay)) / den, neighbor: sector.neighbors[i] };
+    }
+  }
+  return null;
+}
+function contactoPoligono(points: readonly Point[], center: Point, source: Point): number {
+  let t = 0;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[(i + points.length - 1) % points.length];
+    const b = points[i];
+    if (!a || !b) continue;
+    const ex = b.x - a.x;
+    const ey = b.y - a.y;
+    const dx = source.x - center.x;
+    const dy = source.y - center.y;
+    let den = dx * ey - dy * ex;
+    let edgeNumerator = dx * (center.y - a.y) - dy * (center.x - a.x);
+    let rayNumerator = ex * (center.y - a.y) - (center.x - a.x) * ey;
+    if (den < 0) { den = -den; edgeNumerator = -edgeNumerator; rayNumerator = -rayNumerator; }
+    if (edgeNumerator > 0 && rayNumerator > 0 && edgeNumerator < den && rayNumerator < den) {
+      t = Math.max(t, rayNumerator / den);
+    }
+  }
+  return t;
+}
 function sectoresEnRadio(x: number, y: number): { sector: number; z: number; flags: number; margin: number }[] {
   return sec.sectors.flatMap((sector, index) => {
     if (x + 10 < sector.minX || x - 10 > sector.maxX || y + 10 < sector.minY || y - 10 > sector.maxY) return [];
@@ -98,23 +137,7 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
         const next = points[(index + 1) % points.length];
         return next ? Math.hypot(point.x - next.x, point.y - next.y) : 0;
       })));
-      let t = 0;
-      for (let i = 0; i < points.length; i++) {
-        const a = points[(i + points.length - 1) % points.length];
-        const b = points[i];
-        if (!a || !b) continue;
-        const ex = b.x - a.x;
-        const ey = b.y - a.y;
-        const dx = antenna.x - centerX;
-        const dy = antenna.y - centerY;
-        let den = dx * ey - dy * ex;
-        let edgeNumerator = dx * (centerY - a.y) - dy * (centerX - a.x);
-        let rayNumerator = ex * (centerY - a.y) - (centerX - a.x) * ey;
-        if (den < 0) { den = -den; edgeNumerator = -edgeNumerator; rayNumerator = -rayNumerator; }
-        if (edgeNumerator > 0 && rayNumerator > 0 && edgeNumerator < den && rayNumerator < den) {
-          t = Math.max(t, rayNumerator / den);
-        }
-      }
+      const t = contactoPoligono(points, { x: centerX, y: centerY }, antenna);
       const target = { x: centerX + t * (antenna.x - centerX), y: centerY + t * (antenna.y - centerY) };
       const targetSector = map.at(target.x, target.y);
       console.log('CASA04_RAYO_CENTRADO_APROX', JSON.stringify({ t, target, sector: targetSector ? sec.sectors.indexOf(targetSector) : -1 }));
@@ -125,25 +148,7 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
         sector: engineerSector ? sec.sectors.indexOf(engineerSector) : -1,
         ground: engineerSector ? groundZ(engineerSector, engineer.x, engineer.y) : null,
         flags: engineerSector?.flags ?? null }));
-      if (engineerSector) {
-        const dx = source.x - engineer.x;
-        const dy = source.y - engineer.y;
-        for (let i = 0; i < engineerSector.verts.length; i++) {
-          const a = sec.verts[engineerSector.verts[i] ?? -1];
-          const b = sec.verts[engineerSector.verts[(i + 1) % engineerSector.verts.length] ?? -1];
-          if (!a || !b) continue;
-          const ax = a.x - engineer.x;
-          const ay = a.y - engineer.y;
-          const bx = b.x - engineer.x;
-          const by = b.y - engineer.y;
-          const den = dy * (bx - ax) - dx * (by - ay);
-          if (-dx * ay + dy * ax >= 0 && -dx * by + dy * bx < 0 && Math.abs(den) > 0.000001) {
-            console.log('CANDIDATO_COLOCACION_SALIDA_APROX', JSON.stringify({ edge: i,
-              t: (ay * (bx - ax) - ax * (by - ay)) / den, neighbor: engineerSector.neighbors[i] }));
-            break;
-          }
-        }
-      }
+      if (engineerSector) console.log('CANDIDATO_COLOCACION_SALIDA_APROX', JSON.stringify(salidaSector(engineerSector, engineer, source)));
       const overlapping = sectoresEnRadio(source.x, source.y);
       console.log('CANDIDATO_SECTORES_RADIO_10_APROX', JSON.stringify(overlapping));
       const antennaFraction = 100 / Math.hypot(source.x - antenna.x, source.y - antenna.y);
@@ -153,89 +158,17 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
       console.log('ANTENA_RAYO_CANDIDATO_APROX', JSON.stringify({ fraction: antennaFraction, target: antennaTarget,
         sector: antennaTargetSector ? sec.sectors.indexOf(antennaTargetSector) : -1 }));
       const bombSector = map.at(source.x, source.y);
-      if (bombSector) {
-        const dx = antennaTarget.x - source.x;
-        const dy = antennaTarget.y - source.y;
-        for (let i = 0; i < bombSector.verts.length; i++) {
-          const a = sec.verts[bombSector.verts[i] ?? -1];
-          const b = sec.verts[bombSector.verts[(i + 1) % bombSector.verts.length] ?? -1];
-          if (!a || !b) continue;
-          const ax = a.x - source.x;
-          const ay = a.y - source.y;
-          const bx = b.x - source.x;
-          const by = b.y - source.y;
-          const den = dy * (bx - ax) - dx * (by - ay);
-          if (-dx * ay + dy * ax >= 0 && -dx * by + dy * bx < 0 && Math.abs(den) > 0.000001) {
-            console.log('ANTENA_CANDIDATO_SALIDA_SECTOR_APROX', JSON.stringify({ edge: i,
-              t: (ay * (bx - ax) - ax * (by - ay)) / den, neighbor: bombSector.neighbors[i] }));
-            break;
-          }
-        }
-      }
+      if (bombSector) console.log('ANTENA_CANDIDATO_SALIDA_SECTOR_APROX', JSON.stringify(salidaSector(bombSector, source, antennaTarget)));
       console.log('CASA04_DISTANCIA_MAX_VERTICE_CANDIDATO', Math.max(...points.map((point) => Math.hypot(point.x - source.x, point.y - source.y))));
-      let candidateT = 0;
-      for (let i = 0; i < points.length; i++) {
-        const a = points[(i + points.length - 1) % points.length];
-        const b = points[i];
-        if (!a || !b) continue;
-        const ex = b.x - a.x;
-        const ey = b.y - a.y;
-        const dx = source.x - centerX;
-        const dy = source.y - centerY;
-        let den = dx * ey - dy * ex;
-        let edgeNumerator = dx * (centerY - a.y) - dy * (centerX - a.x);
-        let rayNumerator = ex * (centerY - a.y) - (centerX - a.x) * ey;
-        if (den < 0) { den = -den; edgeNumerator = -edgeNumerator; rayNumerator = -rayNumerator; }
-        if (edgeNumerator > 0 && rayNumerator > 0 && edgeNumerator < den && rayNumerator < den) {
-          candidateT = Math.max(candidateT, rayNumerator / den);
-        }
-      }
+      const candidateT = contactoPoligono(points, { x: centerX, y: centerY }, source);
       const candidateTarget = { x: centerX + candidateT * (source.x - centerX), y: centerY + candidateT * (source.y - centerY) };
       const candidateSector = map.at(candidateTarget.x, candidateTarget.y);
       console.log('CASA04_RAYO_CANDIDATO_APROX', JSON.stringify({ source, t: candidateT, target: candidateTarget,
         sector: candidateSector ? sec.sectors.indexOf(candidateSector) : -1 }));
       const sourceSector = map.at(source.x, source.y);
-      if (sourceSector) {
-        const dx = candidateTarget.x - source.x;
-        const dy = candidateTarget.y - source.y;
-        for (let i = 0; i < sourceSector.verts.length; i++) {
-          const a = sec.verts[sourceSector.verts[i] ?? -1];
-          const b = sec.verts[sourceSector.verts[(i + 1) % sourceSector.verts.length] ?? -1];
-          if (!a || !b) continue;
-          const ax = a.x - source.x;
-          const ay = a.y - source.y;
-          const bx = b.x - source.x;
-          const by = b.y - source.y;
-          const den = dy * (bx - ax) - dx * (by - ay);
-          if (-dx * ay + dy * ax >= 0 && -dx * by + dy * bx < 0 && Math.abs(den) > 0.000001) {
-            console.log('CASA04_CANDIDATO_SALIDA_SECTOR_APROX', JSON.stringify({ edge: i,
-              t: (ay * (bx - ax) - ax * (by - ay)) / den, neighbor: sourceSector.neighbors[i] }));
-            break;
-          }
-        }
-      }
+      if (sourceSector) console.log('CASA04_CANDIDATO_SALIDA_SECTOR_APROX', JSON.stringify(salidaSector(sourceSector, source, candidateTarget)));
       if (antennaSector && targetSector === antennaSector) {
-        const sx = target.x - antenna.x;
-        const sy = target.y - antenna.y;
-        const vertices = antennaSector.verts.map((index) => sec.verts[index]).filter((point) => point !== undefined);
-        let crossing: number | null = null;
-        for (let i = 0; i < vertices.length; i++) {
-          const a = vertices[i];
-          const b = vertices[(i + 1) % vertices.length];
-          if (!a || !b) continue;
-          const ax = a.x - antenna.x;
-          const ay = a.y - antenna.y;
-          const bx = b.x - antenna.x;
-          const by = b.y - antenna.y;
-          const before = -sx * ay + sy * ax;
-          const after = -sx * by + sy * bx;
-          const den = sy * (bx - ax) - sx * (by - ay);
-          if (before >= 0 && after < 0 && Math.abs(den) > 0.000001) {
-            crossing = (ay * (bx - ax) - ax * (by - ay)) / den;
-            break;
-          }
-        }
-        console.log('CASA04_RAYO_SALIDA_SECTOR_APROX', crossing);
+        console.log('CASA04_RAYO_SALIDA_SECTOR_APROX', salidaSector(antennaSector, antenna, target)?.t ?? null);
       }
       for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
         const a = points[i];
