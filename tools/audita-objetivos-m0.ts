@@ -2,10 +2,10 @@
 import { readFileSync } from 'node:fs';
 import { entryBytes, parseContainer } from '../src/formats/container.ts';
 import { parseVol } from '../src/formats/vol.ts';
-import { parseSec } from '../src/formats/sec.ts';
+import { parseSec, SectorFlag } from '../src/formats/sec.ts';
 import { asText, find } from '../src/formats/clave.ts';
 import { parseSites } from '../src/engine/demolition.ts';
-import { SectorMap } from '../src/engine/sectors.ts';
+import { groundZ, SectorMap } from '../src/engine/sectors.ts';
 import { flatten, loadWorld } from '../src/engine/world.ts';
 
 const dir = new Uint8Array(readFileSync('D:/SteamLibrary/steamapps/common/Commandos Beyond the Call of Duty/WAR_MP.DIR'));
@@ -46,6 +46,22 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
     console.log('CASA04_CENTRO', JSON.stringify([centerX, centerY]), 'CABECERA_VOL', JSON.stringify(casa.header),
       'SECTOR', casaSector ? sec.sectors.indexOf(casaSector) : -1);
     console.log('ANTENA_SECTOR', antennaSector ? sec.sectors.indexOf(antennaSector) : -1);
+    if (antenna && antennaSector) console.log('ANTENA_SUELO', groundZ(antennaSector, antenna.x, antenna.y),
+      'TIPO', antennaSector.type, 'FLAGS', antennaSector.flags);
+    if (antenna) {
+      const candidates: { x: number; y: number; z: number; distance: number; sector: number }[] = [];
+      for (let dx = -200; dx <= 200; dx += 10) for (let dy = -200; dy <= 200; dy += 10) {
+        const x = antenna.x + dx;
+        const y = antenna.y + dy;
+        const sector = map.at(x, y);
+        if (!sector || sector.flags & (SectorFlag.NTrans | SectorFlag.NCamin)) continue;
+        const z = groundZ(sector, x, y);
+        if (Math.abs(z - antenna.z) > 20) continue;
+        candidates.push({ x, y, z, distance: Math.hypot(dx, dy), sector: sec.sectors.indexOf(sector) });
+      }
+      candidates.sort((a, b) => a.distance - b.distance);
+      console.log('ANTENA_SUELO_CANDIDATOS_APROX', JSON.stringify(candidates.slice(0, 5)));
+    }
     if (antenna) {
       let inside = false;
       const points = casa.points.map((point) => ({ x: point.x + (casa.header[0] ?? 0), y: point.y + (casa.header[1] ?? 0) }));
