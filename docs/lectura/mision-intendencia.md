@@ -49,7 +49,7 @@ Los eventos nacen en puntos de patrulla (`.EVENTO HUGE` en un waypoint, `Ev_Exit
 `FUN_0059B600` (886 B) usa tres listas —B comandos, C objetivos, A vehículo de huida— y las condiciones de la subclase. Definiciones **[hecho, por desensamblado]**:
 - `vivos` = nº de comandos (B) sin `+0x23C & 4` y (con `FUN_00508E90`: no están dentro de un habitáculo de tipo `0x100` —cárcel— ni su contenedor es de acción 5) — `FUN_006ABD90`; `todosVivos` = `vivos == total(B)`.
 - `Aok` = A no vacía y *todas* sus entradas con flag `+0x20` (el vehículo marcó "salió"); `Cok` = `FUN_0059A640` = (C vacía **o** todas marcadas) **y** slot 29; `Cact` = `FUN_0059A690` = todas las C marcadas *y* activas (`bicho+0x38 & 4 == 0`) **y** slot 29.
-- `enVeh` = A vacía **o** `B.FUN_006AC290(A[0])` = *todos* los comandos vivos están dentro del vehículo A[0]; `alguienDentro` = hay un comando con `bicho+0x134 == A[0]`.
+- `enVeh` = A vacía **o** `B.FUN_006AC290(A[0])`: cuenta entradas B no nulas cuyo `bicho+0x134` apunta a A[0], exige que el conteo sea distinto de cero y lo compara por igualdad con `FUN_006ABD90()` (`fn_00680000.c:27754–27784`). El conteo de ocupantes no filtra ahí si la ficha está muerta; por eso no es estrictamente equivalente a «todos los vivos a bordo» si un cuerpo aún conserva ese contenedor. `alguienDentro` = hay un comando con `bicho+0x134 == A[0]`.
 - `enSalida` = A vacía **o** A[0] está en el sector de `PUNTOHUIDA` (`+0xBC8`) **o** no hay `PUNTOHUIDA`.
 - `condVeh` = (`todosVivos && enVeh`) **o** slot 35.
 Orden de decisión (primera que se cumple):
