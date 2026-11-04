@@ -49,6 +49,7 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
   for (const el of elems) {
     for (const action of el.actions.filter((a) => a.name.toUpperCase() === 'ACEXPLOTACASA')) {
       console.log(JSON.stringify({ difficulty, token: el.token, macro: el.macro,
+        xyz: [el.x, el.y, el.z], params: action.params,
         collision: find(el.block, '.VOLCOLISION'), sound: find(action.params, '.SONFIS') ?? null,
         flames: find(action.params, '.VOLTOKENLLAMAS') ?? null }));
     }
