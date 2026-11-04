@@ -37,5 +37,5 @@ Campos: `+0x24` estado (0 apagada, 2 activa) · `+0x2C` **modo** (0 libre, 1 apu
 - `FUN_005986A0(emisor, víctima, tipo, daño)` es quien envía `MSGA_IMPACTO` (ver `impactos.md`; la orden de los dos primeros parámetros es emisor, víctima según `AUAcuchillar`).
 
 ## Dudas abiertas
-- Cerradas en `disparo-enemigo.md`: el `0x1E` sí es el daño (campo `[10]` del contexto, 4.º parámetro de `FUN_005986A0`; tipo `DISPARO`); **no hay tirada de acierto**: el tiro de fusil/pistola daña siempre si el blanco está en la lista de vistos del tirador, si no no daña a nadie; la ráfaga de metralleta (`FUN_00679DC0`) **no lleva daño** (víctima 0, daño 0). Nº de disparos que matan a cada comando: tabla en `disparo-enemigo.md` §5.
+- `disparo-enemigo.md` distingue el impacto inmediato del efecto posterior. En fusil/pistola, la víctima inmediata se conserva si aparece en la lista de vistos. En la ráfaga `00679DC0` no hay víctima inmediata, pero el `AcPuff` creado puede aplicar **30** mediante colisión dinámica; una lectura anterior omitió esta vía. El impacto depende de que se produzca la colisión y se cumplan sus filtros. Nº de impactos de 30 que matan a cada comando: tabla en `disparo-enemigo.md` §5.
 - Valor por defecto de `TIEMPORECARGA` y quién usa `TIPOARMA METRALLETA`: vienen de los datos (MAC), no del exe.

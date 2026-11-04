@@ -11,16 +11,16 @@ Recibe el **contexto de la bala en `EBX`** (sin parámetros de pila). Campos (í
 | `[1..3]` | punto de impacto / de salida (x,y,z); es la posición del sonido y del efecto |
 | `[4]` | **víctima** (bicho) o 0 |
 | `[5..7]` | punto de mira (pos del blanco + altura de ojo, o el punto pedido); lo usa el efecto visual |
-| `[8]` | valor 2 (parámetro de `FUN_00678740`, el nombre de animación del efecto) |
+| `[8]` | filtro de bando que recibe el efecto `AcPuff` cuando se activa su colisión |
 | `[9]` | **tipo de impacto** (0 = `DISPARO`) |
 | `[10]` | **daño** (el 4.º parámetro de `FUN_005986A0`) |
-| `[0xB]` | parámetro de intensidad de la partícula `AcPuff` (no es daño) |
+| `[0xB]` | daño del efecto `AcPuff` por colisión dinámica, cuando se crea con este valor positivo |
 | `[0xC]` | si ≠ 0 y no hay víctima: "ricochete en suelo" (`FUN_00676D60`, sonido `PING`) |
 | `[0xD]` | 1 = hacer sonar el disparo (`FUN_00681660(tipo [0xF], fourcc [0x10], pos [1..3], pos del tirador, tirador)`) |
 | `[0xE]` | 1 = además `FUN_0067F9C0(fourcc, pos, 0.75)` |
 | `[0x11]` | 1 = dibujar el impacto (`FUN_006788C0`, partícula `ClassAcPuff` con la animación `[0x13]`=`DISPFALL`) — lo fijan en "no hay víctima" |
 
-Lo que hace: **si `[4] ≠ 0` y `[10] ≠ 0` → `FUN_005986A0(tirador, víctima, tipo [9], daño [10])`** (envía `MSGA_IMPACTO` a la víctima); si no, y `[0xC] ≠ 0`, el ricochete; después el efecto visual y el sonido. (Comprobado: `mov ecx,[ebx+0x10]; mov eax,[ebx+0x28]; ... push eax(daño); push [ebx+0x24](tipo); push ecx(víctima); push [ebx](tirador); call` en `0x678DDA`.)
+Lo que hace: **si `[4] ≠ 0` y `[10] ≠ 0` → `FUN_005986A0(tirador, víctima, tipo [9], daño [10])`** (envía `MSGA_IMPACTO` a la víctima); si no, y `[0xC] ≠ 0`, el ricochete; después crea el efecto y reproduce el sonido según sus banderas. El efecto puede causar un impacto posterior por colisión, como se precisa en §2. (Impacto inmediato comprobado en `0x678DDA`.)
 
 **`FUN_005986A0(emisor, víctima, tipo, daño)`**: el orden correcto es *emisor primero* (`impactos.md` lo tenía al revés). Arma el mensaje `{+0x00 tipo, +0x04..+0x0C pos del emisor, +0x10 daño, +0x14 emisor}` y lo manda a la víctima. Por eso `ReceptorImpactosDef` y `AcMuerte` leen el daño en `impacto+0x10` y la dirección del golpe en `impacto+4..+0xC`.
 
@@ -31,17 +31,17 @@ Lo que hace: **si `[4] ≠ 0` y `[10] ≠ 0` → `FUN_005986A0(tirador, víctima
 | `FUN_00679820` pistola a punto | `PISTOLA`, sin blanco | 0 | 30 | **0 siempre** | `PIPA` | idem |
 | `FUN_00679A10` fusil con blanco | `TIPOARMA` ausente u otro (fusil) | 0 | 30 | blanco, filtro de §3 | `LFUS` (0x4655534C) | 1 |
 | `FUN_00679BE0` fusil a punto | fusil sin blanco | 0 | 30 | 0 siempre | `LFUS` | 1 |
-| `FUN_00679DC0` **bala de ráfaga** | `TIPOARMA METRALLETA` (`FUN_0045A400`) | 0 | **0** (el `0x1E` cae en `[0xB]`, la partícula) | **0 siempre** | ninguno (`[0xD]=0`) | **0** |
+| `FUN_00679DC0` **bala de ráfaga** | `TIPOARMA METRALLETA` (`FUN_0045A400`) y nido enemigo | 0 | **0 inmediato**, 30 en el efecto de colisión | **0 inmediato** | ninguno (`[0xD]=0`) | **0** |
 
-Detalle de la ráfaga: en `FUN_00679DC0` las escrituras previas a `call 678DD0` son `[esp+0x38]=0, [esp+0x3C]=0, [esp+0x40]=0x1E` con `EBX = esp+0x14`, o sea `[9]=0`, `[10]=0`, `[0xB]=0x1E`; y `[4]=0` desde el principio. Resultado: **las balas de la metralleta enemiga (`TIPOARMA METRALLETA`) no hieren a nadie por este camino**: solo dejan la partícula `DISPFALL` en el punto y el ruido `MET0` que `AcDisparar` emite una vez al empezar la ráfaga (`ac-disparar.md` §4). Ojo: `docs/engine/armas-danio.md` §4 llamaba "ametralladora" a `FUN_00679A10` y le daba daño 30; es el **fusil**; la ráfaga real (`679DC0`) no tiene daño.
+**Corrección: el efecto también puede herir.** En `00679DC0`, `[9]=0`, `[10]=0`, `[0xB]=30` y `[4]=0`; no hay víctima para el impacto inmediato de `00678DD0`. Pero `[0x11]` y `[0x13]` activan la creación de `DISPFALL`: `00678DD0` pasa `[0xB]` a `006788C0` (asm `0x678E59–0x678E7C`). Si es positivo, esta rutina crea `ClassAcPuff`, guarda 30 en `acción+0x2C`, tipo 0 en `+0x30`, filtro 2 en `+0x34`, activa el flag del objeto `+0x23C & 1` y lo registra (`0x678A1C–0x678A61`). Al recibir `MSGA_COLISION_DINAMICA`, `00676DE0` envía `005986A0` con esa cantidad si el otro objeto tiene `+0x108 == 2`, o el filtro es −1, o el objeto tiene `+0x240 & 0x4000`; con `acción+0x28 != 0` pone el daño a cero después del primer impacto (`0x676E01–0x676EA4`). Para esta ráfaga la llamada fija ese campo en 1 y el filtro en 2. **La lectura anterior que concluía que la ráfaga no podía herir era incorrecta.** La entrega depende de que ocurra la colisión dinámica; no está probado que cada tiro alcance a alguien. El ruido de `AcDisparar` es `MET0`; el del nido es `NIDO`.
 
 ## 3. Puntería: no hay tirada, hay un filtro de visibilidad [hecho]
-- **Ninguna de las rutinas de bala llama a `rand`** (comprobado buscando `call 0x40EA0C`, el `_rand` del CRT, en `678DD0`, `679650`, `679820`, `679A10`, `679BE0`, `679DC0`, `6771A0`, `675880`, `675AB0`, `6760C0`, `677010`, `6758D0`, `676D60`, `5986A0`: 0 apariciones). Los únicos `rand` del disparo enemigo son (a) la cadencia: `enfriamiento = TIEMPORECARGA + rand % 6` (`FUN_0045ACD0`) y (b) la dispersión de la ráfaga `rand % 11 − 5` en x e y (`FUN_0045A400`), que como se vio no hiere.
+- En las rutinas de bala enumeradas no se encontró llamada directa al `rand` del CRT; eso no cubre todas las funciones descendientes. `006788C0` sí usa `rand` para parámetros del efecto. La recarga de patrullas usa el generador del juego y la ráfaga agrega dispersión en XY (`refuerzos-m0.md`, `ac-disparar.md`).
 - El filtro (idéntico en `679650` y `679A10`): `FUN_00675880(tirador, blanco)` recorre la lista de elementos vistos del órgano de vista del tirador (`bicho+0x214`: `+0x48` = cantidad, hasta 16 entradas desde `+0x08`, la lista del último escaneo de `Vista01`, `organos.md`).
   - **Blanco en la lista → la víctima se mantiene (`EBX[4]=blanco`) y recibe `IMPACTO` tipo 0 daño 30, siempre.** No se traza rayo ni hay probabilidad de fallo.
-  - **Blanco fuera de la lista → se traza el rayo `FUN_006771A0` (solo para fijar dónde cae el impacto visual: recorta el punto con `FUN_006758D0` si algo lo bloquea) y luego se hace `xor esi,esi; mov [esp+0x1C],esi`: `EBX[4]=0` (sin víctima).** El disparo queda en puro efecto (partícula `DISPFALL` en el punto, sonido). El rayo no devuelve el cuerpo que toca (`param_6 = NULL` en las cuatro rutinas), así que **no hay "bala perdida" que dañe a un tercero**.
+  - **Blanco fuera de la lista → se traza el rayo `FUN_006771A0` y se pone `EBX[4]=0` (sin víctima inmediata).** El rayo no devuelve el cuerpo que toca (`param_6 = NULL` en las cuatro rutinas). Además estas cuatro ponen `[0xB]=0`, por lo que el `AcPuff` no activa esa vía de daño por colisión (asm `0x679752`, `0x679937`, `0x679B09`, `0x679CF1`).
   - (Por eso `FUN_00675AB0`, que elige "el primer cuerpo con `23C & 2` del camino", aquí solo sirve para acortar el punto del impacto visual.)
-- Las rutinas "a punto" (`679820`, `679BE0`): víctima 0 desde el inicio, nunca hieren (disparo a un punto cuando no hay blanco: p. ej. fuego de supresión).
+- Las rutinas "a punto" (`679820`, `679BE0`) parten con víctima inmediata 0 y crean el `AcPuff` con daño de colisión 0. Esto no descarta otros efectos o acciones del soldado fuera de esas llamadas.
 - Además `AcDisparar` solo dispara si `bicho+0x128 == 0` (no ocupado/herido; `FUN_0045ACD0`).
 - Alcance: no hay prueba de distancia en estas rutinas; el límite lo da el cono de visión del tirador (la lista de vistos). [hecho: ausencia de comparación de distancia en el rango leído]
 
