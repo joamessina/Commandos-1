@@ -43,11 +43,17 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
     const antenna = elems.find((elem) => elem.token === 'EXPL_ANTENA');
     const casaSector = map.at(centerX, centerY);
     const antennaSector = antenna ? map.at(antenna.x, antenna.y) : null;
-    console.log('CASA04_CENTRO', JSON.stringify([centerX, centerY]), 'SECTOR', casaSector ? sec.sectors.indexOf(casaSector) : -1);
+    console.log('CASA04_CENTRO', JSON.stringify([centerX, centerY]), 'CABECERA_VOL', JSON.stringify(casa.header),
+      'SECTOR', casaSector ? sec.sectors.indexOf(casaSector) : -1);
     console.log('ANTENA_SECTOR', antennaSector ? sec.sectors.indexOf(antennaSector) : -1);
     if (antenna) {
       let inside = false;
       const points = casa.points.map((point) => ({ x: point.x + (casa.header[0] ?? 0), y: point.y + (casa.header[1] ?? 0) }));
+      console.log('CASA04_VERTICES_DISTANCIA_ANTENA', JSON.stringify(points.map((point) => Math.hypot(point.x - antenna.x, point.y - antenna.y))));
+      console.log('CASA04_LONGITUDES_ARISTAS', JSON.stringify(points.map((point, index) => {
+        const next = points[(index + 1) % points.length];
+        return next ? Math.hypot(point.x - next.x, point.y - next.y) : 0;
+      })));
       for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
         const a = points[i];
         const b = points[j];
