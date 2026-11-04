@@ -38,7 +38,7 @@ function recorrer(nodos: readonly Node[], contexto: readonly string[] = []): voi
     console.log('ZODIAC5_INSTANCIA', 'LISTAS', JSON.stringify(find(nodos, '.LISTAS')));
   }
   if (String(find(nodos, '.CLASS')).toUpperCase() === 'BICHOALIADO') {
-    console.log('ALIADO', token, 'CONTEXTO', actual.join(' > '), 'XYZ', JSON.stringify(find(nodos, '.XYZ')), 'MASA', find(nodos, '.MASA'));
+    console.log('ALIADO', token, 'CONTEXTO', actual.join(' > '), 'XYZ', JSON.stringify(find(nodos, '.XYZ')), 'MASA', find(nodos, '.MASA'), 'LISTAS', JSON.stringify(find(nodos, '.LISTAS')));
     for (const accion of asList(find(nodos, '.ACCIONES')) ?? []) console.log('  ACCION', JSON.stringify(accion));
   }
   for (const nodo of nodos) if (Array.isArray(nodo)) recorrer(nodo, actual);
