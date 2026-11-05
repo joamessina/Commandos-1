@@ -1097,8 +1097,10 @@ function scopeInRange(g: Game, weapon: 'MIRILLA' | 'ARPON' = 'MIRILLA'): boolean
   const near = (px: number, py: number): boolean => Math.abs(mx - px) < 14 && my > py - 40 && my < py + 8;
   const foe = g.soldiers.find((s) => !s.soldier.dead && near(project(s.soldier.x, s.soldier.y, s.soldier.unit.z).px, project(s.soldier.x, s.soldier.y, s.soldier.unit.z).py));
   const barrel = [...g.barrelProps].find(([b, pr]) => !b.dead && Math.abs(mx - project(pr.x, pr.y, pr.z).px) < 14 && Math.abs(my - project(pr.x, pr.y, pr.z).py + 10) < 20)?.[0];
-  const spot = foe || barrel ? null : g.sectors?.pick(mx, my);
-  const target = foe?.soldier ?? barrel ?? (spot ? groundTarget(spot.x, spot.y, spot.z) : null);
+  // shortcut: el área de selección usa el rectángulo genérico de objetos, falta la máscara de selección del sprite original.
+  const mine = [...g.mineProps].find(([m, pr]) => !m.dead && Math.abs(mx - project(pr.x, pr.y, pr.z).px) < 14 && Math.abs(my - project(pr.x, pr.y, pr.z).py + 10) < 20)?.[0];
+  const spot = foe || barrel || mine ? null : g.sectors?.pick(mx, my);
+  const target = foe?.soldier ?? barrel ?? mine ?? (spot ? groundTarget(spot.x, spot.y, spot.z) : null);
   return target !== null && canFire(sel, target, weapon, g.sectors);
 }
 
@@ -1923,6 +1925,7 @@ function onMouse(e: MouseEvent): void {
     return Math.abs(mx - p.px) < 14 && my > p.py - 40 && my < p.py + 8;
   });
   const barrel = [...g.barrelProps].find(([b, pr]) => !b.dead && Math.abs(mx - project(pr.x, pr.y, pr.z).px) < 14 && Math.abs(my - project(pr.x, pr.y, pr.z).py + 10) < 20)?.[0];
+  const mine = [...g.mineProps].find(([m, pr]) => !m.dead && Math.abs(mx - project(pr.x, pr.y, pr.z).px) < 14 && Math.abs(my - project(pr.x, pr.y, pr.z).py + 10) < 20)?.[0];
   if (e.button === 2) {
     rightDown = { x: sx, y: sy };
     return;
@@ -2018,6 +2021,7 @@ function onMouse(e: MouseEvent): void {
     if (!spot || !(kind === 'BOMBA' ? plantBomb(g, sel, spot) : placeTrap(g, sel, spot, kind))) say('No hay camino a pie hasta ese punto.');
   } else if (e.button === 0 && hit >= 0) g.selected = hit;
   else if (e.button === 0 && (g.mode === 'PISTOLA' || g.mode === 'MIRILLA') && barrel && sel && !sel.dead && (!sel.boat || g.mode === 'MIRILLA') && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, barrel, g.mode);
+  else if (e.button === 0 && (g.mode === 'PISTOLA' || g.mode === 'MIRILLA' || g.mode === 'ARPON') && mine && sel && !sel.dead && (!sel.boat || g.mode === 'MIRILLA') && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, mine, g.mode);
   else if (e.button === 0 && g.mode && foe && sel && !sel.dead && (!sel.boat || g.mode === 'MIRILLA') && g.units[g.selected]?.weapons.includes(g.mode)) g.battle.attack(sel, foe.soldier, g.mode); // en el vehículo solo la mirilla (MSG_ITEM_ACTIVADO 0xF)
   else if (e.button === 0 && (g.mode === 'MIRILLA' || g.mode === 'PISTOLA' || g.mode === 'ARPON') && sel && !sel.dead && !sel.diving && (!sel.boat || g.mode === 'MIRILLA') && g.units[g.selected]?.weapons.includes(g.mode)) {
     // FUN_004F0E50: también se puede ordenar un disparo a un punto del terreno.

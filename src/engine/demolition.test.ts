@@ -3,6 +3,7 @@ import { parseAnm } from '../formats/anm.ts';
 import type { Vol } from '../formats/vol.ts';
 import { anmSeq, bnm } from '../testing/builders.ts';
 import { Boat } from './boat.ts';
+import { Battle } from './battle.ts';
 import { BARREL_RADIUS, BLAST_CYCLES, BOMB_RADIUS, Demolition, parseSites } from './demolition.ts';
 import { Soldier } from './soldier.ts';
 import { Unit } from './unit.ts';
@@ -276,6 +277,21 @@ describe('minas', () => {
 });
 
 describe('minas: buzo', () => {
+  it('un disparo a la mina seleccionable la activa y explota al siguiente ciclo', () => {
+    const d = new Demolition([], [], { soldiers: [], commandos: [] });
+    const mine = d.addMine(20, 0);
+    const shooter = unit(0, 0);
+    const battle = new Battle([], [shooter], null);
+    battle.attack(shooter, mine, 'PISTOLA');
+    expect(mine.fuse).toBe(1);
+    expect(mine.done).toBe(false);
+    mine.hurt();
+    expect(mine.fuse).toBe(1);
+    d.tickMines(null, []);
+    expect(mine.done).toBe(true);
+    mine.hurt();
+    expect(d.blasts).toHaveLength(1);
+  });
   it('la onda daña la Zodiac y reparte entre pasajeros, pero no atraviesa una obstrucción', () => {
     const boat = new Boat(20, 0, 0, 0, [{ entry: [0, 0], exit: [0, 0], angle: 0 }], null);
     boat.share = true;

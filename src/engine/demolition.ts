@@ -237,13 +237,15 @@ export class Barrel implements Target {
 }
 
 /** Mina submarina (`MINASUB`: cilindro R 17, POTENCIAMINA 10000, RADIOACCIONMINA 20; `AcMina`, docs/lectura/obj-explosivos.md §1). */
-export interface Mine {
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
+export class Mine implements Target {
+  readonly eye = MINE_H;
   /** Ciclos que faltan para explotar tras ser pisada (null = armada sin pisar). */
-  fuse: number | null;
-  done: boolean;
+  fuse: number | null = null;
+  done = false;
+  constructor(readonly x: number, readonly y: number, readonly z: number) {}
+  get dead(): boolean { return this.done; }
+  /** 00483160: cualquier MSGA_IMPACTO activa una mina armada una sola vez. */
+  hurt(): void { if (!this.done && this.fuse === null) this.fuse = MINE_FUSE; }
 }
 
 const MINE_R = 17;
@@ -301,7 +303,7 @@ export class Demolition {
   }
 
   addMine(x: number, y: number, z = 0): Mine {
-    const mine = { x, y, z, fuse: null, done: false };
+    const mine = new Mine(x, y, z);
     this.mines.push(mine);
     return mine;
   }
@@ -394,7 +396,7 @@ export class Demolition {
     for (const s of this.people.soldiers) if (!s.dead && !s.unit.hidden && areaOverlaps(x, y, z, r, { x: s.x, y: s.y, z: s.unit.z, radius: 10, height: s.unit.eye }) && reaches(s.x, s.y, s.unit.z + s.unit.eye)) s.kill();
     for (const c of this.people.commandos) if (!c.dead && !c.hidden && !c.boat && areaOverlaps(x, y, z, r, { x: c.body.x, y: c.body.y, z: c.z, radius: 10, height: c.eye }) && reaches(c.body.x, c.body.y, c.z + c.eye)) c.wound(tag === 'EBAR' ? 20000 : 10000);
     // AcMina 00483160: cualquier impacto dispara una mina armada; explota en su próxima actualización.
-    for (const m of this.mines) if (!m.done && m.fuse === null && areaOverlaps(x, y, z, r, { x: m.x, y: m.y, z: m.z, radius: MINE_R, height: MINE_H }) && reaches(m.x, m.y, m.z + MINE_H)) m.fuse = MINE_FUSE;
+    for (const m of this.mines) if (!m.done && m.fuse === null && areaOverlaps(x, y, z, r, { x: m.x, y: m.y, z: m.z, radius: MINE_R, height: MINE_H }) && reaches(m.x, m.y, m.z + MINE_H)) m.hurt();
     for (const b of this.barrels) {
       if (b.dead || !areaOverlaps(x, y, z, r, { x: b.x, y: b.y, z: b.z, radius: 10, height: b.eye }) || !reaches(b.x, b.y, b.z + b.eye)) continue;
       b.dead = true;
