@@ -170,7 +170,9 @@ describe('minas', () => {
     const mine = d.addMine(200, 0);
     expect(d.mines[0]).toBe(mine);
     const boat = new Boat(0, 0, 0, 0, [{ entry: [0, 0], exit: [0, 0], angle: 0 }], null);
+    boat.share = true;
     const u = unit(0, 0, 'COMANDO');
+    u.pilot = true;
     u.board(boat, 0);
     return { d, boat, u };
   };
@@ -182,6 +184,8 @@ describe('minas', () => {
     boat.x = 160; // 40 < 17 + 30
     d.tickMines(boat, [u]);
     expect(d.boatSunk).toBe(false);
+    expect(u.dead).toBe(true);
+    boat.tick();
     d.tickMines(boat, [u]);
     expect(d.boatSunk).toBe(true);
     expect(u.dead).toBe(true);
@@ -192,18 +196,30 @@ describe('minas', () => {
     expect(d.blasts).toHaveLength(1);
   });
 
-  it('si el bote ya se alejó cuando explota solo hay explosión; sin bote no pasa nada', () => {
+  it('el impacto de contacto ocurre aunque el bote se aleje antes de la explosión', () => {
     const { d, boat, u } = mkMine();
     boat.x = 160;
     d.tickMines(boat, [u]);
+    expect(u.dead).toBe(true);
     boat.x = -500;
+    boat.tick();
     d.tickMines(boat, [u]);
-    expect(d.boatSunk).toBe(false);
-    expect(u.dead).toBe(false);
+    expect(d.boatSunk).toBe(true);
     const e = new Demolition([], [], { soldiers: [], commandos: [] });
     e.addMine(0, 0);
     e.tickMines(null, []);
     expect(e.mines[0]?.fuse).toBeNull();
+  });
+  it('la invencibilidad del ocupante no se anula al explotar la mina', () => {
+    const { d, boat, u } = mkMine();
+    u.invulnerable = true;
+    boat.x = 160;
+    d.tickMines(boat, [u]);
+    boat.tick();
+    d.tickMines(boat, [u]);
+    boat.tick();
+    expect(u.dead).toBe(false);
+    expect(boat.punctured).toBe(false);
   });
 });
 

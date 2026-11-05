@@ -208,6 +208,7 @@ export class Demolition {
   readonly mines: Mine[] = [];
   /** El Zodiac se hundió con una mina: sus ocupantes murieron. */
   boatSunk = false;
+  private mineHitBoat: Boat | null = null;
   readonly blasts: Blast[] = [];
   readonly objectives: Map<string, boolean>;
   /** Bombas que le quedan al zapador. */
@@ -238,14 +239,20 @@ export class Demolition {
 
   /**
    * Minas: un cuerpo con masa ≥ PESOACT (60; el Zodiac pesa 400) que toque el cilindro la dispara y explota al ciclo siguiente con
-   * potencia 10000: lo que esté dentro del radio de la mina o a bordo del bote muere y el bote se hunde.
-   * shortcut: solo se detectan la Zodiac y los cuatro aliados de M0 (todos con masa 100); faltan otros bichos, impactos y el despacho espacial completo.
+   * potencia 10000; el impacto de contacto se entrega inmediatamente al bicho tocado y el bote lo reparte según AcPilotaje.
+   * shortcut: solo se detectan la Zodiac y los cuatro aliados de M0 (todos con masa 100); faltan otros bichos y el despacho espacial completo.
    */
   tickMines(boat: Boat | null, riders: readonly Unit[]): void {
+    if (this.mineHitBoat?.punctured) this.boatSunk = true;
+    this.mineHitBoat = null;
     for (const m of this.mines) {
       if (m.done) continue;
       if (m.fuse === null) {
-        if (boat && !this.boatSunk && boat.z <= m.z + MINE_H && m.z <= boat.z + 40 && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_R + boat.radius) m.fuse = MINE_FUSE;
+        if (boat && !this.boatSunk && boat.z <= m.z + MINE_H && m.z <= boat.z + 40 && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_R + boat.radius) {
+          boat.impact(10000);
+          this.mineHitBoat = boat;
+          m.fuse = MINE_FUSE;
+        }
         // El aliado que la toca recibe el impacto EXPLOSIONMENOR de 10000.
         for (const u of riders) {
           if (!u.boat && !u.hidden && !u.dead && u.z <= m.z + MINE_H && m.z <= u.z + u.eye && Math.hypot(u.body.x - m.x, u.body.y - m.y) < MINE_R + 10) {
@@ -258,10 +265,10 @@ export class Demolition {
       if (--m.fuse > 0) continue;
       m.done = true;
       this.explode(m.x, m.y, MINE_BLAST, 'XPLO', 'EXPLOSIONMENOR', m.z);
-      if (boat && !this.boatSunk && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_BLAST + boat.radius + 20) {
-        this.boatSunk = true;
-        boat.puncture();
-        for (const u of riders) if (u.boat === boat) u.wound(1e9);
+      if (boat && !this.boatSunk && boat.z <= m.z + MINE_BLAST && m.z <= boat.z + 40 && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_BLAST + boat.radius) {
+        // shortcut: falta el trazado de sectores y volúmenes para la onda de 00571A10.
+        boat.impact(10000);
+        this.mineHitBoat = boat;
       }
     }
   }
