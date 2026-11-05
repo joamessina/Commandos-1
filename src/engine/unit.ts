@@ -310,9 +310,10 @@ export class Unit {
    */
   toggleDive(): boolean {
     if (this.dead || this.boat) return this.diving;
+    // shortcut: radio 10 de los aliados de M0; mejorar al conservar el radio de colisión de cada instancia.
     if (this.diving) {
       // salir (clic derecho): quita buceando/oculto; solo donde se pueda estar de pie (agua somera o tierra)
-      if (this.sector?.type === TYPE_DEEPWATER) return true;
+      if (this.sector?.type === TYPE_DEEPWATER || this.sectors?.touchesType(this.body.x, this.body.y, 10, TYPE_DEEPWATER)) return true;
       this.diving = false;
       this.stop();
       this.anim.set(this.anim.has('REPOSO') ? 'REPOSO' : 'ANDAR');
@@ -320,6 +321,7 @@ export class Unit {
     }
     // shortcut: solo el sector central; FUN_004E95A0 consulta todos los sectores pisados.
     if (this.sector?.type !== TYPE_WATER) return false;
+    if (this.sectors?.touchesType(this.body.x, this.body.y, 10, 0)) return false;
     this.diving = true;
     this.stop();
     if (this.anim.has('BUCEAR')) this.anim.set('BUCEAR');

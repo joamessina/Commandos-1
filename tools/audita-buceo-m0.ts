@@ -26,6 +26,12 @@ function compare(s: Sector, x: number, y: number): { exe: boolean; circle: boole
   }
   return { exe, circle: inside || nearest <= radius };
 }
+for (const [x, y] of [[2098, 1690], [2050, 1724], [2070, 1695], [122, 3165]] as const) {
+  const expected = sec.sectors.slice(0, sec.nA).some((sector) => sector.type === 0 && compare(sector, x, y).exe);
+  const actual = map.touchesType(x, y, radius, 0);
+  if (expected !== actual) throw new Error(`Prueba de sector inconsistente en ${x.toString()},${y.toString()}`);
+  console.log('PRUEBA_MOTOR', x, y, actual);
+}
 let count = 0;
 for (let y = 1600; y <= 1800; y += 2) for (let x = 1950; x <= 2200; x += 2) {
   if (map.at(x, y)?.type !== 1) continue;

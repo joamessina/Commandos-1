@@ -169,6 +169,19 @@ describe('Unit: buceo (AuBucear)', () => {
     expect(dead.toggleDive()).toBe(false);
   });
 
+  it('el cambio de modo comprueba tierra y agua profunda alrededor del radio del buzo', () => {
+    const nearLand = at(95);
+    expect(nearLand.toggleDive()).toBe(false);
+    const clearWater = at(89);
+    expect(clearWater.toggleDive()).toBe(true);
+    const nearDeep = at(195);
+    nearDeep.diving = true;
+    expect(nearDeep.toggleDive()).toBe(true);
+    const awayFromDeep = at(180);
+    awayFromDeep.diving = true;
+    expect(awayFromDeep.toggleDive()).toBe(false);
+  });
+
   it('se tira desde el bote parado a una salida con agua; no con el bote en marcha ni sin agua', () => {
     const boat = new Boat(20, 50, 0, 0, slots, sectors); // salida 0 = (75,50) mar
     const u = new Unit('LANCHERO', anmD, 0, 0, 0, 0, sectors);

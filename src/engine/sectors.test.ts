@@ -32,6 +32,13 @@ const map = new SectorMap(
 const sector = (i: number) => must(map.sec.sectors[i]);
 
 describe('SectorMap', () => {
+  it('prueba sectores por semiplanos ampliados, incluido el contacto en esquina', () => {
+    expect(map.touchesType(210, 50, 10, 0)).toBe(true);
+    expect(map.touchesType(211, 50, 10, 0)).toBe(false);
+    expect(map.touchesType(109, 109, 10, 0)).toBe(true);
+    expect(map.touchesType(111, 111, 10, 0)).toBe(false);
+    expect(map.touchesType(290, 50, 10, 3)).toBe(true);
+  });
   it('busca por bbox (mín < v ≤ máx) y polígono; fuera de todo = null', () => {
     expect(map.at(150, 50)).toBe(sector(1));
     expect(map.at(200, 50)).toBe(sector(1)); // el borde máximo pertenece al sector de la izquierda

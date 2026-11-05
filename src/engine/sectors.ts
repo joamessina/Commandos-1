@@ -36,6 +36,22 @@ export class SectorMap {
     this.sec = sec;
   }
 
+  /** `00576190`: prueba semiplanos ampliados de sectores base del tipo pedido. */
+  touchesType(x: number, y: number, radius: number, type: number): boolean {
+    return this.sec.sectors.slice(0, this.sec.nA).some((s) => {
+      if (s.type !== type || x + radius < s.minX || x - radius > s.maxX || y + radius < s.minY || y - radius > s.maxY) return false;
+      return s.verts.every((index, i) => {
+        const a = this.sec.verts[index];
+        const b = this.sec.verts[s.verts[(i + 1) % s.verts.length] ?? -1];
+        if (!a || !b) return false;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const length = Math.hypot(dx, dy);
+        return length === 0 || (dx * (y - a.y) - dy * (x - a.x)) / length >= -radius;
+      });
+    });
+  }
+
   /** Sector en (x,y): primero la lista B y luego la A, el primero cuyo bbox (mín < v ≤ máx) y polígono contienen el punto. */
   at(x: number, y: number): Sector | null {
     return this.find(x, y, null);

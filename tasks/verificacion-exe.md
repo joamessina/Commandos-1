@@ -1,5 +1,7 @@
 # Qué del HUD, cursores y armas NO está leído del exe (2026-10-30)
 
+**Buceo en bordes:** `00576190` comprueba sectores base por caja y semiplanos ampliados por el radio, y `0066B460` lo usa para validar la transición. El port aplica esa prueba con radio 10 para los aliados de M0. shortcut: la disponibilidad del HUD y `004E95A0` aún usan el sector central en vez de la lista de sectores pisados; falta también conservar radios por instancia. Mejorar al portar `005DB1E0` y la simulación de contactos.
+
 **Alturas de explosión y contacto de minas:** `005BC080` usa el cilindro de detección desde z−radio/2 hasta z+radio/2; los sitios del VOL y los elementos conservan altura. `AcMina` comprueba masa ≥60 y contacto de formas: el port prueba cilindros contra Zodiac y los cuatro aliados de M0 y entrega el impacto inmediato al bote para su reparto. shortcut: falta el árbol espacial y los demás bichos; el daño y encadenamientos ya prueban altura y cilindros, pero la onda no traza sectores ni distribuye todos los impactos a vehículos. Mejorar con `0057D730`/`00571E50`.
 
 **Armas de patrullas:** `0062B6C0` lee la primera clave `DISPARARCABO`/`DISPARARSOLDADO`, con fusil por defecto; en M0 son pistola y metralleta. El port selecciona sus sonidos y radios (`PIPA` 600, `MET0` 400), y genera impactos según el contador, barrido y dispersión de `0045ACD0`/`0045A400`. shortcut: la fase de desenfundado y el estado de apuntado usan la máquina genérica, y el trazado y las colisiones de `00679DC0` siguen aproximados; mejorar con AcDisparar y colisión dinámica completos.
