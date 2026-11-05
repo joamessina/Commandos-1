@@ -6,13 +6,13 @@
 
 **Ondas de explosión:** personas, minas, barriles, bombas y la Zodiac comprueban el recorrido por sectores de `00571A10 → 005F6630`; el impacto a la Zodiac se reparte entre ocupantes. Las dos muestras sobre el SEC real se contrastan con `tools/audita-onda-m0.ts`. Los detectores de edificios usan su polígono o círculo (`0052A310/00529FE0`) y trazan hasta el punto de contacto (`005B9470`); el auditor comprueba CASA04 y antena en ambas dificultades. Falta usar el sector que conserva cada bicho en vez de buscarlo por coordenadas y contrastar la precisión x87, en particular el caso de círculo con origen en su centro.
 
-**Altura en explosiones y minas:** los detectores de casas comprueban el solapamiento vertical del cilindro centrado de `005BC080`, y bombas, barriles y minas conservan su altura al detonar. El contacto con minas comprueba alturas y los aliados de M0, cuya masa es 100. El daño y encadenamiento comprueban cilindros y altura; quedan la oclusión por sectores, vehículos y otros objetos, además del contraste en juego.
+**Altura en explosiones y minas:** los detectores de casas comprueban el solapamiento vertical del cilindro centrado de `005BC080`, y bombas, barriles y minas conservan su altura al detonar. El contacto con minas comprueba alturas y los aliados de M0, cuya masa es 100. El daño y encadenamiento comprueban cilindros, altura y recorrido por sectores; sigue faltando el despacho general a otros objetos y el contraste en juego.
 
 **Armas de patrulla M0:** se conservan las claves `DISPARARCABO`/`DISPARARSOLDADO` y se aplican los sonidos y radios reales: pistola/PIPA/600 para los cinco cabos y metralleta/MET0/400 para sus soldados. Contrastado en ambas dificultades con `tools/audita-cuarteles-m0.ts`. La metralleta emite impactos por ciclos impares, con el barrido y dispersión de `0045ACD0`/`0045A400`; siguen aproximados el trazado y la máquina de estados y animaciones de `AcDisparar`.
 
 **Banderas de efectos ANM:** el lector distingue espejo (bit 1) de mezcla aditiva (bit 2), y el render usa la bandera de cada fotograma. El auditor cruza los registros reales de `EXPLOS1` y `DISPFALL`; falta comparar el resultado visual y la mezcla del navegador con el original.
 
-**Cuarteles y CASA04:** `parseSites` genera las casas del VOL, reenvía los impactos de volúmenes secundarios y distingue el bicho `CASA04` del cambio de tiles de la antena; aplica la protección contra explosiones menores de `.CASASFUERTES`. Contrastado en ambas dificultades con `tools/audita-objetivos-m0.ts`. Falta reemplazar cajas por polígonos, alturas y recorrido real de la onda, y comparar en partida.
+**Cuarteles y CASA04:** `parseSites` genera las casas del VOL, reenvía los impactos de volúmenes secundarios y distingue el bicho `CASA04` del cambio de tiles de la antena; aplica `.CASASFUERTES` y comprueba formas, alturas y recorrido de la onda. Contrastado con muestras en ambas dificultades mediante `tools/audita-objetivos-m0.ts`; falta comparar en partida y cerrar las aproximaciones señaladas arriba.
 
 **Piezas de cañones:** `ANTI04B/C` y `ANTI02B` reenvían los impactos a sus piezas A (`00527380`/`004B6920`); la acción de la pieza A cambia los volúmenes del mismo prefijo (`00526F50`). El auditor contrasta los enlaces y volúmenes reales en ambas dificultades; falta la comparación en partida.
 
@@ -34,9 +34,9 @@
 
 **Colisión y objetivos de M0 (2026-11-03):** `q1-colision.md` corrige la interpretación de los tres intentos de movimiento y demuestra que el MIS no declara `CHOQ` separado; aún faltan contraste geométrico y dinámico. `refuerzos-m0.md` incorpora un auditor de los siete objetivos y los tres edificios de cuartel en ambas dificultades; no sustituye una partida completa.
 
-**Edificios de cuartel:** `refuerzos-m0.md` identifica la generación automática de volúmenes `CASA` en el exe, incluidos `CASA06A`, `CASA08` y `CASA05`, ausentes de los sitios creados por el port. Documenta sus impactos y sonidos según los radios; falta el contraste jugable y la implementación.
+**Edificios de cuartel:** `refuerzos-m0.md` identifica la generación automática de volúmenes `CASA` en el exe; `CASA06A`, `CASA08` y `CASA05` ya se crean en el port. Falta el contraste jugable de sus impactos y sonidos.
 
-**Antena y objetivo:** `refuerzos-m0.md` distingue `EXPL_ANTENA` del bicho `CASA04`, que se genera desde el VOL y es el objetivo y el disparador de `ESCALA02`. El auditor cruza alturas, sectores y muestras aproximadas de colocación y propagación de una bomba; falta contrastar una colocación y sus impactos en ejecución y corregir la implementación, que vincula ambos por cambio de tiles.
+**Antena y objetivo:** `refuerzos-m0.md` distingue `EXPL_ANTENA` del bicho `CASA04`, que se genera desde el VOL y es el objetivo y el disparador de `ESCALA02`. El port ya los trata por separado. El auditor cruza alturas, sectores y muestras aproximadas de colocación y propagación de una bomba; falta contrastar una colocación y sus impactos en ejecución.
 
 **Cerebros y alarma (2026-11-03):** `audita-vtables-bap.py` contrasta los 44 slots de BAP1/BANPE1 y BAP2/BANPE2; `alerta-m0.md` identifica el receptor y las voces de `AcMetrallero` de los nidos, distintos de `AcBunker`. Falta cerrar las ramas de apuntado y comprobarlas en ejecución.
 
@@ -48,7 +48,7 @@
 
 **Sectores pisados del buzo:** `hud-consumidores.md` identifica la lista, su límite de ocho y el orden de actualización: limpieza, vecinos por contactos no bloqueantes y finalmente sector central. El HUD consulta después de la simulación en los ciclos y estados indicados. Falta contrastar los bordes concretos en ejecución.
 
-**Banderas de explosión y salpicadura:** `render.md` documenta la traducción en ensamblador de la bandera del ANM: bit 1 refleja y bit 2 activa el flag interno `0x08` de suma. En los recursos reales, los 14 fotogramas de explosión llevan 2; el agua lleva ocho 2 y un 0 al final. La suma está confirmada en las rutas RLE normales y con zoom, con y sin mapa de luz. El parser del port pierde esa distinción; falta contrastar el resultado en pantalla.
+**Banderas de explosión y salpicadura:** `render.md` documenta la traducción en ensamblador de la bandera del ANM: bit 1 refleja y bit 2 activa el flag interno `0x08` de suma. En los recursos reales, los 14 fotogramas de explosión llevan 2; el agua lleva ocho 2 y un 0 al final. El parser y render del port ya distinguen ambos bits; falta contrastar la mezcla de Canvas en pantalla contra el original.
 
 **Partículas de agua:** `obj-explosivos.md` incorpora selección de los dos tipos, velocidades iniciales, integración con gravedad, factor individual y construcción de tablas de color. Falta reproducir la precisión y comparar el efecto en ejecución.
 
