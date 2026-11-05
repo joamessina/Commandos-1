@@ -332,6 +332,7 @@ describe('minas: buzo', () => {
     const d = new Demolition([], [], { soldiers: [], commandos: [] }, 0, { blastNav: { blastPath: (from, to) => { calls.push([from, to]); return false; } } });
     const mine = d.addMine(20, 0, 10);
     d.explode(0, 0, 30, 'XPLO', 'BOMBA', 10);
+    expect(d.blasts[0]?.z).toBe(10);
     expect(mine.fuse).toBeNull();
     expect(calls).toEqual([[{ x: 0, y: 0, z: 50 }, { x: 20, y: 0, z: 105 }]]);
   });

@@ -59,6 +59,14 @@ describe('voces de la misión', () => {
     await vi.waitFor(() => { expect(fake.play).toHaveBeenCalledTimes(2); });
     expect(effect.mock.calls.map((args) => args[0])).toEqual(['BARRILEX.WAV', 'EXPLOSI.WAV']);
   });
+  it('proyecta el sonido de la explosión a la altura de su origen', async () => {
+    const fake = { decode: vi.fn(() => Promise.resolve(buffer)), play: vi.fn(), stopMusic: vi.fn() };
+    const project = vi.fn((x: number, y: number, z: number) => ({ px: x, py: y + z }));
+    const sound = new GameSound(fake as unknown as Sfx, { effect: () => new Uint8Array([1]), music: () => Promise.resolve(undefined) }, project);
+    sound.tick({ ...view([]), blasts: [{ x: 10, y: 20, z: 50, tag: 'XPLO' }] });
+    await vi.waitFor(() => { expect(fake.play).toHaveBeenCalledOnce(); });
+    expect(project).toHaveBeenCalledWith(10, 20, 50);
+  });
   it('reproduce AL07 con ALE07.WAV y reutiliza el buffer en voces repetidas', async () => {
     const fake = { decode: vi.fn(() => Promise.resolve(buffer)), play: vi.fn(), stopMusic: vi.fn() };
     const effect = vi.fn((name: string) => name === 'ALE07.WAV' ? new Uint8Array([1]) : undefined);

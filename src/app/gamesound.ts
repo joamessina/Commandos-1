@@ -14,7 +14,7 @@ export interface SoundView {
   readonly camX: number;
   readonly camY: number;
   readonly tracers: readonly { readonly fromX: number; readonly fromY: number; readonly tag?: string }[];
-  readonly blasts: readonly Pick<Blast, 'x' | 'y' | 'tag'>[];
+  readonly blasts: readonly (Pick<Blast, 'x' | 'y' | 'tag'> & Partial<Pick<Blast, 'z'>>)[];
   readonly voices: readonly VoiceSound[];
   readonly effects?: readonly EffectSound[];
   readonly waterSteps?: readonly { readonly id: object; readonly x: number; readonly y: number; readonly z: number }[];
@@ -165,7 +165,7 @@ export class GameSound {
     for (const b of v.blasts) {
       if (this.seen.has(b)) continue;
       this.seen.add(b);
-      this.playAt(b.tag, b.x, b.y, 0, v);
+      this.playAt(b.tag, b.x, b.y, b.z ?? 0, v);
     }
     for (const voice of v.voices) this.playVoice(voice, v);
     for (const effect of v.effects ?? []) this.playAt(effect.tag, effect.x, effect.y, effect.z, v);
