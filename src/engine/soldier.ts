@@ -127,6 +127,8 @@ export class Soldier implements Target, Claimant {
   private timer = 0;
   private lost = 0;
   private cooldown = 0;
+  private machineAngle = 0;
+  private machineStep = 0;
   private nestAnimLeft = 0;
   private nestRounds = 0;
   private nestPause = 0;
@@ -696,6 +698,32 @@ export class Soldier implements Target, Claimant {
       }
       return;
     }
+    if (this.shotTag === 'MET0') {
+      if (this.cooldown > 0) this.cooldown--;
+      if (this.cooldown === 0) {
+        this.cooldown = RELOAD_BASE + Math.floor(w.rng() * 6);
+        this.machineAngle = this.unit.body.ang - 10;
+        this.machineStep = 40 / this.cooldown;
+        if (this.unit.anim.has('DISPARAR')) this.unit.anim.restart('DISPARAR');
+        w.onShot(this, { fromX: this.x, fromY: this.y, toX: seen.body.x, toY: seen.body.y, hit: false });
+      }
+      if ((this.cooldown & 1) !== 0) {
+        const distance = Math.hypot(seen.body.x - this.x, seen.body.y - this.y);
+        const angle = this.machineAngle * Math.PI / 180;
+        const dy = Math.floor(w.rng() * 11) - 5;
+        const dx = Math.floor(w.rng() * 11) - 5;
+        const tx = Math.cos(angle) * distance + dx;
+        const ty = Math.sin(angle) * distance + dy;
+        const shotAngle = Math.atan2(ty, tx);
+        const shotDistance = Math.hypot(tx, ty);
+        // shortcut: el trazado de sectores y los volúmenes de 006771A0 se aproximan con rayReach.
+        const length = rayReach(w.sectors, this.x, this.y, shotAngle, shotDistance, this.unit.z + this.unit.eye);
+        const fraction = shotDistance > 0 ? length / shotDistance : 1;
+        w.onNestImpact?.({ x: this.x + Math.cos(shotAngle) * length, y: this.y + Math.sin(shotAngle) * length, z: this.unit.z + this.unit.eye + (seen.z - this.unit.z - this.unit.eye) * fraction });
+        this.machineAngle += this.machineStep;
+      }
+      return;
+    }
     if (this.cooldown > 0) {
       this.cooldown--;
       return;
@@ -705,7 +733,6 @@ export class Soldier implements Target, Claimant {
       this.unit.anim.set('APUNTAR');
       this.unit.anim.set('DISPARAR');
     }
-    // shortcut: METRALLETA aún usa impacto directo por disparo; mejorar con la ráfaga y AcPuff de 0045A400.
     seen.hit(SHOT_DAMAGE);
     w.onShot(this, { fromX: this.unit.body.x, fromY: this.unit.body.y, toX: seen.body.x, toY: seen.body.y, hit: true });
     if (seen.dead) {

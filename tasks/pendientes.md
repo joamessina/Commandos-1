@@ -1,6 +1,6 @@
 # Pendientes (lista maestra para ir tachando)
 
-**Armas de patrulla M0:** se conservan las claves `DISPARARCABO`/`DISPARARSOLDADO` y se aplican los sonidos y radios reales: pistola/PIPA/600 para los cinco cabos y metralleta/MET0/400 para sus soldados. Contrastado en ambas dificultades con `tools/audita-cuarteles-m0.ts`. Falta portar las ráfagas y colisiones de metralleta de `AcDisparar`.
+**Armas de patrulla M0:** se conservan las claves `DISPARARCABO`/`DISPARARSOLDADO` y se aplican los sonidos y radios reales: pistola/PIPA/600 para los cinco cabos y metralleta/MET0/400 para sus soldados. Contrastado en ambas dificultades con `tools/audita-cuarteles-m0.ts`. La metralleta emite impactos por ciclos impares, con el barrido y dispersión de `0045ACD0`/`0045A400`; siguen aproximados el trazado y la máquina de estados y animaciones de `AcDisparar`.
 
 **Banderas de efectos ANM:** el lector distingue espejo (bit 1) de mezcla aditiva (bit 2), y el render usa la bandera de cada fotograma. El auditor cruza los registros reales de `EXPLOS1` y `DISPFALL`; falta comparar el resultado visual y la mezcla del navegador con el original.
 

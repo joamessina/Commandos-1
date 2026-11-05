@@ -99,6 +99,23 @@ describe('Soldier', () => {
     expect([rifle.shotTag, rifle.noiseRadius]).toEqual(['FUSL', 400]);
     expect([nest.shotTag, nest.noiseRadius]).toEqual(['NIDO', 500]);
   });
+  it('la metralleta emite una ráfaga en ciclos impares con barrido y dispersión', () => {
+    const target = unit(100, 0, 0, 'COMANDO');
+    target.invulnerable = true;
+    const soldier = new Soldier('M', unit(0, 0), null, { gun: 'METRALLETA', sweep: 0 });
+    const impacts: { x: number; y: number }[] = [];
+    const { world, shots } = mkWorld([target]);
+    const w = { ...world, onNestImpact: (impact: { x: number; y: number }) => { impacts.push(impact); } };
+    for (let i = 0; i < 100 && shots.length === 0; i++) soldier.tick(w);
+    expect(shots).toHaveLength(1);
+    expect(impacts).toHaveLength(1);
+    expect(impacts[0]?.x).toBeCloseTo(100 * Math.cos(-10 * Math.PI / 180) - 5);
+    expect(impacts[0]?.y).toBeCloseTo(100 * Math.sin(-10 * Math.PI / 180) - 5);
+    run(soldier, w, 14);
+    expect(impacts).toHaveLength(8);
+    expect(shots).toHaveLength(1);
+    expect(target.energy).toBe(100);
+  });
   it('respeta DEMORA y detiene el barrido con período o amplitud no positivos', () => {
     const w = mkWorld([]).world;
     const active = new Soldier('S', unit(0, 0), null, { sweep: 40, sweepPeriod: 20 });
