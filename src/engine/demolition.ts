@@ -92,6 +92,37 @@ function polyShape(poly: Vol['polys'][number]): NonNullable<Site['shape']> {
   return poly.points.length ? { points: poly.points.map((point) => ({ x: x + point.x, y: y + point.y })) } : { x, y, radius: poly.radio ?? 0 };
 }
 
+/** Punto del detector alcanzado por el rayo desde la explosión (005B9470/005758A0). */
+function siteContact(site: Site, source: { x: number; y: number; z: number }): { x: number; y: number; z: number } | null {
+  const shape = site.shape;
+  if (!shape || site.z === undefined || site.height === undefined) return null;
+  let x: number, y: number, fraction = 0;
+  if ('radius' in shape) {
+    x = shape.x; y = shape.y;
+    const distance = Math.hypot(source.x - x, source.y - y);
+    fraction = distance === 0 ? 0 : shape.radius / distance; // shortcut: división x87 por cero del original sin contrastar
+  } else {
+    if (!shape.points.length) return null;
+    x = shape.points.reduce((sum, point) => sum + point.x, 0) / shape.points.length;
+    y = shape.points.reduce((sum, point) => sum + point.y, 0) / shape.points.length;
+    const dx = source.x - x, dy = source.y - y;
+    for (let i = 0; i < shape.points.length; i++) {
+      const a = shape.points[(i + shape.points.length - 1) % shape.points.length];
+      const b = shape.points[i];
+      if (!a || !b) continue;
+      const ex = b.x - a.x, ey = b.y - a.y;
+      let den = dx * ey - dy * ex;
+      let edge = dx * (y - a.y) - dy * (x - a.x);
+      let ray = ex * (y - a.y) - (x - a.x) * ey;
+      if (den < 0) { den = -den; edge = -edge; ray = -ray; }
+      if (edge > 0 && ray > 0 && edge < den && ray < den) fraction = Math.max(fraction, ray / den);
+    }
+  }
+  const top = site.z + site.height;
+  if (Math.hypot(source.x - x, source.y - y, source.z - top) < 1) return { x: source.x, y: source.y, z: source.z };
+  return { x: x + fraction * (source.x - x), y: y + fraction * (source.y - y), z: top + fraction * (source.z - top) };
+}
+
 /** Intersección de la primera pasada de `00571E50`: cilindro de radio y altura r desde la fuente. */
 function areaOverlaps(x: number, y: number, z: number, r: number, target: { readonly x: number; readonly y: number; readonly z: number; readonly radius: number; readonly height: number }): boolean {
   return r > 0 && target.z <= z + r && z <= target.z + target.height && Math.hypot(target.x - x, target.y - y) < r + target.radius;
@@ -375,9 +406,11 @@ export class Demolition {
       }
     }
     for (const s of this.sites) {
-      // shortcut: falta el recorrido hasta el borde del detector de 005B9470.
       if (!siteOverlap(s, x, y, r)) continue;
       if (s.z !== undefined && s.height !== undefined && (s.z > z + r / 2 || s.z + s.height < z - r / 2)) continue;
+      const source = { x, y, z: z + 40 };
+      const contact = siteContact(s, source);
+      if (contact && this.blastNav && !this.blastNav.blastPath(source, contact)) continue;
       const target = s.forwardsTo ? this.sites.find((site) => site.name === s.forwardsTo) : s;
       if (!target || target.destroyed || (target.bombOnly && kind !== 'BOMBA')) continue;
       target.destroyed = true;

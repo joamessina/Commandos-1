@@ -6,6 +6,7 @@ import { parseSec, SectorFlag, type Sector } from '../src/formats/sec.ts';
 import { asText, find } from '../src/formats/clave.ts';
 import { Demolition, parseSites } from '../src/engine/demolition.ts';
 import { groundZ, SectorMap } from '../src/engine/sectors.ts';
+import { navFor } from '../src/engine/path.ts';
 import { flatten, loadWorld } from '../src/engine/world.ts';
 
 const dir = new Uint8Array(readFileSync('D:/SteamLibrary/steamapps/common/Commandos Beyond the Call of Duty/WAR_MP.DIR'));
@@ -124,6 +125,10 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
     if (!checkSite.destroyed.has('CASA04')) throw new Error('El centro real de CASA04 no alcanza su detector');
     console.log('CASA04_CENTRO_DENTRO_DETECTOR', true);
     const map = new SectorMap(sec);
+    const auditWave = new Demolition(sites.map((site) => ({ ...site, destroyed: false })), [], { soldiers: [], commandos: [] }, 0, { blastNav: navFor(map) });
+    auditWave.explode(1830, 946, 250, 'XPLO', 'BOMBA', 355);
+    if (!auditWave.destroyed.has('CASA04') || !auditWave.destroyed.has('EXPL_ANTENA')) throw new Error('La muestra de onda no alcanzó los detectores esperados');
+    console.log('ONDA_MUESTRA_CASA04_Y_ANTENA', true);
     const antenna = elems.find((elem) => elem.token === 'EXPL_ANTENA');
     const casaSector = map.at(centerX, centerY);
     const antennaSector = antenna ? map.at(antenna.x, antenna.y) : null;

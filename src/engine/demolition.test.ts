@@ -76,6 +76,15 @@ describe('parseSites', () => {
 });
 
 describe('geometría de detectores de edificios', () => {
+  it('traza desde la explosión hasta el borde y no destruye el detector si la onda está obstruida', () => {
+    const circle = { ...poly('CASA92', 100, 0), points: [], radio: 30, header: [100, 0, 0, 20, 0, 0] as [number, number, number, number, number, number] };
+    const { sites } = parseSites('.MISSION [ ]', { ...vol, polys: [circle] }, []);
+    const calls: unknown[] = [];
+    const d = new Demolition(sites, [], { soldiers: [], commandos: [] }, 0, { blastNav: { blastPath: (from, to) => { calls.push([from, to]); return false; } } });
+    d.explode(0, 0, 80);
+    expect(d.destroyed.has('CASA92')).toBe(false);
+    expect(calls).toEqual([[{ x: 0, y: 0, z: 40 }, { x: 70, y: 0, z: 26 }]]);
+  });
   it('rechaza la esquina de la caja fuera del polígono y acepta un impacto sobre una arista', () => {
     const triangle = { ...poly('CASA91', 0, 0), points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: 100 }] };
     const map: Vol = { ...vol, polys: [triangle] };
