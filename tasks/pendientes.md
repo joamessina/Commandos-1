@@ -22,6 +22,8 @@
 
 **Cráteres y altura del efecto:** las explosiones en tierra conservan un cráter con `BOQUETET/GRANDE`; en agua no lo crean (`00440D30`, `00483540`). El efecto central y su sonido usan la altura de origen. El ANM real se comprueba con `tools/audita-efectos-m0.ts`; falta ordenar el cráter como bicho entre volúmenes y contrastar visualmente en el original.
 
+**Temblor de bomba:** se usa la curva de diez ciclos de `0063F760/0063F790`, volcada desde el exe y documentada en `render.md`. El desplazamiento se aplica al lienzo completo como atajo; el original vuelve a sortear por volumen. Falta contraste visual.
+
 **Salida de M0:** el port exige que todos los comandos estén vivos y embarcados y compara el sector de la Zodiac con el del punto de huida (`0059B600`), en lugar de un radio arbitrario. Los avisos `AMUC`, `ALOL` y `NOO2` usan los textos de `GLOBAL.STR`, con opciones de continuar o reiniciar (`00570350`); se conserva la prioridad de derrota cuando mueren todos. El diálogo es simplificado y falta la carga rápida; el sector del bote se consulta por XY y faltan los estados de cárcel y los demás resultados de intendencia.
 
 **Impactos visibles del nido:** `disparo-enemigo.md` identifica `DISPFALL/ANDAR`, sus cuatro fotogramas y período 8, el abanico de diez tiros y las chispas. El port dibuja diez efectos con esos sprites y aplica daño individual una vez por efecto. Atajos: trazado de sectores aproximado sin volúmenes, contacto limitado a comandos exteriores, sin chispas del exe ni despacho espacial completo; falta contraste visual y dinámico en el original.

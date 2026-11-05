@@ -57,6 +57,7 @@ export interface Blast {
   readonly x: number;
   readonly y: number;
   readonly z: number;
+  readonly kind: 'BOMBA' | 'EXPLOSIONMENOR';
   readonly radius: number;
   readonly tag: 'XPLO' | 'EBAR';
   ttl: number;
@@ -425,7 +426,7 @@ export class Demolition {
   }
 
   private blast(x: number, y: number, z: number, r: number, tag: Blast['tag'], kind: 'BOMBA' | 'EXPLOSIONMENOR'): void {
-    this.blasts.push({ x, y, z, radius: r, tag, ttl: BLAST_CYCLES });
+    this.blasts.push({ x, y, z, kind, radius: r, tag, ttl: BLAST_CYCLES });
     const reaches = (px: number, py: number, top: number): boolean => this.blastNav?.blastPath({ x, y, z: z + 40 }, { x: px, y: py, z: top }) ?? true;
     const boat = this.boat;
     if (boat && !boat.punctured && areaOverlaps(x, y, z, r, { x: boat.x, y: boat.y, z: boat.z, radius: boat.radius, height: 40 }) && reaches(boat.x, boat.y, boat.z + 40)) {

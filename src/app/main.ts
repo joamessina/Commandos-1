@@ -26,6 +26,7 @@ import { type Cepo, type Decoy, decoyItem, Traps } from '../engine/traps.ts';
 import { eventList, ExitSchedule, formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
 import { groundZ, isWater, SectorMap, TYPE_WATER } from '../engine/sectors.ts';
 import { navFor } from '../engine/path.ts';
+import { bombShake } from '../engine/shake.ts';
 import { canThrow, type Pack, type Throwable } from '../engine/throwing.ts';
 import { norm360 } from '../engine/walk.ts';
 import { parseRoutes } from '../engine/patrol.ts';
@@ -159,6 +160,8 @@ interface Game {
   readonly craterArt: { readonly anm: Anm; readonly sprites: SpriteCache } | null;
   readonly craters: { readonly x: number; readonly y: number; readonly z: number }[];
   readonly seenCraters: WeakSet<object>;
+  readonly seenShakes: WeakSet<object>;
+  shakeAge: number;
   readonly splashArt: { readonly anm: Anm; readonly sprites: SpriteCache } | null;
   readonly stoneArt: { readonly anm: Anm; readonly sprites: SpriteCache } | null;
   readonly bombArt: { readonly anm: Anm; readonly sprites: SpriteCache } | null;
@@ -731,7 +734,7 @@ async function load(introduction = false): Promise<void> {
     const m = /^(\S{4})\s+([^#]*)/.exec(line);
     if (m?.[1] && m[2]) missionTexts.set(m[1], m[2].trim());
   }
-  game = { missionWarnings: n.toUpperCase() === 'MAPA0000' ? new MissionWarnings() : null, missionTexts, notice: null, alarm, seenAlarmBlasts: new WeakSet(), visionPicking: false, visionTarget: null, houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders, lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), craterArt: asset('BOQUETET'), craters: [], seenCraters: new WeakSet(), splashArt: asset('DISPFALL'), stoneArt: asset('CAEPIED'), bombArt: asset('CARTUCHO'), stoneEffects: [], splashes: [], seenSplashes: new WeakSet(), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  game = { missionWarnings: n.toUpperCase() === 'MAPA0000' ? new MissionWarnings() : null, missionTexts, notice: null, alarm, seenAlarmBlasts: new WeakSet(), visionPicking: false, visionTarget: null, houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders, lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), craterArt: asset('BOQUETET'), craters: [], seenCraters: new WeakSet(), seenShakes: new WeakSet(), shakeAge: -1, splashArt: asset('DISPFALL'), stoneArt: asset('CAEPIED'), bombArt: asset('CARTUCHO'), stoneEffects: [], splashes: [], seenSplashes: new WeakSet(), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
@@ -905,6 +908,11 @@ function setupStage(): void {
         g.seenCraters.add(bl);
         const sector = g.sectors?.atZ(bl.x, bl.y, bl.z) ?? null;
         if (sector && !isWater(sector)) g.craters.push({ x: bl.x, y: bl.y, z: bl.z });
+      }
+      if (g.shakeAge >= 0) g.shakeAge++;
+      for (const bl of g.demo.blasts) if (!g.seenShakes.has(bl)) {
+        g.seenShakes.add(bl);
+        if (bl.kind === 'BOMBA') g.shakeAge = 0;
       }
       g.demo.tick();
       for (const bl of g.demo.blasts) if (!g.seenAlarmBlasts.has(bl)) { g.seenAlarmBlasts.add(bl); g.battle.onDanger?.(bl.x, bl.y); }
@@ -1166,6 +1174,9 @@ function draw(g: Game, briefing = false): void {
   ctx.translate(v.x, v.y);
   ctx.scale(z, z);
   ctx.translate(-ox, -oy);
+  // shortcut: un desplazamiento del lienzo sustituye el sorteo independiente por volumen de 005D14A0.
+  const amplitude = bombShake(g.shakeAge);
+  if (amplitude) ctx.translate(-Math.trunc(Math.random() * amplitude), -Math.trunc(Math.random() * amplitude));
   if (g.water) {
     const b = g.water.bounds;
     if (b.x < ox + vw && b.x + b.w > ox && b.y < oy + vh && b.y + b.h > oy) g.water.drawn = true;
