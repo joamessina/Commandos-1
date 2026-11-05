@@ -32,6 +32,20 @@ const map = new SectorMap(
 const sector = (i: number) => must(map.sec.sectors[i]);
 
 describe('SectorMap', () => {
+  it('reúne vecinos tocados no bloqueantes antes del sector central, sin duplicados', () => {
+    const m = new SectorMap(parseSec(secBytes({
+      verts: [[0, 0], [100, 0], [100, 100], [0, 100], [200, 0], [200, 100]],
+      a: [{ verts: [0, 1, 2, 3], type: 1 }, { verts: [1, 4, 5, 2], type: 0 }],
+      tw1: [[-1, 1, -1, -1], [-1, -1, -1, 0]],
+    })));
+    const water = must(m.sec.sectors[0]);
+    const land = must(m.sec.sectors[1]);
+    expect(m.underfoot(null, 95, 50, 10)).toEqual([]);
+    expect(m.underfoot(water, 50, 50, 10)).toEqual([water]);
+    expect(m.underfoot(water, 95, 50, 10)).toEqual([land, water]);
+    expect(m.underfoot(water, 95, 50, 10, { water: true })).toEqual([water]);
+    expect(m.underfoot(water, 95, 105, 3)).toEqual([water]);
+  });
   it('prueba sectores por semiplanos ampliados, incluido el contacto en esquina', () => {
     expect(map.touchesType(210, 50, 10, 0)).toBe(true);
     expect(map.touchesType(211, 50, 10, 0)).toBe(false);

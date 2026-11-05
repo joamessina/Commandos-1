@@ -36,6 +36,35 @@ export class SectorMap {
     this.sec = sec;
   }
 
+  /** Sectores pisados, contactos vecinos antes del sector central (0057B660/005DB1E0/005D6E80). */
+  underfoot(center: Sector | null, x: number, y: number, radius: number, mode: Mode = {}): Sector[] {
+    if (!center) return [];
+    const queue = [center];
+    const visited = new Set<Sector>(queue);
+    const result: Sector[] = [];
+    for (let i = 0; i < queue.length && i < 1023; i++) {
+      const sector = queue[i];
+      if (!sector) continue;
+      for (let edge = 0; edge < sector.verts.length; edge++) {
+        const a = this.sec.verts[sector.verts[edge] ?? -1];
+        const b = this.sec.verts[sector.verts[(edge + 1) % sector.verts.length] ?? -1];
+        const neighbor = this.sec.sectors[sector.neighbors[edge] ?? -1];
+        if (!a || !b || !neighbor) continue;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const length2 = dx * dx + dy * dy;
+        if (length2 === 0) continue;
+        const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / length2));
+        const px = a.x + t * dx, py = a.y + t * dy;
+        if (Math.hypot(x - px, y - py) > radius) continue;
+        if (!visited.has(neighbor)) { visited.add(neighbor); queue.push(neighbor); }
+        // shortcut: 0066ADF0 también contempla cintas y excepciones por la altura de extremos; mejorar con el registro completo de contacto.
+        if (!simBlocked(neighbor, mode) && stepOk(groundZ(neighbor, px, py) - groundZ(sector, px, py)) && !result.includes(neighbor) && result.length < 8) result.push(neighbor);
+      }
+    }
+    if (!result.includes(center) && result.length < 8) result.push(center);
+    return result;
+  }
+
   /** `00576190`: prueba semiplanos ampliados de sectores base del tipo pedido. */
   touchesType(x: number, y: number, radius: number, type: number): boolean {
     return this.sec.sectors.slice(0, this.sec.nA).some((s) => {

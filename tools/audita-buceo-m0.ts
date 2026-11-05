@@ -31,6 +31,10 @@ for (const [x, y] of [[2098, 1690], [2050, 1724], [2070, 1695], [122, 3165]] as 
   const actual = map.touchesType(x, y, radius, 0);
   if (expected !== actual) throw new Error(`Prueba de sector inconsistente en ${x.toString()},${y.toString()}`);
   console.log('PRUEBA_MOTOR', x, y, actual);
+  const center = map.at(x, y);
+  const stepped = map.underfoot(center, x, y, radius);
+  if (new Set(stepped).size !== stepped.length || stepped.length > 8) throw new Error('Lista de sectores pisados inválida');
+  console.log('SECTORES_PISADOS_APROX', x, y, stepped.map((s) => ({ index: sec.sectors.indexOf(s), type: s.type })));
 }
 let count = 0;
 for (let y = 1600; y <= 1800; y += 2) for (let x = 1950; x <= 2200; x += 2) {

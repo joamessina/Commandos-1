@@ -1592,8 +1592,8 @@ function weaponAvailable(v: UnitView, w: Weapon): boolean {
 
 function hudUnit(v: UnitView, g: Game): HudUnit {
   const u = v.unit;
-  // shortcut: se usa el sector central; FUN_004E95A0 exige que todos los sectores pisados sean agua somera.
-  const diveAvailable = diveItemVisible(u.boat !== null, u.sector?.type === TYPE_WATER);
+  const underfoot = g.sectors?.underfoot(u.sector, u.body.x, u.body.y, 10, u.diving ? { water: true } : {}) ?? (u.sector ? [u.sector] : []);
+  const diveAvailable = diveItemVisible(u.boat !== null, underfoot.length > 0 && underfoot.every((s) => s.type === TYPE_WATER));
   // señuelo (AUManejaSegnuelo): un solo ítem a la vez entre el señuelo y su interruptor; sin la habilidad se deja el señuelo como estaba
   const decoy = v.canDecoy ? decoyItem((g.kit.decoy?.left ?? 1) > 0, g.traps.decoys[g.traps.decoys.length - 1] ?? null) : 'IT_SEGNUELO';
   return { token: u.token, energy: u.energy, max: v.maxEnergy, dead: u.dead, items: (g.bag.get(u.token) ?? []).filter((i) => (i.token !== 'IT_TABACO' || u.tobacco > 0) && (!DECOY_ITEMS.has(i.token) || i.token === decoy) && (i.wad !== 'BOTIQUIN' || u.medkits > 0) && (i.wad !== 'MIRILLA' || weaponAvailable(v, 'MIRILLA')) && (i.wad !== 'TRAJEBU' || diveAvailable) && (!u.diving || i.wad === 'TRAJEBU')), inVehicle: u.boat !== null, diving: u.diving, bullets: !u.diving && v.weapons.includes('MIRILLA') ? Math.max(0, u.ammo['MIRILLA'] ?? 0) : 0 };

@@ -1,6 +1,6 @@
 # Pendientes (lista maestra para ir tachando)
 
-**Buceo junto a bordes:** el cambio de modo aplica la prueba de semiplanos ampliados de `00576190` alrededor del radio 10 de M0: rechaza entrar tocando tierra y salir tocando agua profunda. `tools/audita-buceo-m0.ts` contrasta puntos del SEC real. Falta construir la lista de sectores pisados para el HUD y la disponibilidad de la acción.
+**Buceo junto a bordes:** el cambio de modo aplica la prueba de semiplanos ampliados de `00576190` alrededor del radio 10 de M0: rechaza entrar tocando tierra y salir tocando agua profunda. El HUD consulta una reconstrucción de la lista de sectores pisados, con contactos vecinos no bloqueantes, límite de ocho y centro al final. `tools/audita-buceo-m0.ts` muestra puntos del SEC real; falta reproducir las excepciones por altura de extremos y cintas de `0066ADF0`, y contrastar la lista con el original en ejecución.
 
 **Contacto de mina con Zodiac:** el contacto entrega los 10000 de impacto al bote inmediatamente y usa el reparto de `AcPilotaje`; la explosión sigue en el ciclo posterior. El pinchado depende del estado del bote, no de matar forzadamente a todos. Las ondas también activan minas alcanzadas (`00483160`), que explotan en su siguiente actualización. Faltan impactos directos de armas, el trazado completo de ondas a vehículos y la comparación jugable con el original.
 
