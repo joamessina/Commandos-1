@@ -53,6 +53,7 @@ export class SectorMap {
         const dx = b.x - a.x, dy = b.y - a.y;
         const length2 = dx * dx + dy * dy;
         if (length2 === 0) continue;
+        if (dx * (y - a.y) - dy * (x - a.x) < 0) continue;
         const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / length2));
         const px = a.x + t * dx, py = a.y + t * dy;
         if (Math.hypot(x - px, y - py) > radius) continue;
