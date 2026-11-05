@@ -28,6 +28,7 @@ const AIM_CYCLES = 0x28; // acc+0x90 de la orden 8
 const LOSE_CYCLES = 20; // sin ver al blanco: va a investigar
 const SHOT_DAMAGE = 30;
 const RELOAD_BASE = 15; // acc+0x50 por defecto de AcDisparar
+const NEST_ANIM_CYCLES = 20; // AcMetrallero 0047D8E0: CANONERODISPARA en 10, CANONERO en 0
 /** Ruido del fusil del soldado (`FUSL` en la tabla de ruidos 0x821DE0: radio 400; la pistola enemiga sería `PIPA` 600). Se oye si dist < radio (Oido01, strict). */
 export const GUNSHOT_RADIUS = 400;
 const SWEEP_AMP = 50; // AcVigilar ANGBARRIDO por defecto
@@ -116,6 +117,7 @@ export class Soldier implements Target, Claimant {
   private timer = 0;
   private lost = 0;
   private cooldown = 0;
+  private nestAnimLeft = 0;
   private moving = false;
   private bodyAlertPending = false;
   private lookTurns = 0;
@@ -439,7 +441,7 @@ export class Soldier implements Target, Claimant {
     if (this.unit.reacting) {
       this.unit.tick();
       const reacting = (): boolean => this.unit.reacting;
-      if (!reacting() && (this.order === Order.Aim || this.order === Order.Shoot) && this.unit.anim.has('APUNTAR')) this.unit.anim.set('APUNTAR');
+      if (!reacting() && !this.fixed && (this.order === Order.Aim || this.order === Order.Shoot) && this.unit.anim.has('APUNTAR')) this.unit.anim.set('APUNTAR');
       return;
     }
     if (this.down) {
@@ -463,6 +465,11 @@ export class Soldier implements Target, Claimant {
     if (this.chatLeft > 0) {
       this.chatLeft--;
       return;
+    }
+    if (this.fixed && this.nestAnimLeft > 0) {
+      this.nestAnimLeft--;
+      if (this.nestAnimLeft === 10 && this.unit.anim.has('CANONERODISPARA')) this.unit.anim.restart('CANONERODISPARA');
+      if (this.nestAnimLeft === 0) this.idleAnim();
     }
     const aiming = this.order === Order.Aim || this.order === Order.Shoot;
     // AcVigilar: la cabeza barre ±ANGBARRIDO; apuntando, mira al frente (el cuerpo ya se giró hacia el blanco)
@@ -650,6 +657,8 @@ export class Soldier implements Target, Claimant {
       return;
     }
     this.cooldown = RELOAD_BASE + Math.floor(w.rng() * 6);
+    // shortcut: AcMetrallero inicia este ciclo con su orden de ráfaga; mejorar al portar su máquina de estados y el habitáculo.
+    if (this.fixed && this.nestAnimLeft === 0) this.nestAnimLeft = NEST_ANIM_CYCLES;
     if (!this.fixed && this.unit.anim.has('DISPARAR')) {
       this.unit.anim.set('APUNTAR');
       this.unit.anim.set('DISPARAR');

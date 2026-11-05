@@ -370,16 +370,67 @@ describe('Soldier: ruta que cruza una escalera', () => {
 });
 
 describe('artillero de nido (soldado fijo)', () => {
-  it('mantiene la animación CANONERO al vigilar y disparar, y conserva la de muerte', () => {
+  it('usa CANONERO si el recurso no trae la animación de disparo y conserva la muerte', () => {
     const poses = parseAnm(bnm([{ type: 0, slots: [6] }, ...anmSeq(1, 'ANDAR', 1, 0, 0, 8), ...anmSeq(1, 'REPOSO', 1, 0, 0, 8), ...anmSeq(1, 'CANONERO', 1, 0, 0, 8), ...anmSeq(1, 'APUNTAR', 1, 0, 0, 8), ...anmSeq(1, 'DISPARAR', 1, 0, 0, 8), ...anmSeq(1, 'MUERTE1', 1, 0, 0, 8)]));
     const gunner = new Soldier('N', new Unit('N', poses, 0, 0, 0, 0), null, { fixed: true });
     const target = unit(100, 0, 0, 'COMANDO');
     const w = mkWorld([target]).world;
     expect(gunner.unit.anim.name).toBe('CANONERO');
-    for (let i = 0; i < 50; i++) gunner.tick(w);
+    for (let i = 0; i < 60; i++) gunner.tick(w);
     expect(gunner.unit.anim.name).toBe('CANONERO');
     gunner.kill();
     expect(gunner.unit.anim.name).toBe('MUERTE1');
+  });
+  it('anima al operador diez ciclos después de disparar y vuelve al reposo diez ciclos más tarde', () => {
+    const poses = parseAnm(bnm([{ type: 0, slots: [4] }, ...anmSeq(1, 'ANDAR', 1, 0, 0, 8), ...anmSeq(1, 'CANONERO', 1, 0, 2, 24), ...anmSeq(2, 'CANONERODISPARA', 3, 0, 6, 24), ...anmSeq(1, 'MUERTE1', 1, 0, 0, 8)]));
+    const gunner = new Soldier('N', new Unit('N', poses, 0, 0, 0, 0), null, { fixed: true, sweep: 0 });
+    const target = unit(100, 0, 0, 'COMANDO');
+    target.invulnerable = true;
+    const { world, shots } = mkWorld([target]);
+    for (let i = 0; i < 100 && shots.length === 0; i++) gunner.tick(world);
+    expect(shots).toHaveLength(1);
+    expect(gunner.unit.anim.name).toBe('CANONERO');
+    run(gunner, world, 9);
+    expect(gunner.unit.anim.name).toBe('CANONERO');
+    gunner.tick(world);
+    expect(gunner.unit.anim.name).toBe('CANONERODISPARA');
+    run(gunner, world, 2);
+    expect(gunner.unit.anim.step).toBeGreaterThan(0);
+    run(gunner, world, 8);
+    expect(gunner.unit.anim.name).toBe('CANONERO');
+    for (let i = 0; i < 30 && shots.length < 3; i++) gunner.tick(world);
+    expect(shots).toHaveLength(3);
+    run(gunner, world, 10);
+    expect(gunner.unit.anim.name).toBe('CANONERODISPARA');
+    gunner.kill();
+    run(gunner, world, 20);
+    expect(gunner.unit.anim.name).toBe('MUERTE1');
+  });
+  it('al terminar una herida recupera la postura del operador en vez de APUNTAR', () => {
+    const poses = parseAnm(bnm([{ type: 0, slots: [5] }, ...anmSeq(1, 'ANDAR', 1, 0, 0, 8), ...anmSeq(1, 'CANONERO', 1, 0, 2, 24), ...anmSeq(2, 'CANONERODISPARA', 3, 0, 6, 24), ...anmSeq(1, 'APUNTAR', 1, 0, 0, 8), ...anmSeq(2, 'HERIDO1', 1, 0, 2, 8)]));
+    const gunner = new Soldier('N', new Unit('N', poses, 0, 0, 0, 0), null, { fixed: true, sweep: 0 });
+    const target = unit(100, 0, 0, 'COMANDO');
+    target.invulnerable = true;
+    const { world, shots } = mkWorld([target]);
+    for (let i = 0; i < 100 && shots.length === 0; i++) gunner.tick(world);
+    run(gunner, world, 10);
+    expect(gunner.unit.anim.name).toBe('CANONERODISPARA');
+    gunner.unit.react('HERIDO1');
+    run(gunner, world, 2);
+    expect(gunner.unit.anim.name).toBe('CANONERODISPARA');
+  });
+  it('completa el gesto de disparo aunque el blanco muera con ese tiro', () => {
+    const poses = parseAnm(bnm([{ type: 0, slots: [3] }, ...anmSeq(1, 'ANDAR', 1, 0, 0, 8), ...anmSeq(1, 'CANONERO', 1, 0, 2, 24), ...anmSeq(2, 'CANONERODISPARA', 3, 0, 6, 24)]));
+    const gunner = new Soldier('N', new Unit('N', poses, 0, 0, 0, 0), null, { fixed: true, sweep: 0 });
+    const target = unit(100, 0, 0, 'COMANDO');
+    target.energy = 30;
+    const { world, shots } = mkWorld([target]);
+    for (let i = 0; i < 100 && shots.length === 0; i++) gunner.tick(world);
+    expect(target.dead).toBe(true);
+    run(gunner, world, 10);
+    expect(gunner.unit.anim.name).toBe('CANONERODISPARA');
+    run(gunner, world, 10);
+    expect(gunner.unit.anim.name).toBe('CANONERO');
   });
   it('vistaOf lee .MOD (×2) y .ANG del órgano Vista01; sin claves no hay opciones', async () => {
     const { parseClave } = await import('../formats/clave.ts');
