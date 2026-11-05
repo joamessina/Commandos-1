@@ -2,7 +2,7 @@
 
 **Contacto de mina con Zodiac:** el contacto entrega los 10000 de impacto al bote inmediatamente y usa el reparto de `AcPilotaje`; la explosión sigue en el ciclo posterior. El pinchado depende del estado del bote, no de matar forzadamente a todos. Falta el trazado real de la onda y la comparación jugable con el original.
 
-**Altura en explosiones y minas:** los detectores de casas comprueban el solapamiento vertical del cilindro centrado de `005BC080`, y bombas, barriles y minas conservan su altura al detonar. El contacto con minas comprueba alturas y los aliados de M0, cuya masa es 100. Quedan polígonos/recorrido de onda, daño y encadenamientos de cuerpos, otros objetos y contraste en juego.
+**Altura en explosiones y minas:** los detectores de casas comprueban el solapamiento vertical del cilindro centrado de `005BC080`, y bombas, barriles y minas conservan su altura al detonar. El contacto con minas comprueba alturas y los aliados de M0, cuya masa es 100. El daño y encadenamiento comprueban cilindros y altura; quedan la oclusión por sectores, vehículos y otros objetos, además del contraste en juego.
 
 **Armas de patrulla M0:** se conservan las claves `DISPARARCABO`/`DISPARARSOLDADO` y se aplican los sonidos y radios reales: pistola/PIPA/600 para los cinco cabos y metralleta/MET0/400 para sus soldados. Contrastado en ambas dificultades con `tools/audita-cuarteles-m0.ts`. La metralleta emite impactos por ciclos impares, con el barrido y dispersión de `0045ACD0`/`0045A400`; siguen aproximados el trazado y la máquina de estados y animaciones de `AcDisparar`.
 

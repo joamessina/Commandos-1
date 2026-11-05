@@ -63,6 +63,11 @@ const dist2Rect = (r: Rect, x: number, y: number): number => {
   return dx * dx + dy * dy;
 };
 
+/** Intersección de la primera pasada de `00571E50`: cilindro de radio y altura r desde la fuente. */
+function areaOverlaps(x: number, y: number, z: number, r: number, target: { readonly x: number; readonly y: number; readonly z: number; readonly radius: number; readonly height: number }): boolean {
+  return r > 0 && target.z <= z + r && z <= target.z + target.height && Math.hypot(target.x - x, target.y - y) < r + target.radius;
+}
+
 function pairsOf(n: Node | undefined): Map<string, string> | null {
   const l = asList(n);
   if (!l || l.length === 0) return null;
@@ -320,16 +325,17 @@ export class Demolition {
 
   private blast(x: number, y: number, z: number, r: number, tag: Blast['tag'], kind: 'BOMBA' | 'EXPLOSIONMENOR'): void {
     this.blasts.push({ x, y, radius: r, tag, ttl: BLAST_CYCLES });
-    for (const s of this.people.soldiers) if (!s.dead && Math.hypot(s.x - x, s.y - y) <= r) s.kill();
-    for (const c of this.people.commandos) if (!c.dead && Math.hypot(c.body.x - x, c.body.y - y) <= r) c.wound(1e9);
+    // shortcut: falta el recorrido de sectores de 00571A10 y la distribución de impactos a vehículos.
+    for (const s of this.people.soldiers) if (!s.dead && !s.unit.hidden && areaOverlaps(x, y, z, r, { x: s.x, y: s.y, z: s.unit.z, radius: 10, height: s.unit.eye })) s.kill();
+    for (const c of this.people.commandos) if (!c.dead && !c.hidden && !c.boat && areaOverlaps(x, y, z, r, { x: c.body.x, y: c.body.y, z: c.z, radius: 10, height: c.eye })) c.wound(tag === 'EBAR' ? 20000 : 10000);
     for (const b of this.barrels) {
-      if (b.dead || Math.hypot(b.x - x, b.y - y) > r) continue;
+      if (b.dead || !areaOverlaps(x, y, z, r, { x: b.x, y: b.y, z: b.z, radius: 10, height: b.eye })) continue;
       b.dead = true;
       this.queue.push({ x: b.x, y: b.y, z: b.z, r: BARREL_RADIUS, tag: 'EBAR', kind: 'EXPLOSIONMENOR' });
     }
     for (let i = this.planted.length - 1; i >= 0; i--) {
       const p = this.planted[i];
-      if (p && Math.hypot(p.x - x, p.y - y) <= r) {
+      if (p && areaOverlaps(x, y, z, r, { x: p.x, y: p.y, z: p.z, radius: 10, height: 5 })) {
         this.planted.splice(i, 1);
         this.queue.push({ x: p.x, y: p.y, z: p.z, r: BOMB_RADIUS, tag: 'XPLO', kind: 'BOMBA' });
       }

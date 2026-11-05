@@ -85,6 +85,27 @@ describe('Demolition', () => {
     return { d, s1, s2, c };
   };
 
+  it('el daño de área respeta el radio del cuerpo y el intervalo vertical de la onda', () => {
+    const inside = unit(109, 0, 'COMANDO');
+    const boundary = unit(110, 0, 'ARTIFIC');
+    const above = unit(0, 0, 'FRANCOT');
+    above.z = 101;
+    const d = new Demolition([], [], { soldiers: [], commandos: [inside, boundary, above] });
+    d.explode(0, 0, 100);
+    expect(inside.dead).toBe(true);
+    expect(boundary.dead).toBe(false);
+    expect(above.dead).toBe(false);
+  });
+
+  it('un barril no encadena otro que esté por encima de la onda', () => {
+    const d = new Demolition([], [], { soldiers: [], commandos: [] });
+    const near = d.addBarrel('NEAR', 0, 0, 0, 20);
+    const high = d.addBarrel('HIGH', 0, 0, 101, 20);
+    near.hurt('PISTOLA');
+    expect(near.dead).toBe(true);
+    expect(high.dead).toBe(false);
+  });
+
   it('la bomba plantada y detonada mata a quien esté a ≤250, destruye el sitio cercano, cumple el objetivo y marca el mapa sucio', () => {
     const { d, s1, s2, c } = mk();
     expect(d.plant(500, 500)).toBe(true);
