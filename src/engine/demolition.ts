@@ -41,6 +41,9 @@ export interface Site {
   readonly swaps: readonly Swap[];
   /** Objetivos de la misión que esto cumple al destruirse. */
   readonly objectives: readonly string[];
+  /** Volumen secundario que reenvía el impacto al edificio principal (`AcTransmiteImpacto`). */
+  readonly forwardsTo?: string;
+  readonly bombOnly?: boolean;
   destroyed: boolean;
 }
 
@@ -69,9 +72,10 @@ function pairsOf(n: Node | undefined): Map<string, string> | null {
 /** Caja de un polígono del VOL (puntos relativos al centro de la cabecera). */
 function polyRect(vol: Vol, name: string): Rect | null {
   const p = vol.polys.find((q) => q.name === name);
-  if (!p || p.points.length === 0) return null;
+  if (!p) return null;
   const cx = p.header[0] ?? 0;
   const cy = p.header[1] ?? 0;
+  if (p.points.length === 0) return p.radio === null ? null : { x0: cx - p.radio, y0: cy - p.radio, x1: cx + p.radio, y1: cy + p.radio };
   const xs = p.points.map((q) => cx + q.x);
   const ys = p.points.map((q) => cy + q.y);
   return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
@@ -83,12 +87,31 @@ function polyRect(vol: Vol, name: string): Rect | null {
  */
 export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): { sites: Site[]; objectives: string[]; escape: { x: number; y: number } | null; kills: Map<string, KillZone[]> } {
   const mission = asList(find(parseClave(misText), '.MISSION')) ?? [];
+  const strong = new Set((asList(find(mission, '.CASASFUERTES')) ?? []).map((node) => asText(find(asList(node) ?? [], '.MAP'))).filter((name): name is string => name !== undefined));
   const sites: Site[] = [];
   for (const e of asList(find(mission, '.AUTOEXPCASAS')) ?? []) {
     const l = asList(e) ?? [];
     const name = asText(find(l, '.MAP'));
     const rect = name ? polyRect(vol, name) : null;
-    if (name && rect) sites.push({ name, rect, swaps: [{ poly: name, pairs: pairsOf(find(l, '.TILES')) }], objectives: [name], destroyed: false });
+    if (name && rect) sites.push({ name, rect, swaps: [{ poly: name, pairs: pairsOf(find(l, '.TILES')) }], objectives: [name], bombOnly: strong.has(name), destroyed: false });
+  }
+  // 005278A0 crea detectores para CASA y reenvía los sufijos distintos de A al edificio principal.
+  for (const poly of vol.polys) {
+    const match = /^(CASA\d+)(.*)$/i.exec(poly.name);
+    if (!match || match[2]?.toUpperCase() === 'EXP1' || sites.some((site) => site.name === poly.name)) continue;
+    const rect = polyRect(vol, poly.name);
+    if (!rect) continue;
+    const suffix = match[2]?.toUpperCase() ?? '';
+    if (suffix !== '' && suffix !== 'A') {
+      sites.push({ name: poly.name, rect, swaps: [], objectives: [], forwardsTo: `${match[1] ?? ''}A`, destroyed: false });
+      continue;
+    }
+    const base = match[1] ?? '';
+    const swaps = vol.polys.filter((p) => {
+      const part = new RegExp(`^${base}(.*)$`, 'i').exec(p.name)?.[1]?.toUpperCase();
+      return part !== undefined && part !== 'EXP1';
+    }).map((p) => ({ poly: p.name, pairs: null }));
+    sites.push({ name: poly.name, rect, swaps, objectives: [poly.name], bombOnly: strong.has(base), destroyed: false });
   }
   for (const el of elems) {
     const a = el.actions.find((x) => x.name.toUpperCase() === 'ACEXPLOTACASA');
@@ -100,7 +123,7 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
       if (poly) swaps.push({ poly, pairs: pairsOf(find(cl, '.TILES')) });
     }
     const r = Math.max(el.radius, 1);
-    sites.push({ name: el.token, rect: { x0: el.x - r, y0: el.y - r, x1: el.x + r, y1: el.y + r }, swaps, objectives: swaps.map((s) => s.poly), destroyed: false });
+    sites.push({ name: el.token, rect: { x0: el.x - r, y0: el.y - r, x1: el.x + r, y1: el.y + r }, swaps, objectives: [el.token], destroyed: false });
   }
   const objectives: string[] = [];
   const info = asList(find(mission, '.INTENDENCIAINFO')) ?? [];
@@ -191,7 +214,7 @@ export class Demolition {
   private readonly people: People;
   private readonly sectors: Pick<SectorMap, 'atZ' | 'at'> | null;
   private readonly kills: ReadonlyMap<string, readonly KillZone[]>;
-  private readonly queue: { x: number; y: number; r: number; tag: Blast['tag'] }[] = [];
+  private readonly queue: { x: number; y: number; r: number; tag: Blast['tag']; kind: 'BOMBA' | 'EXPLOSIONMENOR' }[] = [];
 
   constructor(sites: Site[], objectives: readonly string[], people: People, bombs = 0, opts: { sectors?: Pick<SectorMap, 'atZ' | 'at'> | null; kills?: ReadonlyMap<string, readonly KillZone[]> } = {}) {
     this.sectors = opts.sectors ?? null;
@@ -229,7 +252,7 @@ export class Demolition {
       }
       if (--m.fuse > 0) continue;
       m.done = true;
-      this.explode(m.x, m.y, MINE_BLAST);
+      this.explode(m.x, m.y, MINE_BLAST, 'XPLO', 'EXPLOSIONMENOR');
       if (boat && !this.boatSunk && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_BLAST + boat.radius + 20) {
         this.boatSunk = true;
         boat.puncture();
@@ -275,41 +298,44 @@ export class Demolition {
   }
 
   /** Explosión en (x,y): mata a las personas dentro del radio, encadena barriles y bombas, destruye sitios y avisa a los soldados. */
-  explode(x: number, y: number, radius: number, tag: Blast['tag'] = 'XPLO'): void {
-    this.queue.push({ x, y, r: radius, tag });
+  explode(x: number, y: number, radius: number, tag: Blast['tag'] = 'XPLO', kind: 'BOMBA' | 'EXPLOSIONMENOR' = tag === 'EBAR' ? 'EXPLOSIONMENOR' : 'BOMBA'): void {
+    this.queue.push({ x, y, r: radius, tag, kind });
     while (this.queue.length > 0) {
       const e = this.queue.shift();
-      if (e) this.blast(e.x, e.y, e.r, e.tag);
+      if (e) this.blast(e.x, e.y, e.r, e.tag, e.kind);
     }
   }
 
-  private blast(x: number, y: number, r: number, tag: Blast['tag']): void {
+  private blast(x: number, y: number, r: number, tag: Blast['tag'], kind: 'BOMBA' | 'EXPLOSIONMENOR'): void {
     this.blasts.push({ x, y, radius: r, tag, ttl: BLAST_CYCLES });
     for (const s of this.people.soldiers) if (!s.dead && Math.hypot(s.x - x, s.y - y) <= r) s.kill();
     for (const c of this.people.commandos) if (!c.dead && Math.hypot(c.body.x - x, c.body.y - y) <= r) c.wound(1e9);
     for (const b of this.barrels) {
       if (b.dead || Math.hypot(b.x - x, b.y - y) > r) continue;
       b.dead = true;
-      this.queue.push({ x: b.x, y: b.y, r: BARREL_RADIUS, tag: 'EBAR' });
+      this.queue.push({ x: b.x, y: b.y, r: BARREL_RADIUS, tag: 'EBAR', kind: 'EXPLOSIONMENOR' });
     }
     for (let i = this.planted.length - 1; i >= 0; i--) {
       const p = this.planted[i];
       if (p && Math.hypot(p.x - x, p.y - y) <= r) {
         this.planted.splice(i, 1);
-        this.queue.push({ x: p.x, y: p.y, r: BOMB_RADIUS, tag: 'XPLO' });
+        this.queue.push({ x: p.x, y: p.y, r: BOMB_RADIUS, tag: 'XPLO', kind: 'BOMBA' });
       }
     }
     for (const s of this.sites) {
-      if (s.destroyed || dist2Rect(s.rect, x, y) > r * r) continue;
-      s.destroyed = true;
+      // shortcut: la caja ignora el polígono, la altura y el recorrido de 005BC080; mejorar con detectores de explosión completos.
+      if (dist2Rect(s.rect, x, y) > r * r) continue;
+      const target = s.forwardsTo ? this.sites.find((site) => site.name === s.forwardsTo) : s;
+      if (!target || target.destroyed || (target.bombOnly && kind !== 'BOMBA')) continue;
+      target.destroyed = true;
       this.dirty = true;
-      this.destroyed.add(s.name);
-      for (const o of s.objectives) {
+      this.destroyed.add(target.name);
+      for (const o of target.objectives) {
         this.destroyed.add(o);
         if (this.objectives.has(o)) this.objectives.set(o, true);
         this.fireKills(o);
       }
-      this.fireKills(s.name);
+      this.fireKills(target.name);
     }
     for (const s of this.people.soldiers) if (!s.dead && Math.hypot(s.x - x, s.y - y) <= NOISE_RADIUS) s.hear(x, y);
   }

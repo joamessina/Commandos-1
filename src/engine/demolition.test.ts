@@ -32,16 +32,37 @@ const elems = flatten(loadWorld(MIS, { difficulty: 'FACIL', macro: () => undefin
 describe('parseSites', () => {
   const { sites, objectives } = parseSites(MIS, vol, elems);
   it('AUTOEXPCASAS (caja del polígono, TILES en pares) y acExplotaCasa (caja del cilindro, CAMBIATILES)', () => {
-    expect(sites.map((s) => s.name)).toEqual(['ANTI01', 'FARO01', 'EXPL']);
+    expect(sites.map((s) => s.name)).toEqual(['ANTI01', 'FARO01', 'CASA04', 'EXPL']);
     expect(sites[0]?.rect).toEqual({ x0: 480, y0: 480, x1: 520, y1: 520 });
     expect(sites[0]?.swaps[0]?.pairs).toBeNull();
     expect(sites[1]?.swaps[0]?.pairs?.get('A.RLE')).toBe('B.RLE');
-    expect(sites[2]?.rect).toEqual({ x0: 50, y0: 50, x1: 150, y1: 150 });
-    expect(sites[2]?.swaps.map((s) => s.poly)).toEqual(['ANTENA', 'CASA04']);
-    expect(sites[2]?.swaps[1]?.pairs?.get('X.RLE')).toBe('NADA');
+    expect(sites[3]?.rect).toEqual({ x0: 50, y0: 50, x1: 150, y1: 150 });
+    expect(sites[3]?.swaps.map((s) => s.poly)).toEqual(['ANTENA', 'CASA04']);
+    expect(sites[3]?.swaps[1]?.pairs?.get('X.RLE')).toBe('NADA');
     expect(objectives).toEqual(['ANTI01', 'FARO01', 'CASA04']);
     expect(parseSites(MIS, vol, elems).escape).toEqual({ x: 7, y: 9 });
     expect(parseSites('.MISSION [ ]', vol, []).escape).toBeNull();
+  });
+  it('genera las casas del VOL, reenvía impactos de B a A y excluye EXP1', () => {
+    const circle = { ...poly('CASA07', 700, 700), points: [], radio: 30 };
+    const extra: Vol = { ...vol, polys: [...vol.polys, poly('CASA06A', 300, 300), poly('CASA06B', 400, 300), poly('CASA06EXP1', 450, 300), circle] };
+    const parsed = parseSites('.MISSION [ ]', extra, []);
+    expect(parsed.sites.find((s) => s.name === 'CASA06B')?.forwardsTo).toBe('CASA06A');
+    expect(parsed.sites.find((s) => s.name === 'CASA06EXP1')).toBeUndefined();
+    expect(parsed.sites.find((s) => s.name === 'CASA07')?.rect).toEqual({ x0: 670, y0: 670, x1: 730, y1: 730 });
+    const d = new Demolition(parsed.sites, [], { soldiers: [], commandos: [] });
+    d.explode(400, 300, 1);
+    expect(d.destroyed.has('CASA06A')).toBe(true);
+    expect(d.destroyed.has('CASA06B')).toBe(false);
+    expect(d.mapState().ruined.has('CASA06B')).toBe(true);
+  });
+  it('una casa fuerte rechaza explosión menor y acepta bomba', () => {
+    const parsed = parseSites('.MISSION [ .CASASFUERTES [ [ .MAP CASA04 ] ] .INTENDENCIAINFO [ .OBJETIVOS [ [ .OBJETIVO CASA04 ] ] ] ]', vol, []);
+    const d = new Demolition(parsed.sites, parsed.objectives, { soldiers: [], commandos: [] });
+    d.explode(120, 120, 1, 'EBAR');
+    expect(d.objectives.get('CASA04')).toBe(false);
+    d.explode(120, 120, 1);
+    expect(d.objectives.get('CASA04')).toBe(true);
   });
 });
 
@@ -116,16 +137,20 @@ describe('Demolition', () => {
     expect(d.blasts.map((e) => e.tag)).toEqual(['EBAR', 'EBAR', 'XPLO']);
   });
 
-  it('la antena (acExplotaCasa con CAMBIATILES) cambia dos volúmenes y cumple CASA04; un sitio no se destruye dos veces', () => {
+  it('cambiar los tiles de CASA04 desde la antena no destruye por sí solo el edificio objetivo', () => {
     const { d } = mk();
-    d.explode(100, 100, 10);
+    d.explode(60, 100, 1);
     const st = d.mapState();
     expect(st.rename.get('ANTENA')?.get('ANTE.RLE')).toBe('ANTD.RLE');
     expect(st.rename.get('CASA04')?.get('X.RLE')).toBe('NADA');
-    expect(d.objectives.get('CASA04')).toBe(true);
+    expect(d.objectives.get('CASA04')).toBe(false);
+    expect(d.destroyed.has('CASA04')).toBe(false);
     d.dirty = false;
-    d.explode(100, 100, 10);
+    d.explode(60, 100, 1);
     expect(d.dirty).toBe(false);
+    d.explode(120, 120, 1);
+    expect(d.objectives.get('CASA04')).toBe(true);
+    expect(d.destroyed.has('CASA04')).toBe(true);
     expect(d.objectivesDone).toBe(false);
   });
 });
