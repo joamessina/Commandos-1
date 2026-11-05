@@ -8,6 +8,15 @@ const seq1 = (pasos: number): BnmRec => ({ type: 1, slots: [{ s: 'X' }, pasos, 0
 const spr: BnmRec = { type: 5, slots: [{ s: 'A' }, 0, 0, 0] };
 
 describe('parseAnm', () => {
+  it('distingue los bits de espejo y mezcla aditiva en SPRITE y SIZESPRITE', () => {
+    const recs: BnmRec[] = [{ type: 1, slots: [{ s: 'F' }, 1, 0, 1] }, { type: 4, slots: [4] },
+      { type: 5, slots: [{ s: 'A' }, 0, 0, 0] },
+      { type: 5, slots: [{ s: 'B' }, 0, 0, 1] },
+      { type: 5, slots: [{ s: 'C' }, 0, 0, 2] },
+      { type: 6, slots: [{ s: 'D' }, 0, 0, 4, 4, 3] }];
+    const frames = must(must(parseAnm(ok(recs)).sequences.get('F')).steps[0]);
+    expect(frames.map((f) => [f.mirror, f.additive])).toEqual([[false, false], [true, false], [false, true], [true, true]]);
+  });
   it('lee secuencias, pasos, fotogramas con espejo y períodos a/b', () => {
     const a = parseAnm(ok(anmSeq(1, 'ANDAR', 3, 35, 0, 8)));
     const s = must(a.sequences.get('ANDAR'));

@@ -60,7 +60,7 @@ export class SpriteCache {
   }
 
   /** Dibuja el fotograma con su punto del mundo ya proyectado a píxel de mapa. Devuelve false si el sprite no existe en el WAD. */
-  draw(ctx: CanvasRenderingContext2D, f: AnmFrame, px: number, py: number, additive = false): boolean {
+  draw(ctx: CanvasRenderingContext2D, f: AnmFrame, px: number, py: number, additive = f.additive): boolean {
     const s = this.wad.byName.get(f.sprite.toUpperCase());
     if (!s) return false;
     const cache = additive ? this.additiveCache : this.cache;

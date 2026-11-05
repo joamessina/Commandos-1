@@ -22,6 +22,8 @@ export interface AnmFrame {
   readonly hy: number;
   /** true = el sprite se dibuja volteado horizontalmente (hx ya es el borde izquierdo de la imagen volteada). */
   readonly mirror: boolean;
+  /** El bit 2 del ANM solicita mezcla aditiva (`004E30C0`). */
+  readonly additive: boolean;
   readonly hotspots: Hotspot[];
 }
 
@@ -103,7 +105,7 @@ export function parseAnm(bytes: Uint8Array): Anm {
   let count = 0;
   let seq: { name: string; cyclic: boolean; steps: AnmFrame[][]; pasos: number; a: number; b: number; link1: string; link2: string; anchored: boolean } | null = null;
   let want = 0; // fotogramas que faltan en el paso actual
-  let frame: { sprite: string; hx: number; hy: number; mirror: boolean; hotspots: Hotspot[] } | null = null;
+  let frame: { sprite: string; hx: number; hy: number; mirror: boolean; additive: boolean; hotspots: Hotspot[] } | null = null;
 
   const closeSeq = (): void => {
     if (!seq) return;
@@ -141,7 +143,8 @@ export function parseAnm(bytes: Uint8Array): Anm {
       case 6: {
         const s = cur(r);
         if (want === 0) throw new AnmError(`${s.name}: fotograma fuera de un paso`);
-        const f = { sprite: txt(r, 0), hx: num(r, 1), hy: num(r, 2), mirror: num(r, r.type === 5 ? 3 : 5) !== 0, hotspots: [] as Hotspot[] };
+        const flags = num(r, r.type === 5 ? 3 : 5);
+        const f = { sprite: txt(r, 0), hx: num(r, 1), hy: num(r, 2), mirror: (flags & 1) !== 0, additive: (flags & 2) !== 0, hotspots: [] as Hotspot[] };
         (s.steps[s.steps.length - 1] as AnmFrame[]).push(f);
         frame = f;
         want--;

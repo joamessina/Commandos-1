@@ -1228,8 +1228,7 @@ function draw(g: Game, briefing = false): void {
     if (!g.blastArt?.anm.sequences.has('EXPLOSION1')) continue;
     const anim = new Animator(g.blastArt.anm, 'EXPLOSION1');
     anim.advance(0, BLAST_CYCLES - bl.ttl);
-    // shortcut: mezcla aditiva del exe para recuperar el brillo; falta confirmar la bandera del emisor de la explosión.
-    g.blastArt.sprites.draw(ctx, { ...anim.frame(0), mirror: false }, q.px, q.py, true);
+    g.blastArt.sprites.draw(ctx, anim.frame(0), q.px, q.py);
   }
   for (const splash of g.splashes) {
     const sector = g.sectors?.at(splash.x, splash.y);
@@ -1237,8 +1236,7 @@ function draw(g: Game, briefing = false): void {
     if (splash.age < 15 && g.splashArt?.anm.sequences.has('FALLOCANONAGUA')) {
       const anim = new Animator(g.splashArt.anm, 'FALLOCANONAGUA');
       anim.advance(0, splash.age);
-      // shortcut: mezcla aditiva para eliminar el fondo negro; falta confirmar la bandera original del efecto.
-      g.splashArt.sprites.draw(ctx, anim.frame(0), q.px, q.py, true);
+      g.splashArt.sprites.draw(ctx, anim.frame(0), q.px, q.py);
     }
     for (const drop of waterSplash(splash.x, splash.y, splash.age)) {
       ctx.fillStyle = drop.color;
@@ -1250,7 +1248,7 @@ function draw(g: Game, briefing = false): void {
       const anim = new Animator(g.splashArt.anm, 'ANDAR');
       anim.advance(0, puff.age);
       const q = project(puff.x, puff.y, puff.z);
-      g.splashArt.sprites.draw(ctx, { ...anim.frame(0), mirror: false }, q.px, q.py, true);
+      g.splashArt.sprites.draw(ctx, anim.frame(0), q.px, q.py);
     }
   }
   for (const tr of g.battle.tracers) {

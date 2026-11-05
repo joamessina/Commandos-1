@@ -1,6 +1,7 @@
 // Cuenta las banderas crudas de SPRITE/SIZESPRITE sin extraer los recursos.
 import { readFileSync } from 'node:fs';
 import { entryBytes, parseContainer } from '../src/formats/container.ts';
+import { parseAnm } from '../src/formats/anm.ts';
 
 const datos = new Uint8Array(readFileSync('D:/SteamLibrary/steamapps/common/Commandos Beyond the Call of Duty/WAR_MP.DIR'));
 const entradas = parseContainer(datos);
@@ -41,5 +42,11 @@ for (const nombre of ['EXPLOS1.ANM', 'DISPFALL.ANM']) {
     }
     posicion = base + tamano;
   }
-  for (const [clave, valores] of conteos) console.log(nombre, clave, Object.fromEntries(valores), 'ORDEN', orden.get(clave));
+  const anm = parseAnm(bytes);
+  for (const [clave, valores] of conteos) {
+    const flags = orden.get(clave) ?? [];
+    const frames = anm.sequences.get(clave)?.steps.flat() ?? [];
+    if (frames.length !== flags.length || frames.some((f, i) => f.mirror !== (((flags[i] ?? 0) & 1) !== 0) || f.additive !== (((flags[i] ?? 0) & 2) !== 0))) throw new Error(`Banderas inconsistentes en ${nombre}/${clave}`);
+    console.log(nombre, clave, Object.fromEntries(valores), 'ORDEN', flags, 'LECTOR_OK');
+  }
 }
