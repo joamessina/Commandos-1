@@ -15,7 +15,7 @@
 import { DAMAGE, type Target, type Weapon } from './attack.ts';
 import { followPoint } from './groups.ts';
 import type { Claimant, Pack, Packs } from './throwing.ts';
-import { DEFAULT_ANGLE, DEFAULT_RANGE, sees } from './vision.ts';
+import { DEFAULT_ANGLE, DEFAULT_RANGE, rayReach, sees } from './vision.ts';
 import { Patrol, type Route } from './patrol.ts';
 import type { SectorMap } from './sectors.ts';
 import type { Unit } from './unit.ts';
@@ -85,6 +85,8 @@ export interface Shot {
 
 export type SoldierVoice = 'VMUE' | 'ALRM' | 'AL07';
 
+export interface NestImpact { readonly x: number; readonly y: number; readonly z: number }
+
 export interface SoldierWorld {
   /** Comandos vivos o muertos (el soldado filtra). */
   readonly commandos: readonly Unit[];
@@ -96,6 +98,7 @@ export interface SoldierWorld {
   readonly packs?: Packs;
   /** Un disparo de un soldado: el mundo lo dibuja y avisa a los demás. */
   readonly onShot: (from: Soldier, shot: Shot) => void;
+  readonly onNestImpact?: (impact: NestImpact) => void;
   readonly onVoice?: (from: Soldier, voice: SoldierVoice) => void;
   readonly onEvent?: (event: string) => void;
 }
@@ -122,6 +125,7 @@ export class Soldier implements Target, Claimant {
   private nestPause = 0;
   private nestOrdered = false;
   private nestTarget: Unit | null = null;
+  private nestPoint: NestImpact | null = null;
   private nestFiringFrame = false;
   private moving = false;
   private bodyAlertPending = false;
@@ -461,6 +465,7 @@ export class Soldier implements Target, Claimant {
       this.nestAnimLeft = 0;
       this.nestPause = 0;
       this.nestTarget = null;
+      this.nestPoint = null;
       this.unit.tick();
       if (!this.cuffed && --this.stun <= 0) this.getUp();
       return;
@@ -677,6 +682,7 @@ export class Soldier implements Target, Claimant {
           this.nestOrdered = true;
           this.nestRounds = 10;
           this.nestTarget = seen;
+          this.nestPoint = { x: seen.body.x, y: seen.body.y, z: seen.z };
         }
       }
       return;
@@ -707,20 +713,24 @@ export class Soldier implements Target, Claimant {
       this.nestOrdered = false;
       this.nestPause = 10;
       this.nestTarget = null;
+      this.nestPoint = null;
       return;
     }
     this.nestFiringFrame = true;
     this.nestRounds--;
-    // shortcut: daño y sonido una vez por ráfaga; mejorar con los diez AcPuff y colisiones de 00679DC0.
     const target = this.nestTarget;
-    if (this.nestRounds === 9 && target && !target.dead) {
-      const killed = target.hit(SHOT_DAMAGE);
+    const point = this.nestPoint;
+    if (point) {
+      const b = this.unit.body;
+      const distance = Math.hypot(point.x - b.x, point.y - b.y, point.z - this.unit.z);
+      const angle = ((b.ang - 15 + 3 * (9 - this.nestRounds)) * Math.PI) / 180;
+      // shortcut: rayReach aproxima los sectores; falta el trazado 3D y los volúmenes de 006771A0.
+      const length = rayReach(w.sectors, b.x, b.y, angle, distance, this.unit.z + 20);
+      const fraction = distance > 0 ? length / distance : 1;
+      w.onNestImpact?.({ x: b.x + Math.cos(angle) * length, y: b.y + Math.sin(angle) * length, z: this.unit.z + 20 + (point.z - this.unit.z - 20) * fraction });
+    }
+    if (this.nestRounds === 9 && target) {
       w.onShot(this, { fromX: this.unit.body.x, fromY: this.unit.body.y, toX: target.body.x, toY: target.body.y, hit: true });
-      if (killed) {
-        this.target = null;
-        this.order = Order.Return;
-        this.returnToPost();
-      }
     }
   }
 

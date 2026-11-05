@@ -4,7 +4,7 @@
  */
 import { Attack, type AttackWorld, type Target, type Weapon } from './attack.ts';
 import type { SectorMap } from './sectors.ts';
-import { CHAT_CYCLES, CHAT_RANGE, type Shot, type Soldier, type SoldierVoice } from './soldier.ts';
+import { CHAT_CYCLES, CHAT_RANGE, type NestImpact, type Shot, type Soldier, type SoldierVoice } from './soldier.ts';
 import { Packs, STONE_NOISE } from './throwing.ts';
 import type { Unit } from './unit.ts';
 
@@ -24,6 +24,7 @@ export interface VoiceSound {
   readonly z: number;
 }
 export interface EffectSound { readonly tag: string; readonly x: number; readonly y: number; readonly z: number }
+export interface NestPuff extends NestImpact { age: number; hit: boolean }
 
 const SHOT_TAG: Readonly<Partial<Record<Weapon, string>>> = { PISTOLA: 'PIPA', MIRILLA: 'MIRI', ARPON: 'MIRI' };
 
@@ -36,6 +37,7 @@ export class Battle {
   readonly soldiers: Soldier[];
   readonly commandos: Unit[];
   readonly tracers: Tracer[] = [];
+  readonly nestPuffs: NestPuff[] = [];
   private readonly voices: VoiceSound[] = [];
   private readonly effects: EffectSound[] = [];
   /** Cajetillas de tabaco en el suelo. */
@@ -108,6 +110,14 @@ export class Battle {
 
   /** Un ciclo lógico (los movimientos de los comandos los hace `Unit.tick` fuera). */
   tick(): void {
+    for (let i = this.nestPuffs.length - 1; i >= 0; i--) {
+      const puff = this.nestPuffs[i];
+      if (!puff) continue;
+      // shortcut: solo comandos exteriores; falta el árbol y despacho dinámico de 0057D730/00676DE0.
+      const victim = !puff.hit && this.commandos.find((c) => !c.dead && !c.hidden && !c.boat && Math.hypot(c.body.x - puff.x, c.body.y - puff.y) < 15 && puff.z <= c.z + c.eye && c.z <= puff.z + 5);
+      if (victim) { victim.hit(30); puff.hit = true; }
+      if (++puff.age >= 8) this.nestPuffs.splice(i, 1);
+    }
     for (const [u, a] of this.attacks) {
       a.tick(this.attackWorld());
       if (a.done) this.attacks.delete(u);
@@ -128,6 +138,7 @@ export class Battle {
         sectors: this.sectors,
         rng: this.rng,
         onEvent: (event) => this.onMissionEvent?.(event),
+        onNestImpact: (impact) => { this.nestPuffs.push({ ...impact, age: 0, hit: false }); },
         onVoice: (from, voice) => {
           this.voices.push({ tag: voice, x: from.x, y: from.y, z: from.unit.z });
           if (voice === 'AL07') return;

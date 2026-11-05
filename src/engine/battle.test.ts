@@ -11,6 +11,37 @@ const anm = parseAnm(bnm([{ type: 0, slots: [5] }, ...anmSeq(1, 'ANDAR', 2, 30, 
 const mk = (x: number, y: number, ang = 0, token = 'X'): Unit => new Unit(token, anm, x, y, 0, ang);
 
 describe('Battle', () => {
+  it('una ráfaga de nido crea impactos sucesivos en vez de dañar directamente al blanco', () => {
+    const target = mk(100, 0, 180, 'COMANDO');
+    target.energy = 200;
+    const gunner = new Soldier('N', mk(0, 0), null, { fixed: true, sweep: 0, noise: 500 });
+    const b = new Battle([gunner], [target], null, () => 0);
+    for (let i = 0; i < 100 && b.nestPuffs.length === 0; i++) b.tick();
+    expect(b.nestPuffs).toHaveLength(1);
+    expect(target.energy).toBe(200);
+    b.tick();
+    expect(b.nestPuffs).toHaveLength(2);
+    expect(target.energy).toBe(200);
+    for (let i = 0; i < 9; i++) b.tick();
+    expect(target.energy).toBeLessThan(200);
+  });
+  it('cada impacto de nido hiere una sola vez dentro del cilindro y desaparece a los ocho ciclos', () => {
+    const target = mk(14.9, 0);
+    target.energy = 100;
+    const boundary = mk(15, 0);
+    const b = new Battle([], [target, boundary], null);
+    b.nestPuffs.push({ x: 0, y: 0, z: 0, age: 0, hit: false });
+    b.tick();
+    expect(target.energy).toBe(70);
+    expect(boundary.energy).toBe(100);
+    b.tick();
+    expect(target.energy).toBe(70);
+    for (let i = 0; i < 6; i++) b.tick();
+    expect(b.nestPuffs).toHaveLength(0);
+    b.nestPuffs.push({ x: 14.9, y: 0, z: target.z + target.eye + 1, age: 0, hit: false });
+    b.tick();
+    expect(target.energy).toBe(70);
+  });
   it('la voz AL07 al ir por tabaco se entrega al audio sin avisar a la IA ni al sensor', () => {
     const witness = new Soldier('BAP2', mk(0, 0), null, { smokes: true, brain: 'route' });
     const listener = new Soldier('OTRO', mk(-20, 0, 180), null);

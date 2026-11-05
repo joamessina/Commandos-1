@@ -1245,6 +1245,14 @@ function draw(g: Game, briefing = false): void {
       ctx.fillRect(Math.round(q.px + drop.x), Math.round(q.py + drop.y), 1, 1);
     }
   }
+  if (g.splashArt?.anm.sequences.has('ANDAR')) {
+    for (const puff of g.battle.nestPuffs) {
+      const anim = new Animator(g.splashArt.anm, 'ANDAR');
+      anim.advance(0, puff.age);
+      const q = project(puff.x, puff.y, puff.z);
+      g.splashArt.sprites.draw(ctx, { ...anim.frame(0), mirror: false }, q.px, q.py, true);
+    }
+  }
   for (const tr of g.battle.tracers) {
     if (tr.enemy) continue;
     const a = project(tr.fromX, tr.fromY, 25);

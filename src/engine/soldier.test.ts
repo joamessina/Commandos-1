@@ -430,11 +430,27 @@ describe('artillero de nido (soldado fijo)', () => {
     target.energy = 30;
     const { world, shots } = mkWorld([target]);
     for (let i = 0; i < 100 && shots.length === 0; i++) gunner.tick(world);
+    target.hit(30);
     expect(target.dead).toBe(true);
     run(gunner, world, 10);
     expect(gunner.unit.anim.name).toBe('CANONERODISPARA');
     run(gunner, world, 10);
     expect(gunner.unit.anim.name).toBe('CANONERO');
+  });
+  it('genera diez puntos de impacto en el abanico original, aunque el blanco se mueva', () => {
+    const gunner = new Soldier('N', unit(0, 0), null, { fixed: true, sweep: 0 });
+    const target = unit(100, 0, 0, 'COMANDO');
+    target.invulnerable = true;
+    const impacts: { x: number; y: number; z: number }[] = [];
+    const { world, shots } = mkWorld([target]);
+    const w = { ...world, onNestImpact: (impact: { x: number; y: number; z: number }) => { impacts.push(impact); } };
+    for (let i = 0; i < 100 && shots.length === 0; i++) gunner.tick(w);
+    target.body.x = 120;
+    run(gunner, w, 9);
+    expect(impacts).toHaveLength(10);
+    expect(Math.atan2(impacts[0]?.y ?? 0, impacts[0]?.x ?? 0) * 180 / Math.PI).toBeCloseTo(-15);
+    expect(Math.atan2(impacts[9]?.y ?? 0, impacts[9]?.x ?? 0) * 180 / Math.PI).toBeCloseTo(12);
+    expect(Math.hypot(impacts[9]?.x ?? 0, impacts[9]?.y ?? 0)).toBeCloseTo(100);
   });
   it('vistaOf lee .MOD (×2) y .ANG del órgano Vista01; sin claves no hay opciones', async () => {
     const { parseClave } = await import('../formats/clave.ts');
