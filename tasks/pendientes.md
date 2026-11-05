@@ -1,5 +1,7 @@
 # Pendientes (lista maestra para ir tachando)
 
+**Contraste de colisiones y nidos:** `contraste-colisiones-nidos-m0.md` compara exe, MIS/MAC/SEC/ANM originales y port. El arma usa la secuencia base `DISPARA`; el operador todavía no reproduce `CANONERODISPARA` y el disparo usa la lógica general de soldado. El efecto enemigo original tiene cilindro de radio 5 y altura 5. Falta contraste del juego original en ejecución.
+
 **Nidos, giro y disparo:** `obj-armas-fijas.md` documenta la tolerancia de 2°, el giro permitido, la posibilidad de empezar la ráfaga durante el giro y la diferencia entre los trazados aliado y enemigo. El tiro aliado aplica impacto 100 a un candidato que supera sus filtros; el efecto del disparo enemigo puede aplicar 30 por colisión dinámica. Falta contrastar la interacción completa en partida y las demás vías del artillero.
 
 **BAP2 ante sonidos:** `soldado-acbap2.md` §4b precisa el límite horizontal de 400 unidades, la prueba de sectores y los casos en que emite `AL01` o mira el lugar durante 100 ciclos. La marca `acción+0x134` se actualiza al oír atención según si el emisor es una piedra; falta contrastar la reacción en partida.
