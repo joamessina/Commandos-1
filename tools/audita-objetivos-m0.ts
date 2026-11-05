@@ -111,6 +111,12 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
   for (const token of objectives) {
     console.log('OBJETIVO', token, 'SITIOS', JSON.stringify(sites.filter((site) => site.objectives.includes(token)).map((site) => site.name)));
   }
+  for (const [part, main] of [['ANTI04B', 'ANTI04A'], ['ANTI04C', 'ANTI04A'], ['ANTI02B', 'ANTI02A']] as const) {
+    const secondary = sites.find((site) => site.name === part);
+    const primary = sites.find((site) => site.name === main);
+    if (secondary?.forwardsTo !== main || !primary?.swaps.some((swap) => swap.poly === part)) throw new Error(`Enlace incompleto de ${part} a ${main}`);
+    console.log('OBJETIVO_PIEZA', part, 'REENVIA', main);
+  }
   for (const name of ['CASA06A', 'CASA08', 'CASA05']) {
     console.log('CUARTEL_EDIFICIO', name, 'SITIOS', JSON.stringify(sites.filter((site) => site.name === name).map((site) => site.name)));
   }

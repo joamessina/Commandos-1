@@ -155,13 +155,24 @@ function polyRect(vol: Vol, name: string): Rect | null {
 export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): { sites: Site[]; objectives: string[]; escape: { x: number; y: number } | null; kills: Map<string, KillZone[]> } {
   const mission = asList(find(parseClave(misText), '.MISSION')) ?? [];
   const strong = new Set((asList(find(mission, '.CASASFUERTES')) ?? []).map((node) => asText(find(asList(node) ?? [], '.MAP'))).filter((name): name is string => name !== undefined));
+  const auto = asList(find(mission, '.AUTOEXPCASAS')) ?? [];
   const sites: Site[] = [];
-  for (const e of asList(find(mission, '.AUTOEXPCASAS')) ?? []) {
+  for (const e of auto) {
     const l = asList(e) ?? [];
     const name = asText(find(l, '.MAP'));
     const rect = name ? polyRect(vol, name) : null;
     const poly = vol.polys.find((p) => p.name === name);
-    if (name && rect && poly) sites.push({ name, rect, shape: polyShape(poly), z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps: [{ poly: name, pairs: pairsOf(find(l, '.TILES')) }], objectives: [name], bombOnly: strong.has(name), destroyed: false });
+    if (name && rect && poly) {
+      const match = /^(\D+\d+)(.*)$/i.exec(name);
+      const suffix = match?.[2]?.toUpperCase() ?? '';
+      const forwardsTo = suffix !== '' && !suffix.startsWith('A') ? `${match?.[1] ?? ''}A` : null;
+      const base = match?.[1] ?? name;
+      const swaps = vol.polys.filter((p) => p.name.startsWith(base) && p.name.slice(base.length).toUpperCase() !== 'EXP1')
+        .map((p) => ({ poly: p.name, pairs: pairsOf(find(l, '.TILES')) }));
+      sites.push({ name, rect, shape: polyShape(poly), z: poly.header[2] ?? 0, height: poly.header[3] ?? 0,
+        swaps: forwardsTo ? [] : swaps, objectives: forwardsTo ? [] : [name],
+        ...(forwardsTo ? { forwardsTo } : { bombOnly: strong.has(name) }), destroyed: false });
+    }
   }
   // 005278A0 crea detectores para CASA y reenvía los sufijos distintos de A al edificio principal.
   for (const poly of vol.polys) {

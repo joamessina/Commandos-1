@@ -77,6 +77,17 @@ describe('parseSites', () => {
 });
 
 describe('geometría de detectores de edificios', () => {
+  it('un impacto a la pieza B de un cañón se transmite a la pieza principal A', () => {
+    const main = poly('ANTI04A', 100, 100);
+    const secondary = poly('ANTI04B', 300, 100);
+    const mis = '.MISSION [ .AUTOEXPCASAS [ [ .MAP ANTI04A ] [ .MAP ANTI04B ] ] .INTENDENCIAINFO [ .OBJETIVOS [ [ .OBJETIVO ANTI04A ] ] ] ]';
+    const { sites, objectives } = parseSites(mis, { ...vol, polys: [main, secondary] }, []);
+    expect(sites.find((site) => site.name === 'ANTI04A')?.swaps.map((swap) => swap.poly)).toEqual(['ANTI04A', 'ANTI04B']);
+    const d = new Demolition(sites, objectives, { soldiers: [], commandos: [] });
+    d.explode(300, 100, 10);
+    expect(d.destroyed.has('ANTI04A')).toBe(true);
+    expect(d.objectivesDone).toBe(true);
+  });
   it('traza desde la explosión hasta el borde y no destruye el detector si la onda está obstruida', () => {
     const circle = { ...poly('CASA92', 100, 0), points: [], radio: 30, header: [100, 0, 0, 20, 0, 0] as [number, number, number, number, number, number] };
     const { sites } = parseSites('.MISSION [ ]', { ...vol, polys: [circle] }, []);
