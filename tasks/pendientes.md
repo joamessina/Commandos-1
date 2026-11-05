@@ -20,6 +20,8 @@
 
 **Pasos en agua:** `PASW` reproduce `PASOSAGU.WAV` en bucle posicional con volumen base 0,3 para comandos en marcha que pisan agua somera (`004BB370/004BBDD0`). El auditor confirma el WAV real; el estado de movimiento y los sectores pisados siguen aproximados y falta contraste auditivo.
 
+**Zodiac pinchada:** `BARCA/PINCHAR` ahora avanza sus cinco fotogramas en diez ciclos y en agua profunda se mezcla progresivamente la parte sumergida (`004C2430 → 00590F20 → 00658C80`). El contador observado no mueve la balsa ni implica veinte ciclos de hundimiento; falta contrastar visualmente la mezcla y portar plegado y recogida.
+
 **Cráteres y altura del efecto:** las explosiones en tierra conservan un cráter con `BOQUETET/GRANDE`; en agua no lo crean (`00440D30`, `00483540`). El efecto central y su sonido usan la altura de origen. El ANM real se comprueba con `tools/audita-efectos-m0.ts`; falta ordenar el cráter como bicho entre volúmenes y contrastar visualmente en el original.
 
 **Temblor de bomba:** se usa la curva de diez ciclos de `0063F760/0063F790`, volcada desde el exe y documentada en `render.md`. El desplazamiento se aplica al lienzo completo como atajo; el original vuelve a sortear por volumen. Falta contraste visual.

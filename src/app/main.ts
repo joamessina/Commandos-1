@@ -942,7 +942,10 @@ function setupStage(): void {
         g.battle.noise(x, y, r);
       });
       for (const c of g.traps.cepos) if (!c.armed) g.trapProps.get(c)?.anim.advance(0, 1); // PILLAR: el cepo se cierra
-      if (g.boat?.boat.punctured && g.boat.prop.anim.has('PINCHAR')) g.boat.prop.anim.set('PINCHAR');
+      if (g.boat?.boat.punctured && g.boat.prop.anim.has('PINCHAR')) {
+        g.boat.prop.anim.set('PINCHAR');
+        g.boat.prop.anim.advance(0, 1);
+      }
       if (g.demo.dirty) recompose(g);
       checkWin(g);
       g.boat?.boat.tick();
@@ -1211,13 +1214,13 @@ function draw(g: Game, briefing = false): void {
   }
   const drawables: Drawable[] = [];
   const off = (px: number, py: number): boolean => px < ox - 150 || px > ox + vw + 150 || py < oy - 150 || py > oy + vh + 150;
-  const add = (actor: Actor, sprites: SpriteCache, frame: AnmFrame, px: number, py: number, before?: () => void): void => {
+  const add = (actor: Actor, sprites: SpriteCache, frame: AnmFrame, px: number, py: number, before?: () => void, waterline = 0): void => {
     drawables.push({
       actor,
       rect: sprites.bounds(frame, px, py),
       paint: () => {
         before?.();
-        if (!sprites.draw(ctx, frame, px, py)) {
+        if (!(waterline ? sprites.drawWaterline(ctx, frame, px, py, waterline) : sprites.draw(ctx, frame, px, py))) {
           ctx.fillStyle = '#f0f';
           ctx.fillRect(px - 4, py - 30, 8, 30);
         }
@@ -1230,7 +1233,7 @@ function draw(g: Game, briefing = false): void {
     if ([...g.barrelProps].some(([b, bp]) => bp === pr && b.dead)) continue;
     if ([...g.mineProps].some(([m, mp]) => mp === pr && m.done)) continue;
     const isBoat = pr === g.boat?.prop;
-    add({ x: pr.x, y: pr.y, z: pr.z, r: isBoat ? 30 : pr.elem.radius || 10, h: isBoat ? 0.01 : pr.elem.height || 20 }, pr.sprites, pr.anim.frame(pr.ang), px, py);
+    add({ x: pr.x, y: pr.y, z: pr.z, r: isBoat ? 30 : pr.elem.radius || 10, h: isBoat ? 0.01 : pr.elem.height || 20 }, pr.sprites, pr.anim.frame(pr.ang), px, py, undefined, isBoat ? g.boat.boat.waterline : 0);
   }
   g.units.forEach((u, i) => {
     if (u.unit.hidden) return;

@@ -22,6 +22,23 @@ describe('Boat (SimBalsa)', () => {
     expect(b.speed).toBe(0);
   });
 
+  it('al pincharse en agua profunda baja la línea translúcida durante los diez ciclos de PINCHAR', () => {
+    const deep = { type: 3 } as Sector;
+    const boat = new Boat(0, 0, 0, 0, [], { at: () => deep });
+    boat.puncture();
+    expect(boat.waterline).toBe(0);
+    boat.tick();
+    expect(boat.waterline).toBe(19);
+    for (let i = 0; i < 9; i++) boat.tick();
+    expect(boat.waterline).toBe(10);
+    boat.tick();
+    expect(boat.waterline).toBe(10);
+    const shallow = new Boat(0, 0, 0, 0, [], { at: () => water });
+    shallow.puncture();
+    shallow.tick();
+    expect(shallow.waterline).toBe(0);
+  });
+
   it('gira como máximo 5/R rad por ciclo (tope de oruga) mientras avanza poco', () => {
     const b = new Boat(0, 0, 0, 0, [], null);
     b.goTo({ x: 0, y: 100 }); // Δ = 90°: e = 47,1 → a = −43,1, b = 51,1, escalados para que b = 5 ⇒ ω = 9,22/60 rad = 8,8°

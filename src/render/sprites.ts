@@ -59,6 +59,23 @@ export class SpriteCache {
     return { x0: left, y0: top, x1: left + s.width, y1: top + s.height };
   }
 
+  /** 00658C80 mezcla al 50 % las filas desde waterline; Canvas aproxima los píxeles FE ya translúcidos. */
+  drawWaterline(ctx: CanvasRenderingContext2D, f: AnmFrame, px: number, py: number, waterline: number): boolean {
+    const bounds = this.bounds(f, px, py);
+    if (!bounds) return false;
+    const split = Math.min(bounds.y1, bounds.y0 + waterline);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(bounds.x0, bounds.y0, bounds.x1 - bounds.x0, split - bounds.y0); ctx.clip();
+    this.draw(ctx, f, px, py);
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath(); ctx.rect(bounds.x0, split, bounds.x1 - bounds.x0, bounds.y1 - split); ctx.clip();
+    ctx.globalAlpha *= 0.5;
+    this.draw(ctx, f, px, py);
+    ctx.restore();
+    return true;
+  }
+
   /** Dibuja el fotograma con su punto del mundo ya proyectado a píxel de mapa. Devuelve false si el sprite no existe en el WAD. */
   draw(ctx: CanvasRenderingContext2D, f: AnmFrame, px: number, py: number, additive = f.additive): boolean {
     const s = this.wad.byName.get(f.sprite.toUpperCase());

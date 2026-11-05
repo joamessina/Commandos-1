@@ -9,7 +9,7 @@
  *           rebote en DEEPWATER vacía; al topar con tierra se frena en seco. Cuándo mejorar: al portar vehículos terrestres.
  */
 import { asList, asNumber, asNumbers, find } from '../formats/clave.ts';
-import { isWater, type SectorMap } from './sectors.ts';
+import { isWater, TYPE_DEEPWATER, type SectorMap } from './sectors.ts';
 import type { Unit } from './unit.ts';
 import type { Elem } from './world.ts';
 import { norm180, type Vec } from './walk.ts';
@@ -58,6 +58,9 @@ export class Boat {
   share = false;
   /** Pinchada (estado 9/10 de `AcZodiac`): sin motor y sin plazas nuevas. */
   punctured = false;
+  /** Primera fila translúcida al pincharse en agua profunda (`bicho+0x230`); 0 desactiva el efecto. */
+  waterline = 0;
+  private pinchTicks = 0;
   private impacted = false;
   private lastDead = false;
   private reverse = false;
@@ -137,6 +140,13 @@ export class Boat {
 
   /** Un ciclo: motor (`FUN_005F17C0` + maniobra `FUN_005F00E0`) y Sim (inercia `FUN_00667D30`, integración, límite). */
   tick(): void {
+    if (this.punctured && this.pinchTicks < 10) {
+      this.pinchTicks++;
+      if (this.sectors?.at(this.x, this.y)?.type === TYPE_DEEPWATER) {
+        if (this.waterline === 0) this.waterline = 20;
+        if (this.waterline > 1) this.waterline--;
+      }
+    }
     // `FUN_004C2850` estado 4: última tripulación muerta, o impacto con 0 ocupantes → pinchada; los avisos se limpian cada ciclo
     if (!this.punctured && (this.lastDead || (this.impacted && this.riders.length === 0))) this.puncture();
     this.lastDead = this.impacted = false;

@@ -5,7 +5,7 @@ import { parseAnm } from '../src/formats/anm.ts';
 
 const datos = new Uint8Array(readFileSync('D:/SteamLibrary/steamapps/common/Commandos Beyond the Call of Duty/WAR_MP.DIR'));
 const entradas = parseContainer(datos);
-for (const nombre of ['EXPLOS1.ANM', 'BOQUETET.ANM']) {
+for (const nombre of ['EXPLOS1.ANM', 'BOQUETET.ANM', 'BARCA.ANM']) {
   const coincidencias = entradas.filter((e) => e.path.toUpperCase().endsWith('/' + nombre));
   console.log('ARCHIVO', nombre, 'COINCIDENCIAS', coincidencias.length);
   for (const entrada of coincidencias) {
