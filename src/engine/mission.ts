@@ -3,6 +3,17 @@
  * (CLASS BICHOALIADO, TOKEN, XYZ, ANGULO, GRAPH .ANIM). El resto de los elementos (82 macros en la misión 0) no se instancia todavía.
  */
 import { asList, asNumber, asNumbers, asText, find, parseClave, type Node } from '../formats/clave.ts';
+import type { Boat } from './boat.ts';
+import type { SectorMap } from './sectors.ts';
+import type { Unit } from './unit.ts';
+
+/** Intendencia00 0059B600: todos los aliados vivos dentro de la Zodiac, en el sector del punto de huida. */
+export function escapeReady(allies: readonly Unit[], boat: Boat, escape: { readonly x: number; readonly y: number }, sectors: Pick<SectorMap, 'at'> | null): boolean {
+  if (allies.length === 0 || allies.some((unit) => unit.dead || unit.boat !== boat) || !sectors) return false;
+  // shortcut: el bote no conserva el puntero de sector del motor; mejorar con SimBalsa y estados de cárcel de 006ABD90.
+  const exitSector = sectors.at(escape.x, escape.y);
+  return exitSector !== null && sectors.at(boat.x, boat.y) === exitSector;
+}
 
 export interface AllyDef {
   readonly token: string;

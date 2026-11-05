@@ -1,5 +1,7 @@
 # Pendientes (lista maestra para ir tachando)
 
+**Salida de M0:** el port exige que todos los comandos estén vivos y embarcados y compara el sector de la Zodiac con el del punto de huida (`0059B600`), en lugar de un radio arbitrario. El sector del bote se consulta por XY porque aún no conserva el sector de su simulación; faltan los estados de cárcel y los demás resultados de intendencia.
+
 **Impactos visibles del nido:** `disparo-enemigo.md` identifica `DISPFALL/ANDAR`, sus cuatro fotogramas y período 8, el abanico de diez tiros y las chispas. El port dibuja diez efectos con esos sprites y aplica daño individual una vez por efecto. Atajos: trazado de sectores aproximado sin volúmenes, contacto limitado a comandos exteriores, sin chispas del exe ni despacho espacial completo; falta contraste visual y dinámico en el original.
 
 **Contraste de colisiones y nidos:** `contraste-colisiones-nidos-m0.md` compara exe, MIS/MAC/SEC/ANM originales y port. El arma usa la secuencia base `DISPARA`; el operador reproduce `CANONERODISPARA`; su ciclo y la animación del arma siguen contadores separados. Los impactos individuales están implementados con los límites de arriba; falta la IA completa y el contraste del juego original en ejecución.

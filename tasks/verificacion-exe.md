@@ -1,5 +1,7 @@
 # Qué del HUD, cursores y armas NO está leído del exe (2026-10-30)
 
+**Salida de misión 0:** se exige el mismo sector de `PUNTOHUIDA` y que todos los comandos sigan vivos y a bordo (`0059B600`). shortcut: el sector de la Zodiac se recalcula por XY y no desde su Sim; faltan los casos de cárcel y los otros códigos de derrota. Mejorar con los estados de intendencia y SimBalsa completos.
+
 **Menú e introducción (2026-11-02):** `src/app/menu.ts` carga fondos, fuentes y textos del DIR y permite elegir dificultad y resolución para menú, presentación y partida. Nueva partida reproduce el guion de M0 con AVI, fundidos, ZOM, voces y recorrido táctico; Alt+B abre la ficha de objetivos con `MBRIEFMA.BMP` y `COMANDO.FNT`: lectura y límites en `docs/lectura/intro-briefing.md`. Atajos: menú inicial a 640×480 sin leer configuración; para 1280×720 escala MENU1024; muestra tamaños efectivos en vez de las cadenas OVI contradictorias; brillo seleccionado aproximado y geometría de submenús basada en la del principal. Los recursos 4:3 de la presentación se amplían conservando proporción; se aproxima el picking de cámara y no avanzan simulación ni agua; sin WAV se omite la espera de subtítulo. Faltan comandos exclusivos de otros guiones, contraste visual/audio y otros navegadores. Guardado, carga, contraseñas, ayuda, créditos, opciones de sonido/preferencias y salida aún no están implementados.
 
 Regla: antes de implementar algo se lee su definición en el exe (tabla, función o memoria del juego en marcha); lo que no, queda acá como atajo con su fecha de revisión.

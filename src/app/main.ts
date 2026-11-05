@@ -20,6 +20,7 @@ import { Battle } from '../engine/battle.ts';
 import { BLAST_CYCLES, Demolition, parseSites, type Barrel, type Mine, type PlantedBomb } from '../engine/demolition.ts';
 import { destroyLinkedHouses, House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
+import { escapeReady } from '../engine/mission.ts';
 import { Boat, boatShares, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, decoyItem, Traps } from '../engine/traps.ts';
 import { eventList, ExitSchedule, formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
@@ -781,13 +782,12 @@ function settle(g: Game): void {
   g.result = { score: score(g.lostAt ?? g.ticks, par, lost, g.units.length), text: g.won ? END_TEXT.FINM : END_TEXT.ALMU, victory: g.won, kills: g.soldiers.filter((s) => s.soldier.dead).length };
 }
 
-/** Victoria: todos los objetivos, todos los comandos vivos a bordo del bote y el bote en el punto de huida (Intend00; evaluador de docs/lectura/mision-intendencia.md §6). */
+/** Victoria: todos los objetivos, todos los comandos a bordo y la Zodiac en el sector de huida (Intend00). */
 function checkWin(g: Game): void {
   settle(g);
   const b = g.boat?.boat;
   if (g.won || !b || !g.escape || !g.demo.objectivesDone) return;
-  const alive = g.units.filter((u) => !u.unit.dead);
-  if (alive.length > 0 && alive.every((u) => u.unit.boat === b) && Math.hypot(b.x - g.escape.x, b.y - g.escape.y) < 250) g.won = true;
+  if (escapeReady(g.units.map((u) => u.unit), b, g.escape, g.sectors)) g.won = true;
 }
 
 /** Escaleras y montacargas por ciclo: ESCALA02 se desactiva al caer CASA04 (Intend00) y el montacargas lleva a quien está encima. */
