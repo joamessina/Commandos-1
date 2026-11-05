@@ -1,5 +1,7 @@
 # Pendientes (lista maestra para ir tachando)
 
+**Impactos visibles del nido:** `disparo-enemigo.md` identifica la secuencia `DISPFALL/ANDAR`, sus cuatro fotogramas y período 8, el abanico de diez tiros y el componente de chispas. El port todavía no dibuja estos impactos ni implementa los diez efectos de colisión individuales; falta también el contraste visual original.
+
 **Contraste de colisiones y nidos:** `contraste-colisiones-nidos-m0.md` compara exe, MIS/MAC/SEC/ANM originales y port. El arma usa la secuencia base `DISPARA`; el operador reproduce `CANONERODISPARA`; su ciclo y la animación del arma siguen contadores separados; faltan los impactos y la IA completa de la ráfaga. El efecto enemigo original tiene cilindro de radio 5 y altura 5. Falta contraste del juego original en ejecución.
 
 **Nidos, giro y disparo:** `obj-armas-fijas.md` documenta la tolerancia de 2°, el giro permitido, la posibilidad de empezar la ráfaga durante el giro y la diferencia entre los trazados aliado y enemigo. El tiro aliado aplica impacto 100 a un candidato que supera sus filtros; el efecto del disparo enemigo puede aplicar 30 por colisión dinámica. Falta contrastar la interacción completa en partida y las demás vías del artillero.
