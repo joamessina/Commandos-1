@@ -29,7 +29,6 @@ export interface NestPuff extends NestImpact { age: number; hit: boolean }
 const SHOT_TAG: Readonly<Partial<Record<Weapon, string>>> = { PISTOLA: 'PIPA', MIRILLA: 'MIRI', ARPON: 'MIRI' };
 
 const TRACER_CYCLES = 4;
-const NEST_NOISE = 500;
 /** shortcut: 14 aproxima el contacto de la piedra con el cilindro del soldado; mejorar al portar su colisión dinámica. */
 const STONE_HIT = 14;
 
@@ -147,7 +146,7 @@ export class Battle {
           if (voice === 'ALRM') this.onDanger?.(from.x, from.y);
         },
         onShot: (from, shot) => {
-          this.tracers.push({ ...shot, ttl: TRACER_CYCLES, enemy: true, tag: from.noiseRadius === NEST_NOISE ? 'NIDO' : 'FUSL' }); // radio 500 = nido, 400 = fusil (tabla de ruidos 0x821DE0)
+          this.tracers.push({ ...shot, ttl: TRACER_CYCLES, enemy: true, tag: from.shotTag });
           this.onDanger?.(shot.fromX, shot.fromY);
           for (const o of this.soldiers) if (o !== from && Math.hypot(o.unit.body.x - shot.fromX, o.unit.body.y - shot.fromY) < from.noiseRadius) o.hear(shot.fromX, shot.fromY);
         },

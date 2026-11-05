@@ -1,5 +1,7 @@
 # Qué del HUD, cursores y armas NO está leído del exe (2026-10-30)
 
+**Armas de patrullas:** `0062B6C0` lee la primera clave `DISPARARCABO`/`DISPARARSOLDADO`, con fusil por defecto; en M0 son pistola y metralleta. El port selecciona sus sonidos y radios (`PIPA` 600, `MET0` 400). shortcut: el disparo de metralleta todavía usa daño directo y recarga del soldado genérico, no los efectos de ráfaga `0045A400`/`00679DC0`; mejorar al portar esa acción.
+
 **Banderas ANM:** `004E30C0` distingue el bit 1 de espejo y el bit 2 de suma; `parseAnm` y `SpriteCache` ya conservan ambos. shortcut: el canvas usa `lighter` y la conversión de alfa del port para aproximar el blitter original; mejorar al contrastar la mezcla con el ejecutable en pantalla.
 
 **Casas de misión 0:** los edificios automáticos del VOL se registran con su identidad; `CASA06B` reenvía impactos a `CASA06A`, la antena no completa por sí sola `CASA04` y las casas fuertes rechazan explosión menor (`005278A0`, `00526F50`, `0059E900`). shortcut: explosiones prueban cajas XY, no polígonos, altura ni recorrido de onda; faltan umbrales adicionales y contraste en ejecución. Mejorar con los detectores de `005BC080`.

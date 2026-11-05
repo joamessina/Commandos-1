@@ -29,6 +29,8 @@ export interface GroupDef {
   readonly routes: readonly Route[];
   readonly animCabo: string;
   readonly animSoldier: string;
+  readonly gunCabo: string;
+  readonly gunSoldier: string;
   readonly columns: number;
   readonly formX: number;
   readonly formY: number;
@@ -106,6 +108,8 @@ export function parseGroups(misText: string, difficulty: Difficulty): GroupDef[]
       routes,
       animCabo: asText(find(l, '.ANIMCABO')) ?? 'CABO',
       animSoldier: asText(find(l, '.ANIMSOLDADO')) ?? 'ALEGABAR',
+      gunCabo: asText(find(l, '.DISPARARCABO')) ?? 'FUSIL',
+      gunSoldier: asText(find(l, '.DISPARARSOLDADO')) ?? 'FUSIL',
       columns: asNumber(find(l, '.NCOLUMNS')) ?? 2,
       formX: asNumber(find(l, '.FORMX')) ?? 40,
       formY: asNumber(find(l, '.FORMY')) ?? 30,

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { entryBytes, parseContainer } from '../src/formats/container.ts';
 import { asList, asText, find, findAll, parseClave } from '../src/formats/clave.ts';
 import { parseHouses } from '../src/engine/house.ts';
+import { parseGroups } from '../src/engine/groups.ts';
 import { flatten, loadWorld } from '../src/engine/world.ts';
 
 const datos = new Uint8Array(readFileSync('D:/SteamLibrary/steamapps/common/Commandos Beyond the Call of Duty/WAR_MP.DIR'));
@@ -24,6 +25,11 @@ for (const p of asList(find(raiz, '.PATRULLAS')) ?? []) {
   console.log('ARMAS_PATRULLA', JSON.stringify({ token: asText(find(row, '.TOKEN')),
     cabo: findAll(row, '.DISPARARCABO'), soldados: findAll(row, '.DISPARARSOLDADO'),
     recarga: findAll(row, '.TIEMPORECARGA') }));
+}
+for (const dificultad of ['FACIL', 'DIFICIL'] as const) {
+  const grupos = parseGroups(mis, dificultad);
+  if (grupos.length !== 5 || grupos.some((g) => g.gunCabo !== 'PISTOLA' || g.gunSoldier !== 'METRALLETA')) throw new Error(`Armas de patrulla inesperadas en ${dificultad}`);
+  console.log('ARMAS_PORT', dificultad, JSON.stringify(grupos.map((g) => [g.token, g.gunCabo, g.gunSoldier])));
 }
 const elems = flatten(loadWorld(mis, { difficulty: 'FACIL', macro: (name) => leer(name + '.MAC') }));
 for (const h of parseHouses(elems)) console.log('CASA', h.token, 'REGEN', h.regen, 'ENTRADA', h.entry, 'SALIDA', h.exit);

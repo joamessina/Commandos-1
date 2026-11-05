@@ -5,7 +5,7 @@ import { anmSeq, bnm, secBytes } from '../testing/builders.ts';
 import { newClimb } from './ladder.ts';
 import { RouteType, type Route } from './patrol.ts';
 import { SectorMap } from './sectors.ts';
-import { lookRange, Order, Soldier, type Shot, type SoldierVoice, type SoldierWorld } from './soldier.ts';
+import { enemyGun, lookRange, Order, Soldier, type Shot, type SoldierVoice, type SoldierWorld } from './soldier.ts';
 import { COMMANDO_ENERGY, Unit } from './unit.ts';
 import { inCone, lineClear, rayReach, sees } from './vision.ts';
 
@@ -88,6 +88,17 @@ const run = (s: Soldier, w: SoldierWorld, n: number): void => {
 };
 
 describe('Soldier', () => {
+  it('selecciona sonido y radio de oído según el arma declarada', () => {
+    expect([enemyGun('pistola'), enemyGun('metralleta'), enemyGun('OTRA'), enemyGun(undefined)]).toEqual(['PISTOLA', 'METRALLETA', 'FUSIL', 'FUSIL']);
+    const pistol = new Soldier('P', unit(0, 0), null, { gun: 'PISTOLA' });
+    const machine = new Soldier('M', unit(0, 0), null, { gun: 'METRALLETA' });
+    const rifle = new Soldier('F', unit(0, 0), null);
+    const nest = new Soldier('N', unit(0, 0), null, { fixed: true });
+    expect([pistol.shotTag, pistol.noiseRadius]).toEqual(['PIPA', 600]);
+    expect([machine.shotTag, machine.noiseRadius]).toEqual(['MET0', 400]);
+    expect([rifle.shotTag, rifle.noiseRadius]).toEqual(['FUSL', 400]);
+    expect([nest.shotTag, nest.noiseRadius]).toEqual(['NIDO', 500]);
+  });
   it('respeta DEMORA y detiene el barrido con período o amplitud no positivos', () => {
     const w = mkWorld([]).world;
     const active = new Soldier('S', unit(0, 0), null, { sweep: 40, sweepPeriod: 20 });

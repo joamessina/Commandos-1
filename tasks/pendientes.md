@@ -1,5 +1,7 @@
 # Pendientes (lista maestra para ir tachando)
 
+**Armas de patrulla M0:** se conservan las claves `DISPARARCABO`/`DISPARARSOLDADO` y se aplican los sonidos y radios reales: pistola/PIPA/600 para los cinco cabos y metralleta/MET0/400 para sus soldados. Contrastado en ambas dificultades con `tools/audita-cuarteles-m0.ts`. Falta portar las ráfagas y colisiones de metralleta de `AcDisparar`.
+
 **Banderas de efectos ANM:** el lector distingue espejo (bit 1) de mezcla aditiva (bit 2), y el render usa la bandera de cada fotograma. El auditor cruza los registros reales de `EXPLOS1` y `DISPFALL`; falta comparar el resultado visual y la mezcla del navegador con el original.
 
 **Cuarteles y CASA04:** `parseSites` genera las casas del VOL, reenvía los impactos de volúmenes secundarios y distingue el bicho `CASA04` del cambio de tiles de la antena; aplica la protección contra explosiones menores de `.CASASFUERTES`. Contrastado en ambas dificultades con `tools/audita-objetivos-m0.ts`. Falta reemplazar cajas por polígonos, alturas y recorrido real de la onda, y comparar en partida.

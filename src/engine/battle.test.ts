@@ -11,6 +11,16 @@ const anm = parseAnm(bnm([{ type: 0, slots: [5] }, ...anmSeq(1, 'ANDAR', 2, 30, 
 const mk = (x: number, y: number, ang = 0, token = 'X'): Unit => new Unit(token, anm, x, y, 0, ang);
 
 describe('Battle', () => {
+  it('publica el sonido de pistola o metralleta elegido para cada patrullero', () => {
+    for (const [gun, tag] of [['PISTOLA', 'PIPA'], ['METRALLETA', 'MET0']] as const) {
+      const target = mk(100, 0, 180, 'COMANDO');
+      target.invulnerable = true;
+      const soldier = new Soldier('P', mk(0, 0), null, { gun, sweep: 0 });
+      const b = new Battle([soldier], [target], null, () => 0);
+      for (let i = 0; i < 100 && b.tracers.length === 0; i++) b.tick();
+      expect(b.tracers[0]?.tag).toBe(tag);
+    }
+  });
   it('una ráfaga de nido crea impactos sucesivos en vez de dañar directamente al blanco', () => {
     const target = mk(100, 0, 180, 'COMANDO');
     target.energy = 200;

@@ -73,8 +73,14 @@ describe('groups', () => {
     expect(g[0]).toMatchObject({ position: null, angle: 0 });
     expect(g[0]).toMatchObject({ sweep: 50, sweepPeriod: 50 });
     expect(g[1]).toMatchObject({ sweep: 75, sweepPeriod: 80 });
+    expect(g[0]).toMatchObject({ gunCabo: 'FUSIL', gunSoldier: 'FUSIL' });
     expect(eventList('reac')).toEqual(['REAC']);
     expect(eventList(undefined)).toEqual([]);
+  });
+
+  it('conserva las armas declaradas y la primera clave repetida', () => {
+    const mis = '.MISSION [ .PATRULLAS [ [ .TOKEN P .DISPARARCABO PISTOLA .DISPARARCABO FUSIL .DISPARARSOLDADO METRALLETA ] ] ]';
+    expect(parseGroups(mis, 'FACIL')[0]).toMatchObject({ gunCabo: 'PISTOLA', gunSoldier: 'METRALLETA' });
   });
 
   it('formación: con 2 columnas los dos primeros van a ±20 del cabo, los demás en fila tras el patrullero idx−n', () => {

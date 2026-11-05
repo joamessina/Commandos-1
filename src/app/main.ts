@@ -28,7 +28,7 @@ import { groundZ, isWater, SectorMap, TYPE_WATER } from '../engine/sectors.ts';
 import { canThrow, type Pack, type Throwable } from '../engine/throwing.ts';
 import { norm360 } from '../engine/walk.ts';
 import { parseRoutes } from '../engine/patrol.ts';
-import { Order, Soldier } from '../engine/soldier.ts';
+import { enemyGun, Order, Soldier } from '../engine/soldier.ts';
 import { Alarm } from '../engine/alarm.ts';
 import { COMMANDO_ENERGY, project, unproject, Unit } from '../engine/unit.ts';
 import { VolOrder, type Actor } from '../engine/volorder.ts';
@@ -528,6 +528,7 @@ async function load(introduction = false): Promise<void> {
       const investigateSpeed = asNumber(find(bap2?.params ?? [], '.VELDEJARPATRULLA'));
       const soldier = new Soldier(e.token, unit, route, {
         ...vistaOf(e.block),
+        gun: enemyGun(asText(find(e.actions.find((x) => x.name.toUpperCase() === 'ACDISPARAR')?.params ?? [], '.TIPOARMA'))),
         alternateRoutes: routes.slice(1),
         waitRouteEvent: (asNumber(find(pat?.params ?? [], '.ESPERAEVENTO')) ?? 0) !== 0,
         ...(e.actions.some((x) => /^ac(bap|banpe)1$/i.test(x.name)) ? { brain: 'base' as const } : {}),
@@ -617,7 +618,7 @@ async function load(introduction = false): Promise<void> {
       const follow = f ? { leader: () => { const lead = made[f.leader + 1]; return !lead || lead.dead ? null : { x: lead.x, y: lead.y, ang: lead.unit.body.ang, speed: lead.unit.speed }; }, lateral: f.lateral, back: def.formY } : undefined;
       const unit = new Unit(`${def.token}_${i.toString()}`, a.anm, pos.x, pos.y, pos.z, def.angle, sectors);
       unit.ladders = ladders;
-      const s = new Soldier(`${def.token}_${i.toString()}_${soldiers.length.toString()}`, unit, i === 0 ? def.route : null, { sweep: def.sweep, sweepPeriod: def.sweepPeriod, ...(follow ? { follow } : { alternateRoutes: def.routes.slice(1) }) });
+      const s = new Soldier(`${def.token}_${i.toString()}_${soldiers.length.toString()}`, unit, i === 0 ? def.route : null, { gun: enemyGun(i === 0 ? def.gunCabo : def.gunSoldier), sweep: def.sweep, sweepPeriod: def.sweepPeriod, ...(follow ? { follow } : { alternateRoutes: def.routes.slice(1) }) });
       made[i] = s;
       if (i === 0) groupLeaders.set(def.token, s);
       soldiers.push({ soldier: s, sprites: a.sprites });

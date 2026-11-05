@@ -84,6 +84,13 @@ export interface Shot {
 }
 
 export type SoldierVoice = 'VMUE' | 'ALRM' | 'AL07';
+export type EnemyGun = 'PISTOLA' | 'METRALLETA' | 'FUSIL';
+
+/** AcDisparar usa fusil si TIPOARMA no es PISTOLA ni METRALLETA. */
+export function enemyGun(value: string | undefined): EnemyGun {
+  const name = value?.toUpperCase();
+  return name === 'PISTOLA' || name === 'METRALLETA' ? name : 'FUSIL';
+}
 
 export interface NestImpact { readonly x: number; readonly y: number; readonly z: number }
 
@@ -164,12 +171,13 @@ export class Soldier implements Target, Claimant {
   private readonly investigateSpeed: number | null;
   /** Radio del ruido de su disparo (fusil 400 `FUSL`; el nido `NIDO` 500). */
   readonly noiseRadius: number;
+  readonly shotTag: 'NIDO' | 'PIPA' | 'MET0' | 'FUSL';
 
   constructor(
     token: string,
     unit: Unit,
     route: Route | null,
-    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly sweep?: number; readonly sweepPeriod?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean; readonly follow?: Follow; readonly smokes?: boolean; readonly tobacco?: boolean; readonly brain?: 'base' | 'route'; readonly investigateSpeed?: number; readonly alternateRoutes?: readonly Route[]; readonly waitRouteEvent?: boolean } = {},
+    opts: { readonly range?: number; readonly angle?: number; readonly fixed?: boolean; readonly gun?: EnemyGun; readonly sweep?: number; readonly sweepPeriod?: number; readonly elliptical?: boolean; readonly noise?: number; readonly walks?: boolean; readonly follow?: Follow; readonly smokes?: boolean; readonly tobacco?: boolean; readonly brain?: 'base' | 'route'; readonly investigateSpeed?: number; readonly alternateRoutes?: readonly Route[]; readonly waitRouteEvent?: boolean } = {},
   ) {
     this.fixed = opts.fixed ?? false;
     this.sweepAmp = opts.sweep ?? SWEEP_AMP;
@@ -181,7 +189,8 @@ export class Soldier implements Target, Claimant {
     this.brain = opts.brain ?? null;
     this.investigateSpeed = this.brain === 'route' ? (opts.investigateSpeed ?? 3) : null;
     this.tobacco = opts.tobacco ?? false;
-    this.noiseRadius = opts.noise ?? GUNSHOT_RADIUS;
+    this.shotTag = this.fixed ? 'NIDO' : opts.gun === 'PISTOLA' ? 'PIPA' : opts.gun === 'METRALLETA' ? 'MET0' : 'FUSL';
+    this.noiseRadius = opts.noise ?? (this.shotTag === 'NIDO' ? 500 : this.shotTag === 'PIPA' ? 600 : GUNSHOT_RADIUS);
     this.token = token;
     this.unit = unit;
     this.patrol = route && route.points.length > 0 ? new Patrol(route, opts.alternateRoutes, opts.waitRouteEvent) : null;
@@ -696,6 +705,7 @@ export class Soldier implements Target, Claimant {
       this.unit.anim.set('APUNTAR');
       this.unit.anim.set('DISPARAR');
     }
+    // shortcut: METRALLETA aún usa impacto directo por disparo; mejorar con la ráfaga y AcPuff de 0045A400.
     seen.hit(SHOT_DAMAGE);
     w.onShot(this, { fromX: this.unit.body.x, fromY: this.unit.body.y, toX: seen.body.x, toY: seen.body.y, hit: true });
     if (seen.dead) {
