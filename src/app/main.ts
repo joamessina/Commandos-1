@@ -25,6 +25,7 @@ import { Boat, boatShares, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, decoyItem, Traps } from '../engine/traps.ts';
 import { eventList, ExitSchedule, formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
 import { groundZ, isWater, SectorMap, TYPE_WATER } from '../engine/sectors.ts';
+import { navFor } from '../engine/path.ts';
 import { canThrow, type Pack, type Throwable } from '../engine/throwing.ts';
 import { norm360 } from '../engine/walk.ts';
 import { parseRoutes } from '../engine/patrol.ts';
@@ -577,7 +578,7 @@ async function load(introduction = false): Promise<void> {
   const bag = bagItems(new Map([...iface].map(([t, c]) => [t, { items: c.items.map((i) => (dynamic.has(i.token) ? { ...i, available: true } : i)) }])));
   for (const u of units) if (iface.get(u.unit.token)?.items.some((i) => i.token === 'IT_TABACO' && i.available)) u.unit.tobacco = 1;
   const { sites, objectives, escape, kills } = parseSites(misText, vol, elems);
-  const demo = new Demolition(sites, objectives, { soldiers: battle.soldiers, commandos: battle.commandos }, bombCount, { sectors, kills });
+  const demo = new Demolition(sites, objectives, { soldiers: battle.soldiers, commandos: battle.commandos }, bombCount, { sectors, kills, blastNav: sectors ? navFor(sectors) : null });
   const barrelMap = new Map<Barrel, Prop>();
   const mineMap = new Map<Mine, Prop>();
   for (const e of elems) if (e.macro?.toUpperCase() === 'MINASUB') {

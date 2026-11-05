@@ -12,6 +12,7 @@ import { asList, asNumbers, asText, find, parseClave, type Node } from '../forma
 import type { Vol } from '../formats/vol.ts';
 import type { Target, Weapon } from './attack.ts';
 import type { Boat } from './boat.ts';
+import type { Nav } from './path.ts';
 import type { SectorMap } from './sectors.ts';
 import type { Soldier } from './soldier.ts';
 import type { Unit } from './unit.ts';
@@ -224,11 +225,13 @@ export class Demolition {
   readonly destroyed = new Set<string>();
   private readonly people: People;
   private readonly sectors: Pick<SectorMap, 'atZ' | 'at'> | null;
+  private readonly blastNav: Pick<Nav, 'blastPath'> | null;
   private readonly kills: ReadonlyMap<string, readonly KillZone[]>;
   private readonly queue: { x: number; y: number; z: number; r: number; tag: Blast['tag']; kind: 'BOMBA' | 'EXPLOSIONMENOR' }[] = [];
 
-  constructor(sites: Site[], objectives: readonly string[], people: People, bombs = 0, opts: { sectors?: Pick<SectorMap, 'atZ' | 'at'> | null; kills?: ReadonlyMap<string, readonly KillZone[]> } = {}) {
+  constructor(sites: Site[], objectives: readonly string[], people: People, bombs = 0, opts: { sectors?: Pick<SectorMap, 'atZ' | 'at'> | null; kills?: ReadonlyMap<string, readonly KillZone[]>; blastNav?: Pick<Nav, 'blastPath'> | null } = {}) {
     this.sectors = opts.sectors ?? null;
+    this.blastNav = opts.blastNav ?? null;
     this.kills = opts.kills ?? new Map();
     this.sites = sites;
     this.objectives = new Map(objectives.map((o) => [o, false]));
@@ -325,19 +328,20 @@ export class Demolition {
 
   private blast(x: number, y: number, z: number, r: number, tag: Blast['tag'], kind: 'BOMBA' | 'EXPLOSIONMENOR'): void {
     this.blasts.push({ x, y, radius: r, tag, ttl: BLAST_CYCLES });
-    // shortcut: falta el recorrido de sectores de 00571A10 y la distribución de impactos a vehículos.
-    for (const s of this.people.soldiers) if (!s.dead && !s.unit.hidden && areaOverlaps(x, y, z, r, { x: s.x, y: s.y, z: s.unit.z, radius: 10, height: s.unit.eye })) s.kill();
-    for (const c of this.people.commandos) if (!c.dead && !c.hidden && !c.boat && areaOverlaps(x, y, z, r, { x: c.body.x, y: c.body.y, z: c.z, radius: 10, height: c.eye })) c.wound(tag === 'EBAR' ? 20000 : 10000);
+    // shortcut: falta distribuir impactos a vehículos y trazar los detectores de edificios por 005BC080.
+    const reaches = (px: number, py: number, top: number): boolean => this.blastNav?.blastPath({ x, y, z: z + 40 }, { x: px, y: py, z: top }) ?? true;
+    for (const s of this.people.soldiers) if (!s.dead && !s.unit.hidden && areaOverlaps(x, y, z, r, { x: s.x, y: s.y, z: s.unit.z, radius: 10, height: s.unit.eye }) && reaches(s.x, s.y, s.unit.z + s.unit.eye)) s.kill();
+    for (const c of this.people.commandos) if (!c.dead && !c.hidden && !c.boat && areaOverlaps(x, y, z, r, { x: c.body.x, y: c.body.y, z: c.z, radius: 10, height: c.eye }) && reaches(c.body.x, c.body.y, c.z + c.eye)) c.wound(tag === 'EBAR' ? 20000 : 10000);
     // AcMina 00483160: cualquier impacto dispara una mina armada; explota en su próxima actualización.
-    for (const m of this.mines) if (!m.done && m.fuse === null && areaOverlaps(x, y, z, r, { x: m.x, y: m.y, z: m.z, radius: MINE_R, height: MINE_H })) m.fuse = MINE_FUSE;
+    for (const m of this.mines) if (!m.done && m.fuse === null && areaOverlaps(x, y, z, r, { x: m.x, y: m.y, z: m.z, radius: MINE_R, height: MINE_H }) && reaches(m.x, m.y, m.z + MINE_H)) m.fuse = MINE_FUSE;
     for (const b of this.barrels) {
-      if (b.dead || !areaOverlaps(x, y, z, r, { x: b.x, y: b.y, z: b.z, radius: 10, height: b.eye })) continue;
+      if (b.dead || !areaOverlaps(x, y, z, r, { x: b.x, y: b.y, z: b.z, radius: 10, height: b.eye }) || !reaches(b.x, b.y, b.z + b.eye)) continue;
       b.dead = true;
       this.queue.push({ x: b.x, y: b.y, z: b.z, r: BARREL_RADIUS, tag: 'EBAR', kind: 'EXPLOSIONMENOR' });
     }
     for (let i = this.planted.length - 1; i >= 0; i--) {
       const p = this.planted[i];
-      if (p && areaOverlaps(x, y, z, r, { x: p.x, y: p.y, z: p.z, radius: 10, height: 5 })) {
+      if (p && areaOverlaps(x, y, z, r, { x: p.x, y: p.y, z: p.z, radius: 10, height: 5 }) && reaches(p.x, p.y, p.z + 5)) {
         this.planted.splice(i, 1);
         this.queue.push({ x: p.x, y: p.y, z: p.z, r: BOMB_RADIUS, tag: 'XPLO', kind: 'BOMBA' });
       }

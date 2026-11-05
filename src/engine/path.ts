@@ -263,6 +263,35 @@ export class Nav {
     return false;
   }
 
+  /** Trayecto de onda 005F6630: compara la pendiente contra la altura central de cada sector intermedio.
+   * shortcut: el sector del blanco se busca por coordenadas, no se sigue desde el sector actual del bicho como 005F9E60; mejorar al conservar ese puntero en todos los objetos. */
+  blastPath(a: Vec & { z: number }, b: Vec & { z: number }): boolean {
+    const d = { x: b.x - a.x, y: b.y - a.y };
+    const length = Math.hypot(d.x, d.y);
+    if (length < 1) return true; // 00571A10
+    const from = this.map.at(a.x, a.y);
+    const target = this.map.atZ(b.x, b.y, b.z);
+    if (!from) return false;
+    const slope = (b.z - a.z) / length;
+    let need = -1e10;
+    let cur = this.indexOf(from);
+    for (let guard = 0; guard < this.list.length; guard++) {
+      const sector = this.list[cur];
+      const hit = sector ? this.exitEdge(sector, a, d) : null;
+      if (!sector || !hit || hit.t < 0) return false;
+      if (hit.t > 1) return slope >= need;
+      const nextIndex = sector.neighbors[hit.edge] ?? -1;
+      const next = this.list[nextIndex];
+      if (!next) return false;
+      if (next === target) return true;
+      const height = Math.max(this.cz[cur] ?? 0, this.cz[nextIndex] ?? 0);
+      need = Math.max(need, (height - a.z) / (hit.t * length));
+      if (slope < need) return false;
+      cur = nextIndex;
+    }
+    return false;
+  }
+
   /** Atajo de línea recta (FUN_00624840): sigue el segmento arista a arista; null si no llega al sector del destino por un camino libre. */
   private straight(start: Vec, from: number, goal: Vec, crouched: boolean, water: boolean): PathStep[] | null {
     const d = { x: goal.x - start.x, y: goal.y - start.y };

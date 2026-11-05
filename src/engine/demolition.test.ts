@@ -245,6 +245,14 @@ describe('minas', () => {
 });
 
 describe('minas: buzo', () => {
+  it('una onda obstruida no activa la mina y traza desde z + 40 hasta el tope de su cilindro', () => {
+    const calls: unknown[] = [];
+    const d = new Demolition([], [], { soldiers: [], commandos: [] }, 0, { blastNav: { blastPath: (from, to) => { calls.push([from, to]); return false; } } });
+    const mine = d.addMine(20, 0, 10);
+    d.explode(0, 0, 30, 'XPLO', 'BOMBA', 10);
+    expect(mine.fuse).toBeNull();
+    expect(calls).toEqual([[{ x: 0, y: 0, z: 50 }, { x: 20, y: 0, z: 105 }]]);
+  });
   it('una onda activa minas alcanzadas y no activa las que están lejos o a otra altura', () => {
     const d = new Demolition([], [], { soldiers: [], commandos: [] });
     const near = d.addMine(20, 0, 0);

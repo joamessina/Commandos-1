@@ -36,6 +36,17 @@ function got<T>(v: T | null | undefined): T {
 const walls = (cx: number, cy: number): object => (cx === 1 && cy === 1 ? { flags: SectorFlag.NTrans } : {});
 
 describe('rutas por sectores', () => {
+  it('la onda comprueba el relieve de sectores intermedios, con el destino vecino como excepción del exe', () => {
+    const m = grid((cx, cy) => (cx === 1 && cy === 1 ? { plane: [0, 0, 100] } : {}));
+    const nav = navFor(m);
+    const origin = { x: 50, y: 150, z: 40 };
+    expect(nav.blastPath(origin, { x: 250, y: 150, z: 40 })).toBe(false);
+    expect(nav.blastPath(origin, { x: 250, y: 150, z: 300 })).toBe(true);
+    expect(nav.blastPath(origin, { x: 150, y: 150, z: 40 })).toBe(true);
+    expect(nav.blastPath(origin, { x: 50.5, y: 150, z: 0 })).toBe(true);
+    expect(nav.blastPath({ x: -10, y: 150, z: 40 }, origin)).toBe(false);
+    expect(nav.blastPath(origin, { x: 350, y: 150, z: 40 })).toBe(false);
+  });
   it('en línea recta por sectores libres: una cadena y solo el destino como punto', () => {
     const m = grid();
     const nav = navFor(m);
