@@ -893,7 +893,7 @@ function setupStage(): void {
       for (const h of g.houses) h.tick();
       for (const n of g.nests) {
         n.prop.ang = n.soldier.unit.body.ang;
-        const want = n.soldier.dead ? 'NODISPARA' : n.soldier.order === Order.Shoot ? 'DISPARA' : 'NODISPARA';
+        const want = n.soldier.nestFiring ? 'DISPARA' : 'NODISPARA';
         if (n.prop.anim.has(want)) n.prop.anim.set(want);
       }
       for (const [pk, pr] of g.packProps) {

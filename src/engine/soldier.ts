@@ -118,6 +118,11 @@ export class Soldier implements Target, Claimant {
   private lost = 0;
   private cooldown = 0;
   private nestAnimLeft = 0;
+  private nestRounds = 0;
+  private nestPause = 0;
+  private nestOrdered = false;
+  private nestTarget: Unit | null = null;
+  private nestFiringFrame = false;
   private moving = false;
   private bodyAlertPending = false;
   private lookTurns = 0;
@@ -189,6 +194,9 @@ export class Soldier implements Target, Claimant {
   get dead(): boolean {
     return this.unit.dead;
   }
+
+  /** El arma está en el tramo visible de una ráfaga (`00488670`). */
+  get nestFiring(): boolean { return this.nestFiringFrame; }
 
   get x(): number {
     return this.unit.body.x;
@@ -434,17 +442,25 @@ export class Soldier implements Target, Claimant {
   /** Un ciclo de lógica. */
   tick(w: SoldierWorld): void {
     if (this.unit.dead) {
+      this.nestFiringFrame = false;
       this.order = Order.Dead;
       this.unit.tick();
       return;
     }
     if (this.unit.reacting) {
+      if (this.fixed) this.tickNestWeapon(w);
       this.unit.tick();
       const reacting = (): boolean => this.unit.reacting;
       if (!reacting() && !this.fixed && (this.order === Order.Aim || this.order === Order.Shoot) && this.unit.anim.has('APUNTAR')) this.unit.anim.set('APUNTAR');
       return;
     }
     if (this.down) {
+      this.nestFiringFrame = false;
+      this.nestOrdered = false;
+      this.nestRounds = 0;
+      this.nestAnimLeft = 0;
+      this.nestPause = 0;
+      this.nestTarget = null;
       this.unit.tick();
       if (!this.cuffed && --this.stun <= 0) this.getUp();
       return;
@@ -466,6 +482,7 @@ export class Soldier implements Target, Claimant {
       this.chatLeft--;
       return;
     }
+    const nestCycleEnding = this.fixed && this.nestAnimLeft === 1;
     if (this.fixed && this.nestAnimLeft > 0) {
       this.nestAnimLeft--;
       if (this.nestAnimLeft === 10 && this.unit.anim.has('CANONERODISPARA')) this.unit.anim.restart('CANONERODISPARA');
@@ -516,11 +533,12 @@ export class Soldier implements Target, Claimant {
         } else this.lookAround(w);
         break;
       case Order.Shoot:
-        this.shooting(w, seen);
+        this.shooting(w, seen, nestCycleEnding);
         break;
       default:
         break;
     }
+    if (this.fixed) this.tickNestWeapon(w);
     this.unit.tick();
   }
 
@@ -645,21 +663,30 @@ export class Soldier implements Target, Claimant {
     }
   }
 
-  private shooting(w: SoldierWorld, seen: Unit | null): void {
+  private shooting(w: SoldierWorld, seen: Unit | null, nestCycleEnding: boolean): void {
     if (!seen) {
       if (this.lost >= LOSE_CYCLES && this.spot) this.investigate(this.spot.x, this.spot.y, this.spot.z);
       return;
     }
     this.target = seen;
     this.face(seen.body.x, seen.body.y);
+    if (this.fixed) {
+      if (this.nestAnimLeft === 0 && !nestCycleEnding) {
+        this.nestAnimLeft = NEST_ANIM_CYCLES;
+        if (!this.nestOrdered) {
+          this.nestOrdered = true;
+          this.nestRounds = 10;
+          this.nestTarget = seen;
+        }
+      }
+      return;
+    }
     if (this.cooldown > 0) {
       this.cooldown--;
       return;
     }
     this.cooldown = RELOAD_BASE + Math.floor(w.rng() * 6);
-    // shortcut: AcMetrallero inicia este ciclo con su orden de ráfaga; mejorar al portar su máquina de estados y el habitáculo.
-    if (this.fixed && this.nestAnimLeft === 0) this.nestAnimLeft = NEST_ANIM_CYCLES;
-    if (!this.fixed && this.unit.anim.has('DISPARAR')) {
+    if (this.unit.anim.has('DISPARAR')) {
       this.unit.anim.set('APUNTAR');
       this.unit.anim.set('DISPARAR');
     }
@@ -669,6 +696,31 @@ export class Soldier implements Target, Claimant {
       this.target = null;
       this.order = Order.Return;
       this.returnToPost();
+    }
+  }
+
+  private tickNestWeapon(w: SoldierWorld): void {
+    this.nestFiringFrame = false;
+    if (!this.nestOrdered) return;
+    if (this.nestPause > 0) { this.nestPause--; return; }
+    if (this.nestRounds === 0) {
+      this.nestOrdered = false;
+      this.nestPause = 10;
+      this.nestTarget = null;
+      return;
+    }
+    this.nestFiringFrame = true;
+    this.nestRounds--;
+    // shortcut: daño y sonido una vez por ráfaga; mejorar con los diez AcPuff y colisiones de 00679DC0.
+    const target = this.nestTarget;
+    if (this.nestRounds === 9 && target && !target.dead) {
+      const killed = target.hit(SHOT_DAMAGE);
+      w.onShot(this, { fromX: this.unit.body.x, fromY: this.unit.body.y, toX: target.body.x, toY: target.body.y, hit: true });
+      if (killed) {
+        this.target = null;
+        this.order = Order.Return;
+        this.returnToPost();
+      }
     }
   }
 
