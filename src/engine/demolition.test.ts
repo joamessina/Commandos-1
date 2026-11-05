@@ -75,6 +75,28 @@ describe('parseSites', () => {
   });
 });
 
+describe('geometría de detectores de edificios', () => {
+  it('rechaza la esquina de la caja fuera del polígono y acepta un impacto sobre una arista', () => {
+    const triangle = { ...poly('CASA91', 0, 0), points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: 100 }] };
+    const map: Vol = { ...vol, polys: [triangle] };
+    const { sites } = parseSites('.MISSION [ ]', map, []);
+    const d = new Demolition(sites, [], { soldiers: [], commandos: [] });
+    d.explode(90, 90, 5);
+    expect(d.destroyed.has('CASA91')).toBe(false);
+    d.explode(50, -4, 5);
+    expect(d.destroyed.has('CASA91')).toBe(true);
+  });
+  it('usa el radio del detector circular en vez de las esquinas de su caja', () => {
+    const circle = { ...poly('CASA92', 0, 0), points: [], radio: 30 };
+    const { sites } = parseSites('.MISSION [ ]', { ...vol, polys: [circle] }, []);
+    const d = new Demolition(sites, [], { soldiers: [], commandos: [] });
+    d.explode(29, 29, 5);
+    expect(d.destroyed.has('CASA92')).toBe(false);
+    d.explode(32, 0, 5);
+    expect(d.destroyed.has('CASA92')).toBe(true);
+  });
+});
+
 describe('Demolition', () => {
   const mk = (bombs = 2) => {
     const s1 = new Soldier('S1', unit(520, 500, 'S1'), null);

@@ -47,6 +47,7 @@ export interface Site {
   readonly bombOnly?: boolean;
   readonly z?: number;
   readonly height?: number;
+  readonly shape?: { readonly points: readonly { readonly x: number; readonly y: number }[] } | { readonly x: number; readonly y: number; readonly radius: number };
   destroyed: boolean;
 }
 
@@ -63,6 +64,33 @@ const dist2Rect = (r: Rect, x: number, y: number): number => {
   const dy = Math.max(r.y0 - y, 0, y - r.y1);
   return dx * dx + dy * dy;
 };
+
+/** 00529FE0: el círculo solapa el interior, una arista o un vértice del polígono. */
+function siteOverlap(site: Site, x: number, y: number, r: number): boolean {
+  const shape = site.shape;
+  if (!shape) return dist2Rect(site.rect, x, y) <= r * r;
+  if ('radius' in shape) return Math.hypot(shape.x - x, shape.y - y) < shape.radius + r;
+  let inside = true;
+  for (let i = 0; i < shape.points.length; i++) {
+    const a = shape.points[i];
+    const b = shape.points[(i + 1) % shape.points.length];
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const length = Math.hypot(dx, dy);
+    if (length === 0) continue;
+    const side = ((x - a.x) * dy - (y - a.y) * dx) / length;
+    if (side > 0) inside = false;
+    const projection = (x - a.x) * dx + (y - a.y) * dy;
+    if (side >= 0 && side <= r && projection > 0 && projection < length * length) return true;
+    if ((x - a.x) ** 2 + (y - a.y) ** 2 < r * r) return true;
+  }
+  return inside;
+}
+
+function polyShape(poly: Vol['polys'][number]): NonNullable<Site['shape']> {
+  const x = poly.header[0] ?? 0, y = poly.header[1] ?? 0;
+  return poly.points.length ? { points: poly.points.map((point) => ({ x: x + point.x, y: y + point.y })) } : { x, y, radius: poly.radio ?? 0 };
+}
 
 /** Intersección de la primera pasada de `00571E50`: cilindro de radio y altura r desde la fuente. */
 function areaOverlaps(x: number, y: number, z: number, r: number, target: { readonly x: number; readonly y: number; readonly z: number; readonly radius: number; readonly height: number }): boolean {
@@ -102,7 +130,7 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
     const name = asText(find(l, '.MAP'));
     const rect = name ? polyRect(vol, name) : null;
     const poly = vol.polys.find((p) => p.name === name);
-    if (name && rect && poly) sites.push({ name, rect, z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps: [{ poly: name, pairs: pairsOf(find(l, '.TILES')) }], objectives: [name], bombOnly: strong.has(name), destroyed: false });
+    if (name && rect && poly) sites.push({ name, rect, shape: polyShape(poly), z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps: [{ poly: name, pairs: pairsOf(find(l, '.TILES')) }], objectives: [name], bombOnly: strong.has(name), destroyed: false });
   }
   // 005278A0 crea detectores para CASA y reenvía los sufijos distintos de A al edificio principal.
   for (const poly of vol.polys) {
@@ -112,7 +140,7 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
     if (!rect) continue;
     const suffix = match[2]?.toUpperCase() ?? '';
     if (suffix !== '' && suffix !== 'A') {
-      sites.push({ name: poly.name, rect, z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps: [], objectives: [], forwardsTo: `${match[1] ?? ''}A`, destroyed: false });
+      sites.push({ name: poly.name, rect, shape: polyShape(poly), z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps: [], objectives: [], forwardsTo: `${match[1] ?? ''}A`, destroyed: false });
       continue;
     }
     const base = match[1] ?? '';
@@ -120,7 +148,7 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
       const part = new RegExp(`^${base}(.*)$`, 'i').exec(p.name)?.[1]?.toUpperCase();
       return part !== undefined && part !== 'EXP1';
     }).map((p) => ({ poly: p.name, pairs: null }));
-    sites.push({ name: poly.name, rect, z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps, objectives: [poly.name], bombOnly: strong.has(base), destroyed: false });
+    sites.push({ name: poly.name, rect, shape: polyShape(poly), z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps, objectives: [poly.name], bombOnly: strong.has(base), destroyed: false });
   }
   for (const el of elems) {
     const a = el.actions.find((x) => x.name.toUpperCase() === 'ACEXPLOTACASA');
@@ -132,7 +160,7 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
       if (poly) swaps.push({ poly, pairs: pairsOf(find(cl, '.TILES')) });
     }
     const r = Math.max(el.radius, 1);
-    sites.push({ name: el.token, rect: { x0: el.x - r, y0: el.y - r, x1: el.x + r, y1: el.y + r }, z: el.z, height: el.height, swaps, objectives: [el.token], destroyed: false });
+    sites.push({ name: el.token, rect: { x0: el.x - r, y0: el.y - r, x1: el.x + r, y1: el.y + r }, shape: { x: el.x, y: el.y, radius: r }, z: el.z, height: el.height, swaps, objectives: [el.token], destroyed: false });
   }
   const objectives: string[] = [];
   const info = asList(find(mission, '.INTENDENCIAINFO')) ?? [];
@@ -347,8 +375,8 @@ export class Demolition {
       }
     }
     for (const s of this.sites) {
-      // shortcut: la caja ignora el polígono y el recorrido de 005BC080; mejorar con detectores de explosión completos.
-      if (dist2Rect(s.rect, x, y) > r * r) continue;
+      // shortcut: falta el recorrido hasta el borde del detector de 005B9470.
+      if (!siteOverlap(s, x, y, r)) continue;
       if (s.z !== undefined && s.height !== undefined && (s.z > z + r / 2 || s.z + s.height < z - r / 2)) continue;
       const target = s.forwardsTo ? this.sites.find((site) => site.name === s.forwardsTo) : s;
       if (!target || target.destroyed || (target.bombOnly && kind !== 'BOMBA')) continue;

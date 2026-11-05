@@ -4,7 +4,7 @@ import { entryBytes, parseContainer } from '../src/formats/container.ts';
 import { parseVol } from '../src/formats/vol.ts';
 import { parseSec, SectorFlag, type Sector } from '../src/formats/sec.ts';
 import { asText, find } from '../src/formats/clave.ts';
-import { parseSites } from '../src/engine/demolition.ts';
+import { Demolition, parseSites } from '../src/engine/demolition.ts';
 import { groundZ, SectorMap } from '../src/engine/sectors.ts';
 import { flatten, loadWorld } from '../src/engine/world.ts';
 
@@ -117,6 +117,12 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
   if (casa && casa.points.length > 0) {
     const centerX = (casa.header[0] ?? 0) + casa.points.reduce((sum, point) => sum + point.x, 0) / casa.points.length;
     const centerY = (casa.header[1] ?? 0) + casa.points.reduce((sum, point) => sum + point.y, 0) / casa.points.length;
+    const auditSite = sites.find((site) => site.name === 'CASA04');
+    if (!auditSite) throw new Error('Falta el detector de CASA04');
+    const checkSite = new Demolition([{ ...auditSite, destroyed: false }], [], { soldiers: [], commandos: [] });
+    checkSite.explode(centerX, centerY, 1, 'XPLO', 'BOMBA', casa.header[2] ?? 0);
+    if (!checkSite.destroyed.has('CASA04')) throw new Error('El centro real de CASA04 no alcanza su detector');
+    console.log('CASA04_CENTRO_DENTRO_DETECTOR', true);
     const map = new SectorMap(sec);
     const antenna = elems.find((elem) => elem.token === 'EXPL_ANTENA');
     const casaSector = map.at(centerX, centerY);
