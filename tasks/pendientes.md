@@ -2,7 +2,7 @@
 
 **Buceo junto a bordes:** el cambio de modo aplica la prueba de semiplanos ampliados de `00576190` alrededor del radio 10 de M0: rechaza entrar tocando tierra y salir tocando agua profunda. `tools/audita-buceo-m0.ts` contrasta puntos del SEC real. Falta construir la lista de sectores pisados para el HUD y la disponibilidad de la acción.
 
-**Contacto de mina con Zodiac:** el contacto entrega los 10000 de impacto al bote inmediatamente y usa el reparto de `AcPilotaje`; la explosión sigue en el ciclo posterior. El pinchado depende del estado del bote, no de matar forzadamente a todos. Falta el trazado real de la onda y la comparación jugable con el original.
+**Contacto de mina con Zodiac:** el contacto entrega los 10000 de impacto al bote inmediatamente y usa el reparto de `AcPilotaje`; la explosión sigue en el ciclo posterior. El pinchado depende del estado del bote, no de matar forzadamente a todos. Las ondas también activan minas alcanzadas (`00483160`), que explotan en su siguiente actualización. Faltan impactos directos de armas, el trazado real de la onda y la comparación jugable con el original.
 
 **Altura en explosiones y minas:** los detectores de casas comprueban el solapamiento vertical del cilindro centrado de `005BC080`, y bombas, barriles y minas conservan su altura al detonar. El contacto con minas comprueba alturas y los aliados de M0, cuya masa es 100. El daño y encadenamiento comprueban cilindros y altura; quedan la oclusión por sectores, vehículos y otros objetos, además del contraste en juego.
 

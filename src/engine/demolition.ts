@@ -211,7 +211,7 @@ export class Demolition {
   readonly barrels: Barrel[] = [];
   readonly planted: PlantedBomb[] = [];
   readonly mines: Mine[] = [];
-  /** El Zodiac se hundió con una mina: sus ocupantes murieron. */
+  /** El Zodiac quedó pinchado después de recibir el impacto de una mina. */
   boatSunk = false;
   private mineHitBoat: Boat | null = null;
   readonly blasts: Blast[] = [];
@@ -328,6 +328,8 @@ export class Demolition {
     // shortcut: falta el recorrido de sectores de 00571A10 y la distribución de impactos a vehículos.
     for (const s of this.people.soldiers) if (!s.dead && !s.unit.hidden && areaOverlaps(x, y, z, r, { x: s.x, y: s.y, z: s.unit.z, radius: 10, height: s.unit.eye })) s.kill();
     for (const c of this.people.commandos) if (!c.dead && !c.hidden && !c.boat && areaOverlaps(x, y, z, r, { x: c.body.x, y: c.body.y, z: c.z, radius: 10, height: c.eye })) c.wound(tag === 'EBAR' ? 20000 : 10000);
+    // AcMina 00483160: cualquier impacto dispara una mina armada; explota en su próxima actualización.
+    for (const m of this.mines) if (!m.done && m.fuse === null && areaOverlaps(x, y, z, r, { x: m.x, y: m.y, z: m.z, radius: MINE_R, height: MINE_H })) m.fuse = MINE_FUSE;
     for (const b of this.barrels) {
       if (b.dead || !areaOverlaps(x, y, z, r, { x: b.x, y: b.y, z: b.z, radius: 10, height: b.eye })) continue;
       b.dead = true;

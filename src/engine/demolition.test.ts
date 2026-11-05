@@ -245,6 +245,22 @@ describe('minas', () => {
 });
 
 describe('minas: buzo', () => {
+  it('una onda activa minas alcanzadas y no activa las que están lejos o a otra altura', () => {
+    const d = new Demolition([], [], { soldiers: [], commandos: [] });
+    const near = d.addMine(20, 0, 0);
+    const far = d.addMine(200, 0, 0);
+    const high = d.addMine(0, 0, 200);
+    d.explode(0, 0, 30);
+    expect(near.fuse).toBe(1);
+    expect(near.done).toBe(false);
+    expect(far.fuse).toBeNull();
+    expect(high.fuse).toBeNull();
+    d.tickMines(null, []);
+    expect(near.done).toBe(true);
+    expect(d.blasts).toHaveLength(2);
+    d.tickMines(null, []);
+    expect(d.blasts).toHaveLength(2);
+  });
   it('el buzo que roza la mina muere y la dispara; las posiciones alejadas o a otra altura no', () => {
     const d = new Demolition([], [], { soldiers: [], commandos: [] });
     d.addMine(200, 0);
