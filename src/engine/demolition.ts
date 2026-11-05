@@ -44,6 +44,8 @@ export interface Site {
   /** Volumen secundario que reenvía el impacto al edificio principal (`AcTransmiteImpacto`). */
   readonly forwardsTo?: string;
   readonly bombOnly?: boolean;
+  readonly z?: number;
+  readonly height?: number;
   destroyed: boolean;
 }
 
@@ -93,7 +95,8 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
     const l = asList(e) ?? [];
     const name = asText(find(l, '.MAP'));
     const rect = name ? polyRect(vol, name) : null;
-    if (name && rect) sites.push({ name, rect, swaps: [{ poly: name, pairs: pairsOf(find(l, '.TILES')) }], objectives: [name], bombOnly: strong.has(name), destroyed: false });
+    const poly = vol.polys.find((p) => p.name === name);
+    if (name && rect && poly) sites.push({ name, rect, z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps: [{ poly: name, pairs: pairsOf(find(l, '.TILES')) }], objectives: [name], bombOnly: strong.has(name), destroyed: false });
   }
   // 005278A0 crea detectores para CASA y reenvía los sufijos distintos de A al edificio principal.
   for (const poly of vol.polys) {
@@ -103,7 +106,7 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
     if (!rect) continue;
     const suffix = match[2]?.toUpperCase() ?? '';
     if (suffix !== '' && suffix !== 'A') {
-      sites.push({ name: poly.name, rect, swaps: [], objectives: [], forwardsTo: `${match[1] ?? ''}A`, destroyed: false });
+      sites.push({ name: poly.name, rect, z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps: [], objectives: [], forwardsTo: `${match[1] ?? ''}A`, destroyed: false });
       continue;
     }
     const base = match[1] ?? '';
@@ -111,7 +114,7 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
       const part = new RegExp(`^${base}(.*)$`, 'i').exec(p.name)?.[1]?.toUpperCase();
       return part !== undefined && part !== 'EXP1';
     }).map((p) => ({ poly: p.name, pairs: null }));
-    sites.push({ name: poly.name, rect, swaps, objectives: [poly.name], bombOnly: strong.has(base), destroyed: false });
+    sites.push({ name: poly.name, rect, z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps, objectives: [poly.name], bombOnly: strong.has(base), destroyed: false });
   }
   for (const el of elems) {
     const a = el.actions.find((x) => x.name.toUpperCase() === 'ACEXPLOTACASA');
@@ -123,7 +126,7 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
       if (poly) swaps.push({ poly, pairs: pairsOf(find(cl, '.TILES')) });
     }
     const r = Math.max(el.radius, 1);
-    sites.push({ name: el.token, rect: { x0: el.x - r, y0: el.y - r, x1: el.x + r, y1: el.y + r }, swaps, objectives: [el.token], destroyed: false });
+    sites.push({ name: el.token, rect: { x0: el.x - r, y0: el.y - r, x1: el.x + r, y1: el.y + r }, z: el.z, height: el.height, swaps, objectives: [el.token], destroyed: false });
   }
   const objectives: string[] = [];
   const info = asList(find(mission, '.INTENDENCIAINFO')) ?? [];
@@ -172,12 +175,14 @@ export class Barrel implements Target {
 export interface Mine {
   readonly x: number;
   readonly y: number;
+  readonly z: number;
   /** Ciclos que faltan para explotar tras ser pisada (null = armada sin pisar). */
   fuse: number | null;
   done: boolean;
 }
 
 const MINE_R = 17;
+const MINE_H = 95;
 const MINE_BLAST = 20; // RADIOACCIONMINA
 const MINE_FUSE = 1; // FUN_00483160 pone +0x18=20; FUN_00483BB0 detona en el siguiente ciclo
 
@@ -214,7 +219,7 @@ export class Demolition {
   private readonly people: People;
   private readonly sectors: Pick<SectorMap, 'atZ' | 'at'> | null;
   private readonly kills: ReadonlyMap<string, readonly KillZone[]>;
-  private readonly queue: { x: number; y: number; r: number; tag: Blast['tag']; kind: 'BOMBA' | 'EXPLOSIONMENOR' }[] = [];
+  private readonly queue: { x: number; y: number; z: number; r: number; tag: Blast['tag']; kind: 'BOMBA' | 'EXPLOSIONMENOR' }[] = [];
 
   constructor(sites: Site[], objectives: readonly string[], people: People, bombs = 0, opts: { sectors?: Pick<SectorMap, 'atZ' | 'at'> | null; kills?: ReadonlyMap<string, readonly KillZone[]> } = {}) {
     this.sectors = opts.sectors ?? null;
@@ -225,25 +230,25 @@ export class Demolition {
     this.bombs = bombs;
   }
 
-  addMine(x: number, y: number): Mine {
-    const mine = { x, y, fuse: null, done: false };
+  addMine(x: number, y: number, z = 0): Mine {
+    const mine = { x, y, z, fuse: null, done: false };
     this.mines.push(mine);
     return mine;
   }
 
   /**
-   * Minas: un cuerpo con masa > PESOACT (60; el Zodiac pesa 400) que toque el cilindro (R 17 + el del bote) la dispara y explota al ciclo siguiente con
+   * Minas: un cuerpo con masa ≥ PESOACT (60; el Zodiac pesa 400) que toque el cilindro la dispara y explota al ciclo siguiente con
    * potencia 10000: lo que esté dentro del radio de la mina o a bordo del bote muere y el bote se hunde.
-   * shortcut: pisan minas el bote y el buzo (la masa del comando no se leyó: el exe exige masa > PESOACT; a pie no la pisa nadie); la mina no se activa por impactos.
+   * shortcut: solo se detectan la Zodiac y los cuatro aliados de M0 (todos con masa 100); faltan otros bichos, impactos y el despacho espacial completo.
    */
   tickMines(boat: Boat | null, riders: readonly Unit[]): void {
     for (const m of this.mines) {
       if (m.done) continue;
       if (m.fuse === null) {
-        if (boat && !this.boatSunk && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_R + boat.radius) m.fuse = MINE_FUSE;
-        // un buzo que la toca recibe el impacto EXPLOSIONMENOR de 10000 (muere en el acto)
+        if (boat && !this.boatSunk && boat.z <= m.z + MINE_H && m.z <= boat.z + 40 && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_R + boat.radius) m.fuse = MINE_FUSE;
+        // El aliado que la toca recibe el impacto EXPLOSIONMENOR de 10000.
         for (const u of riders) {
-          if (u.diving && !u.dead && Math.hypot(u.body.x - m.x, u.body.y - m.y) < MINE_R + 10) {
+          if (!u.boat && !u.hidden && !u.dead && u.z <= m.z + MINE_H && m.z <= u.z + u.eye && Math.hypot(u.body.x - m.x, u.body.y - m.y) < MINE_R + 10) {
             u.wound(1e9);
             m.fuse = MINE_FUSE;
           }
@@ -252,7 +257,7 @@ export class Demolition {
       }
       if (--m.fuse > 0) continue;
       m.done = true;
-      this.explode(m.x, m.y, MINE_BLAST, 'XPLO', 'EXPLOSIONMENOR');
+      this.explode(m.x, m.y, MINE_BLAST, 'XPLO', 'EXPLOSIONMENOR', m.z);
       if (boat && !this.boatSunk && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_BLAST + boat.radius + 20) {
         this.boatSunk = true;
         boat.puncture();
@@ -287,44 +292,45 @@ export class Demolition {
   /** Activa el detonador: explotan todas las bombas plantadas. */
   detonate(): number {
     const n = this.planted.length;
-    for (const b of this.planted.splice(0)) this.explode(b.x, b.y, BOMB_RADIUS);
+    for (const b of this.planted.splice(0)) this.explode(b.x, b.y, BOMB_RADIUS, 'XPLO', 'BOMBA', b.z);
     return n;
   }
 
   blowBarrel(b: Barrel): void {
     if (b.dead) return;
     b.dead = true;
-    this.explode(b.x, b.y, BARREL_RADIUS, 'EBAR');
+    this.explode(b.x, b.y, BARREL_RADIUS, 'EBAR', 'EXPLOSIONMENOR', b.z);
   }
 
   /** Explosión en (x,y): mata a las personas dentro del radio, encadena barriles y bombas, destruye sitios y avisa a los soldados. */
-  explode(x: number, y: number, radius: number, tag: Blast['tag'] = 'XPLO', kind: 'BOMBA' | 'EXPLOSIONMENOR' = tag === 'EBAR' ? 'EXPLOSIONMENOR' : 'BOMBA'): void {
-    this.queue.push({ x, y, r: radius, tag, kind });
+  explode(x: number, y: number, radius: number, tag: Blast['tag'] = 'XPLO', kind: 'BOMBA' | 'EXPLOSIONMENOR' = tag === 'EBAR' ? 'EXPLOSIONMENOR' : 'BOMBA', z = 0): void {
+    this.queue.push({ x, y, z, r: radius, tag, kind });
     while (this.queue.length > 0) {
       const e = this.queue.shift();
-      if (e) this.blast(e.x, e.y, e.r, e.tag, e.kind);
+      if (e) this.blast(e.x, e.y, e.z, e.r, e.tag, e.kind);
     }
   }
 
-  private blast(x: number, y: number, r: number, tag: Blast['tag'], kind: 'BOMBA' | 'EXPLOSIONMENOR'): void {
+  private blast(x: number, y: number, z: number, r: number, tag: Blast['tag'], kind: 'BOMBA' | 'EXPLOSIONMENOR'): void {
     this.blasts.push({ x, y, radius: r, tag, ttl: BLAST_CYCLES });
     for (const s of this.people.soldiers) if (!s.dead && Math.hypot(s.x - x, s.y - y) <= r) s.kill();
     for (const c of this.people.commandos) if (!c.dead && Math.hypot(c.body.x - x, c.body.y - y) <= r) c.wound(1e9);
     for (const b of this.barrels) {
       if (b.dead || Math.hypot(b.x - x, b.y - y) > r) continue;
       b.dead = true;
-      this.queue.push({ x: b.x, y: b.y, r: BARREL_RADIUS, tag: 'EBAR', kind: 'EXPLOSIONMENOR' });
+      this.queue.push({ x: b.x, y: b.y, z: b.z, r: BARREL_RADIUS, tag: 'EBAR', kind: 'EXPLOSIONMENOR' });
     }
     for (let i = this.planted.length - 1; i >= 0; i--) {
       const p = this.planted[i];
       if (p && Math.hypot(p.x - x, p.y - y) <= r) {
         this.planted.splice(i, 1);
-        this.queue.push({ x: p.x, y: p.y, r: BOMB_RADIUS, tag: 'XPLO', kind: 'BOMBA' });
+        this.queue.push({ x: p.x, y: p.y, z: p.z, r: BOMB_RADIUS, tag: 'XPLO', kind: 'BOMBA' });
       }
     }
     for (const s of this.sites) {
-      // shortcut: la caja ignora el polígono, la altura y el recorrido de 005BC080; mejorar con detectores de explosión completos.
+      // shortcut: la caja ignora el polígono y el recorrido de 005BC080; mejorar con detectores de explosión completos.
       if (dist2Rect(s.rect, x, y) > r * r) continue;
+      if (s.z !== undefined && s.height !== undefined && (s.z > z + r / 2 || s.z + s.height < z - r / 2)) continue;
       const target = s.forwardsTo ? this.sites.find((site) => site.name === s.forwardsTo) : s;
       if (!target || target.destroyed || (target.bombOnly && kind !== 'BOMBA')) continue;
       target.destroyed = true;

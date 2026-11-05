@@ -581,7 +581,7 @@ async function load(introduction = false): Promise<void> {
   const barrelMap = new Map<Barrel, Prop>();
   const mineMap = new Map<Mine, Prop>();
   for (const e of elems) if (e.macro?.toUpperCase() === 'MINASUB') {
-    const mine = demo.addMine(e.x, e.y);
+    const mine = demo.addMine(e.x, e.y, e.z);
     const prop = mineProps.find((p) => p.elem === e)?.prop;
     if (prop) mineMap.set(mine, prop);
   }

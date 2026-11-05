@@ -64,6 +64,15 @@ describe('parseSites', () => {
     d.explode(120, 120, 1);
     expect(d.objectives.get('CASA04')).toBe(true);
   });
+  it('los detectores respetan la altura del cilindro de la onda', () => {
+    const house = { ...poly('CASA04', 120, 120), header: [120, 120, 355, 105, 4, 0] };
+    const parsed = parseSites('.MISSION [ .INTENDENCIAINFO [ .OBJETIVOS [ [ .OBJETIVO CASA04 ] ] ] ]', { ...vol, polys: [house] }, []);
+    const d = new Demolition(parsed.sites, parsed.objectives, { soldiers: [], commandos: [] });
+    d.explode(120, 120, 250, 'XPLO', 'BOMBA', 665);
+    expect(d.objectives.get('CASA04')).toBe(false);
+    d.explode(120, 120, 250, 'XPLO', 'BOMBA', 355);
+    expect(d.objectives.get('CASA04')).toBe(true);
+  });
 });
 
 describe('Demolition', () => {
@@ -199,13 +208,15 @@ describe('minas', () => {
 });
 
 describe('minas: buzo', () => {
-  it('el buzo que roza la mina muere y la dispara; el que no bucea o está lejos no', () => {
+  it('el buzo que roza la mina muere y la dispara; las posiciones alejadas o a otra altura no', () => {
     const d = new Demolition([], [], { soldiers: [], commandos: [] });
     d.addMine(200, 0);
     const swimmer = unit(200, 0, 'LANCHERO');
+    swimmer.z = 200;
     d.tickMines(null, [swimmer]);
-    expect(d.mines[0]?.fuse).toBeNull(); // no bucea
+    expect(d.mines[0]?.fuse).toBeNull(); // por encima del cilindro
     swimmer.diving = true;
+    swimmer.z = 0;
     swimmer.body.x = 100;
     d.tickMines(null, [swimmer]);
     expect(d.mines[0]?.fuse).toBeNull(); // lejos
@@ -215,6 +226,24 @@ describe('minas: buzo', () => {
     expect(d.mines[0]?.fuse).not.toBeNull();
     d.tickMines(null, [swimmer]);
     expect(d.mines[0]?.done).toBe(true);
+  });
+  it('un aliado sin bucear también activa el contacto si se superponen los cilindros', () => {
+    const d = new Demolition([], [], { soldiers: [], commandos: [] });
+    d.addMine(200, 0, -70);
+    const ally = unit(200, 0, 'COMANDO');
+    d.tickMines(null, [ally]);
+    expect(ally.dead).toBe(true);
+    expect(d.mines[0]?.fuse).toBe(1);
+  });
+  it('la Zodiac no toca una mina a otra altura, aunque coincidan en XY', () => {
+    const d = new Demolition([], [], { soldiers: [], commandos: [] });
+    d.addMine(0, 0, -200);
+    const boat = new Boat(0, 0, 0, 0, [], null);
+    d.tickMines(boat, []);
+    expect(d.mines[0]?.fuse).toBeNull();
+    boat.z = -110;
+    d.tickMines(boat, []);
+    expect(d.mines[0]?.fuse).toBe(1);
   });
 });
 

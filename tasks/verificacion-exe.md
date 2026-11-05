@@ -1,5 +1,7 @@
 # Qué del HUD, cursores y armas NO está leído del exe (2026-10-30)
 
+**Alturas de explosión y contacto de minas:** `005BC080` usa el cilindro de detección desde z−radio/2 hasta z+radio/2; los sitios del VOL y los elementos conservan altura. `AcMina` comprueba masa ≥60 y contacto de formas: el port prueba cilindros de minas contra Zodiac y los cuatro aliados de M0. shortcut: falta el árbol espacial, los demás bichos y la entrega de impactos al bote; el daño a personas y encadenamientos de explosivos aún se calcula solo en XY. Mejorar con `0057D730`/`00571E50`.
+
 **Armas de patrullas:** `0062B6C0` lee la primera clave `DISPARARCABO`/`DISPARARSOLDADO`, con fusil por defecto; en M0 son pistola y metralleta. El port selecciona sus sonidos y radios (`PIPA` 600, `MET0` 400), y genera impactos según el contador, barrido y dispersión de `0045ACD0`/`0045A400`. shortcut: la fase de desenfundado y el estado de apuntado usan la máquina genérica, y el trazado y las colisiones de `00679DC0` siguen aproximados; mejorar con AcDisparar y colisión dinámica completos.
 
 **Banderas ANM:** `004E30C0` distingue el bit 1 de espejo y el bit 2 de suma; `parseAnm` y `SpriteCache` ya conservan ambos. shortcut: el canvas usa `lighter` y la conversión de alfa del port para aproximar el blitter original; mejorar al contrastar la mezcla con el ejecutable en pantalla.

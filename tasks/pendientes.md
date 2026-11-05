@@ -1,5 +1,7 @@
 # Pendientes (lista maestra para ir tachando)
 
+**Altura en explosiones y minas:** los detectores de casas comprueban el solapamiento vertical del cilindro centrado de `005BC080`, y bombas, barriles y minas conservan su altura al detonar. El contacto con minas comprueba alturas y los aliados de M0, cuya masa es 100. Quedan polígonos/recorrido de onda, daño y encadenamientos de cuerpos, otros objetos y contraste en juego.
+
 **Armas de patrulla M0:** se conservan las claves `DISPARARCABO`/`DISPARARSOLDADO` y se aplican los sonidos y radios reales: pistola/PIPA/600 para los cinco cabos y metralleta/MET0/400 para sus soldados. Contrastado en ambas dificultades con `tools/audita-cuarteles-m0.ts`. La metralleta emite impactos por ciclos impares, con el barrido y dispersión de `0045ACD0`/`0045A400`; siguen aproximados el trazado y la máquina de estados y animaciones de `AcDisparar`.
 
 **Banderas de efectos ANM:** el lector distingue espejo (bit 1) de mezcla aditiva (bit 2), y el render usa la bandera de cada fotograma. El auditor cruza los registros reales de `EXPLOS1` y `DISPFALL`; falta comparar el resultado visual y la mezcla del navegador con el original.
