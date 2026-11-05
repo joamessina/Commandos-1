@@ -889,7 +889,7 @@ function setupStage(): void {
     acc = Math.min(acc + dt, 500);
     last = now;
     while (acc >= TICK) {
-      if (g.notice) { acc = 0; break; }
+      if (g.notice) { g.sound.stopWater(); acc = 0; break; }
       if (!g.battle.lost && !g.won) g.battle.tick();
       if (!g.battle.lost && !g.won) g.tickGroups();
       for (const s of g.splashes) s.age++;
@@ -903,7 +903,9 @@ function setupStage(): void {
       g.alarm.tick();
       const selected = g.units[g.selected];
       if (g.mode && selected && !weaponAvailable(selected, g.mode)) g.mode = null;
-      g.sound.tick({ alarmVolume: g.alarm.volume, camX: g.camX, camY: g.camY, tracers: g.battle.tracers, blasts: g.demo.blasts, voices: g.battle.takeVoices(), effects: [...g.battle.takeEffects(), ...g.demo.takeEffects()], end: g.result ? (g.result.victory ? 'win' : 'lose') : null });
+      // shortcut: moving aproxima el estado de AuUsuarioGoto y la lista pisada conserva los límites de SectorMap.underfoot.
+      const waterSteps = g.units.flatMap(({ unit }) => !unit.dead && !unit.hidden && !unit.boat && !unit.diving && unit.moving && (g.sectors?.underfoot(unit.sector, unit.body.x, unit.body.y, 10).some((s) => s.type === TYPE_WATER) ?? false) ? [{ id: unit, x: unit.body.x, y: unit.body.y, z: unit.z }] : []);
+      g.sound.tick({ alarmVolume: g.alarm.volume, camX: g.camX, camY: g.camY, tracers: g.battle.tracers, blasts: g.demo.blasts, voices: g.battle.takeVoices(), effects: [...g.battle.takeEffects(), ...g.demo.takeEffects()], waterSteps, end: g.result ? (g.result.victory ? 'win' : 'lose') : null });
       destroyLinkedHouses(g.houses, g.demo.destroyed);
       tickWorld(g);
       for (const h of g.houses) h.tick();

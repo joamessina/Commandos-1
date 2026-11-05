@@ -18,6 +18,8 @@
 
 **Sonido de derrumbes:** las casas eligen `XCA0/1/2` según el radio y emiten desde el promedio de los volúmenes modificados (`004620E0/0045EC80`). El auditor confirma `XCA1` y posiciones reales de los objetivos y la antena; falta escucharlo y contrastarlo con el original.
 
+**Pasos en agua:** `PASW` reproduce `PASOSAGU.WAV` en bucle posicional con volumen base 0,3 para comandos en marcha que pisan agua somera (`004BB370/004BBDD0`). El auditor confirma el WAV real; el estado de movimiento y los sectores pisados siguen aproximados y falta contraste auditivo.
+
 **Salida de M0:** el port exige que todos los comandos estén vivos y embarcados y compara el sector de la Zodiac con el del punto de huida (`0059B600`), en lugar de un radio arbitrario. Los avisos `AMUC`, `ALOL` y `NOO2` usan los textos de `GLOBAL.STR`, con opciones de continuar o reiniciar (`00570350`); se conserva la prioridad de derrota cuando mueren todos. El diálogo es simplificado y falta la carga rápida; el sector del bote se consulta por XY y faltan los estados de cárcel y los demás resultados de intendencia.
 
 **Impactos visibles del nido:** `disparo-enemigo.md` identifica `DISPFALL/ANDAR`, sus cuatro fotogramas y período 8, el abanico de diez tiros y las chispas. El port dibuja diez efectos con esos sprites y aplica daño individual una vez por efecto. Atajos: trazado de sectores aproximado sin volúmenes, contacto limitado a comandos exteriores, sin chispas del exe ni despacho espacial completo; falta contraste visual y dinámico en el original.

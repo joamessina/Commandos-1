@@ -17,6 +17,7 @@ export interface SoundView {
   readonly blasts: readonly Pick<Blast, 'x' | 'y' | 'tag'>[];
   readonly voices: readonly VoiceSound[];
   readonly effects?: readonly EffectSound[];
+  readonly waterSteps?: readonly { readonly id: object; readonly x: number; readonly y: number; readonly z: number }[];
   /** Fin de la misión: 'win' = victoria, 'lose' = derrota, null = sigue. */
   readonly end: 'win' | 'lose' | null;
 }
@@ -41,6 +42,9 @@ export class GameSound {
   private alarmVolume = 0;
   private alarmPending = false;
   private alarmLoop: ReturnType<Sfx['loop']> = null;
+  private readonly waterLoops = new Map<object, NonNullable<ReturnType<Sfx['positionalLoop']>>>();
+  private waterPending = false;
+  private waterBuffer: AudioBuffer | null = null;
 
   /** Falso tras `stop()`; un método para que las comprobaciones tras un `await` no se den por siempre verdaderas. */
   private isLive(): boolean {
@@ -87,7 +91,13 @@ export class GameSound {
     this.alive = false;
     this.alarmLoop?.stop();
     this.alarmLoop = null;
+    this.stopWater();
     this.sfx.stopMusic();
+  }
+
+  stopWater(): void {
+    for (const loop of this.waterLoops.values()) loop.stop();
+    this.waterLoops.clear();
   }
 
   private playBuffer(buffer: AudioBuffer | null, x: number, y: number, z: number, v: SoundView): void {
@@ -110,6 +120,23 @@ export class GameSound {
 
   /** Un ciclo de juego: ambiente, disparos nuevos, explosiones nuevas y el jingle de fin. */
   tick(v: SoundView): void {
+    const steps = v.waterSteps ?? [];
+    const active = new Set(steps.map((step) => step.id));
+    for (const [id, loop] of this.waterLoops) if (!active.has(id)) { loop.stop(); this.waterLoops.delete(id); }
+    if (steps.length && !this.waterBuffer && !this.waterPending) {
+      this.waterPending = true;
+      this.tag('PASW').then((buffer) => { this.waterPending = false; if (this.isLive()) this.waterBuffer = buffer; }).catch(() => { this.waterPending = false; });
+    }
+    for (const step of steps) {
+      const point = this.project(step.x, step.y, step.z);
+      const mix = attenuate(point.px - v.camX, point.py - v.camY, 0.3);
+      const loop = this.waterLoops.get(step.id);
+      if (loop) loop.update(mix?.volume ?? 0, mix?.pan ?? 0);
+      else if (this.waterBuffer && mix) {
+        const next = this.sfx.positionalLoop(this.waterBuffer, mix.volume, mix.pan);
+        if (next) this.waterLoops.set(step.id, next);
+      }
+    }
     this.alarmVolume = v.alarmVolume ?? 0;
     if (this.alarmVolume <= 0) {
       this.alarmLoop?.stop();

@@ -52,6 +52,20 @@ export class Sfx {
     return { setVolume, stop: () => { src.stop(); } };
   }
 
+  /** Bucle posicional con volumen y paneo actualizables. */
+  positionalLoop(buffer: AudioBuffer, volume: number, pan: number): { update: (v: number, p: number) => void; stop: () => void } | null {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running') return null;
+    const src = ctx.createBufferSource(), gain = ctx.createGain(), panner = ctx.createStereoPanner();
+    src.buffer = buffer;
+    src.loop = true;
+    const update = (v: number, p: number): void => { gain.gain.value = v * this.volEffects; panner.pan.value = p; };
+    update(volume, pan);
+    src.connect(gain).connect(panner).connect(ctx.destination);
+    src.start();
+    return { update, stop: () => { src.stop(); } };
+  }
+
   /** Música de la misión (o jingle de fin con `loop = false`): corta la anterior sin fundido, como el original (docs/lectura/sonido.md S2.3). */
   playMusic(buffer: AudioBuffer, loop: boolean): void {
     this.stopMusic();
