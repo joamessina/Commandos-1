@@ -16,6 +16,8 @@
 
 **Piezas de cañones:** `ANTI04B/C` y `ANTI02B` reenvían los impactos a sus piezas A (`00527380`/`004B6920`); la acción de la pieza A cambia los volúmenes del mismo prefijo (`00526F50`). El auditor contrasta los enlaces y volúmenes reales en ambas dificultades; falta la comparación en partida.
 
+**Sonido de derrumbes:** las casas eligen `XCA0/1/2` según el radio y emiten desde el promedio de los volúmenes modificados (`004620E0/0045EC80`). El auditor confirma `XCA1` y posiciones reales de los objetivos y la antena; falta escucharlo y contrastarlo con el original.
+
 **Salida de M0:** el port exige que todos los comandos estén vivos y embarcados y compara el sector de la Zodiac con el del punto de huida (`0059B600`), en lugar de un radio arbitrario. El sector del bote se consulta por XY porque aún no conserva el sector de su simulación; faltan los estados de cárcel y los demás resultados de intendencia.
 
 **Impactos visibles del nido:** `disparo-enemigo.md` identifica `DISPFALL/ANDAR`, sus cuatro fotogramas y período 8, el abanico de diez tiros y las chispas. El port dibuja diez efectos con esos sprites y aplica daño individual una vez por efecto. Atajos: trazado de sectores aproximado sin volúmenes, contacto limitado a comandos exteriores, sin chispas del exe ni despacho espacial completo; falta contraste visual y dinámico en el original.

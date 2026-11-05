@@ -889,7 +889,7 @@ function setupStage(): void {
       g.alarm.tick();
       const selected = g.units[g.selected];
       if (g.mode && selected && !weaponAvailable(selected, g.mode)) g.mode = null;
-      g.sound.tick({ alarmVolume: g.alarm.volume, camX: g.camX, camY: g.camY, tracers: g.battle.tracers, blasts: g.demo.blasts, voices: g.battle.takeVoices(), effects: g.battle.takeEffects(), end: g.result ? (g.result.victory ? 'win' : 'lose') : null });
+      g.sound.tick({ alarmVolume: g.alarm.volume, camX: g.camX, camY: g.camY, tracers: g.battle.tracers, blasts: g.demo.blasts, voices: g.battle.takeVoices(), effects: [...g.battle.takeEffects(), ...g.demo.takeEffects()], end: g.result ? (g.result.victory ? 'win' : 'lose') : null });
       destroyLinkedHouses(g.houses, g.demo.destroyed);
       tickWorld(g);
       for (const h of g.houses) h.tick();

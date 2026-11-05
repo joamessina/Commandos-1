@@ -12,6 +12,7 @@ import { asList, asNumbers, asText, find, parseClave, type Node } from '../forma
 import type { Vol } from '../formats/vol.ts';
 import type { Target, Weapon } from './attack.ts';
 import type { Boat } from './boat.ts';
+import type { EffectSound } from './battle.ts';
 import type { Nav } from './path.ts';
 import type { SectorMap } from './sectors.ts';
 import type { Soldier } from './soldier.ts';
@@ -48,6 +49,7 @@ export interface Site {
   readonly z?: number;
   readonly height?: number;
   readonly shape?: { readonly points: readonly { readonly x: number; readonly y: number }[] } | { readonly x: number; readonly y: number; readonly radius: number };
+  readonly sound?: EffectSound;
   destroyed: boolean;
 }
 
@@ -90,6 +92,26 @@ function siteOverlap(site: Site, x: number, y: number, r: number): boolean {
 function polyShape(poly: Vol['polys'][number]): NonNullable<Site['shape']> {
   const x = poly.header[0] ?? 0, y = poly.header[1] ?? 0;
   return poly.points.length ? { points: poly.points.map((point) => ({ x: x + point.x, y: y + point.y })) } : { x, y, radius: poly.radio ?? 0 };
+}
+
+/** 004620E0/0045EC80: sonido por radio del dueño, situado en el promedio de volúmenes modificados. */
+function collapseSound(vol: Vol, swaps: readonly Swap[], radius: number, override?: string): EffectSound | undefined {
+  const parts = swaps.flatMap((swap) => {
+    const poly = vol.polys.find((p) => p.name === swap.poly);
+    return poly ? [poly] : [];
+  });
+  if (!parts.length) return undefined;
+  return { tag: override ?? (radius <= 70 ? 'XCA0' : radius <= 140 ? 'XCA1' : 'XCA2'),
+    x: parts.reduce((sum, p) => sum + (p.header[0] ?? 0), 0) / parts.length,
+    y: parts.reduce((sum, p) => sum + (p.header[1] ?? 0), 0) / parts.length,
+    z: parts.reduce((sum, p) => sum + (p.header[2] ?? 0), 0) / parts.length };
+}
+
+function polyRadius(poly: Vol['polys'][number]): number {
+  if (!poly.points.length) return poly.radio ?? 0;
+  const x = poly.points.reduce((sum, point) => sum + point.x, 0) / poly.points.length;
+  const y = poly.points.reduce((sum, point) => sum + point.y, 0) / poly.points.length;
+  return Math.max(...poly.points.map((point) => Math.hypot(point.x - x, point.y - y)));
 }
 
 /** Punto del detector alcanzado por el rayo desde la explosión (005B9470/005758A0). */
@@ -169,9 +191,10 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
       const base = match?.[1] ?? name;
       const swaps = vol.polys.filter((p) => p.name.startsWith(base) && p.name.slice(base.length).toUpperCase() !== 'EXP1')
         .map((p) => ({ poly: p.name, pairs: pairsOf(find(l, '.TILES')) }));
+      const sound = collapseSound(vol, swaps, polyRadius(poly));
       sites.push({ name, rect, shape: polyShape(poly), z: poly.header[2] ?? 0, height: poly.header[3] ?? 0,
         swaps: forwardsTo ? [] : swaps, objectives: forwardsTo ? [] : [name],
-        ...(forwardsTo ? { forwardsTo } : { bombOnly: strong.has(name) }), destroyed: false });
+        ...(forwardsTo ? { forwardsTo } : { bombOnly: strong.has(name), ...(sound ? { sound } : {}) }), destroyed: false });
     }
   }
   // 005278A0 crea detectores para CASA y reenvía los sufijos distintos de A al edificio principal.
@@ -190,7 +213,8 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
       const part = new RegExp(`^${base}(.*)$`, 'i').exec(p.name)?.[1]?.toUpperCase();
       return part !== undefined && part !== 'EXP1';
     }).map((p) => ({ poly: p.name, pairs: null }));
-    sites.push({ name: poly.name, rect, shape: polyShape(poly), z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps, objectives: [poly.name], bombOnly: strong.has(base), destroyed: false });
+    const sound = collapseSound(vol, swaps, polyRadius(poly));
+    sites.push({ name: poly.name, rect, shape: polyShape(poly), z: poly.header[2] ?? 0, height: poly.header[3] ?? 0, swaps, objectives: [poly.name], bombOnly: strong.has(base), ...(sound ? { sound } : {}), destroyed: false });
   }
   for (const el of elems) {
     const a = el.actions.find((x) => x.name.toUpperCase() === 'ACEXPLOTACASA');
@@ -202,7 +226,8 @@ export function parseSites(misText: string, vol: Vol, elems: readonly Elem[]): {
       if (poly) swaps.push({ poly, pairs: pairsOf(find(cl, '.TILES')) });
     }
     const r = Math.max(el.radius, 1);
-    sites.push({ name: el.token, rect: { x0: el.x - r, y0: el.y - r, x1: el.x + r, y1: el.y + r }, shape: { x: el.x, y: el.y, radius: r }, z: el.z, height: el.height, swaps, objectives: [el.token], destroyed: false });
+    const sound = collapseSound(vol, swaps, r, asText(find(a.params, '.SONFIS')));
+    sites.push({ name: el.token, rect: { x0: el.x - r, y0: el.y - r, x1: el.x + r, y1: el.y + r }, shape: { x: el.x, y: el.y, radius: r }, z: el.z, height: el.height, swaps, objectives: [el.token], ...(sound ? { sound } : {}), destroyed: false });
   }
   const objectives: string[] = [];
   const info = asList(find(mission, '.INTENDENCIAINFO')) ?? [];
@@ -288,6 +313,8 @@ export class Demolition {
   boatSunk = false;
   private mineHitBoat: Boat | null = null;
   readonly blasts: Blast[] = [];
+  private readonly effects: EffectSound[] = [];
+  takeEffects(): EffectSound[] { return this.effects.splice(0); }
   readonly objectives: Map<string, boolean>;
   /** Bombas que le quedan al zapador. */
   bombs: number;
@@ -429,6 +456,7 @@ export class Demolition {
       const target = s.forwardsTo ? this.sites.find((site) => site.name === s.forwardsTo) : s;
       if (!target || target.destroyed || (target.bombOnly && kind !== 'BOMBA')) continue;
       target.destroyed = true;
+      if (target.sound) this.effects.push(target.sound);
       this.dirty = true;
       this.destroyed.add(target.name);
       for (const o of target.objectives) {

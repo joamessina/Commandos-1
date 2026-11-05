@@ -77,6 +77,11 @@ describe('parseSites', () => {
 });
 
 describe('geometría de detectores de edificios', () => {
+  it('elige el sonido de derrumbe con los límites 70 y 140 del ejecutable', () => {
+    const circles = [70, 71, 140, 141].map((r, i) => ({ ...poly(`CASA9${i.toString()}`, i * 500, 0), points: [], radio: r }));
+    const { sites } = parseSites('.MISSION [ ]', { ...vol, polys: circles }, []);
+    expect(sites.map((s) => s.sound?.tag)).toEqual(['XCA0', 'XCA1', 'XCA1', 'XCA2']);
+  });
   it('un impacto a la pieza B de un cañón se transmite a la pieza principal A', () => {
     const main = poly('ANTI04A', 100, 100);
     const secondary = poly('ANTI04B', 300, 100);
@@ -87,6 +92,9 @@ describe('geometría de detectores de edificios', () => {
     d.explode(300, 100, 10);
     expect(d.destroyed.has('ANTI04A')).toBe(true);
     expect(d.objectivesDone).toBe(true);
+    expect(d.takeEffects()).toEqual([{ tag: 'XCA0', x: 200, y: 100, z: 0 }]);
+    d.explode(100, 100, 10);
+    expect(d.takeEffects()).toEqual([]);
   });
   it('traza desde la explosión hasta el borde y no destruye el detector si la onda está obstruida', () => {
     const circle = { ...poly('CASA92', 100, 0), points: [], radio: 30, header: [100, 0, 0, 20, 0, 0] as [number, number, number, number, number, number] };

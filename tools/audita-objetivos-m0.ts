@@ -117,6 +117,11 @@ for (const difficulty of ['FACIL', 'DIFICIL'] as const) {
     if (secondary?.forwardsTo !== main || !primary?.swaps.some((swap) => swap.poly === part)) throw new Error(`Enlace incompleto de ${part} a ${main}`);
     console.log('OBJETIVO_PIEZA', part, 'REENVIA', main);
   }
+  for (const name of ['ANTI04A', 'ANTI01', 'ANTI02A', 'ANTI03', 'ANTI05', 'FARO01', 'EXPL_ANTENA']) {
+    const sound = sites.find((site) => site.name === name)?.sound;
+    if (!sound || sound.tag !== 'XCA1') throw new Error(`Sonido inesperado de ${name}`);
+    console.log('SONIDO_DERRUMBE', name, JSON.stringify(sound));
+  }
   for (const name of ['CASA06A', 'CASA08', 'CASA05']) {
     console.log('CUARTEL_EDIFICIO', name, 'SITIOS', JSON.stringify(sites.filter((site) => site.name === name).map((site) => site.name)));
   }

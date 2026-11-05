@@ -1,7 +1,6 @@
 /**
  * Sonido de la misión en marcha: ambiente del `.MIS` (engine/sound.ts), música y los efectos de los disparos y explosiones que ve la partida.
  * shortcut: suenan VMUE, ALRM y AL07 ya emitidas por BAP, disparos, explosiones y jingles; faltan otras voces, pasos, objetos y emisores. Mejorar al portar las acciones restantes.
- *           Falta el sonido de las casas (XCA*). Cuándo mejorar: al portar sus emisores.
  */
 import { AmbientSource, attenuate, BASE_VOLUME, isPositional, lcg, parseAmbient, parseMusic, type AmbientDef } from '../engine/sound.ts';
 import { SOUND_WAV } from '../engine/sound-table.ts';
