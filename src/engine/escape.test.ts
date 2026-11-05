@@ -3,7 +3,7 @@ import { parseAnm } from '../formats/anm.ts';
 import { parseSec } from '../formats/sec.ts';
 import { anmSeq, bnm, secBytes } from '../testing/builders.ts';
 import { Boat } from './boat.ts';
-import { escapeReady } from './mission.ts';
+import { escapeReady, MissionWarnings } from './mission.ts';
 import { SectorMap } from './sectors.ts';
 import { Unit } from './unit.ts';
 
@@ -14,6 +14,29 @@ const map = new SectorMap(parseSec(secBytes({
 })));
 
 describe('salida de la misión', () => {
+  it('emite una sola vez el aviso de muerte y prioriza la derrota diferida si murieron todos', () => {
+    const a = new Unit('A', anm, 0, 0, 0, 0), b = new Unit('B', anm, 0, 0, 0, 0);
+    const warnings = new MissionWarnings();
+    expect(warnings.next([], null, null, null, false)).toBeNull();
+    a.wound(99999);
+    expect(warnings.next([a, b], null, null, null, false)).toBe('AMUC');
+    expect(warnings.next([a, b], null, null, null, false)).toBeNull();
+    b.wound(99999);
+    expect(new MissionWarnings().next([a, b], null, null, null, false)).toBeNull();
+  });
+  it('distingue salida prematura y falta de tripulantes', () => {
+    const boat = new Boat(50, 50, 0, 0, [], null);
+    const a = new Unit('A', anm, 0, 0, 0, 0), b = new Unit('B', anm, 0, 0, 0, 0);
+    const exit = { x: 200, y: 50 };
+    a.boat = boat;
+    expect(new MissionWarnings().next([a, b], boat, exit, map, true)).toBe('ALOL');
+    expect(new MissionWarnings().next([a, b], boat, exit, map, false)).toBeNull();
+    b.boat = boat;
+    expect(new MissionWarnings().next([a, b], boat, exit, map, false)).toBe('NOO2');
+    expect(new MissionWarnings().next([a, b], boat, exit, map, true)).toBeNull();
+    boat.x = 550;
+    expect(new MissionWarnings().next([a, b], boat, exit, map, false)).toBeNull();
+  });
   it('compara sectores, aunque el bote esté cerca del punto o lejos dentro del mismo sector', () => {
     const boat = new Boat(550, 50, 0, 0, [], null);
     const u = new Unit('COMANDO', anm, 0, 0, 0, 0);

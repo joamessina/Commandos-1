@@ -20,7 +20,7 @@ import { Battle } from '../engine/battle.ts';
 import { BLAST_CYCLES, Demolition, parseSites, type Barrel, type Mine, type PlantedBomb } from '../engine/demolition.ts';
 import { destroyLinkedHouses, House, parseHouses } from '../engine/house.ts';
 import { Lift, parseLadders, parseLift, pickLadder, type Ladder } from '../engine/ladder.ts';
-import { escapeReady } from '../engine/mission.ts';
+import { escapeReady, MissionWarnings } from '../engine/mission.ts';
 import { Boat, boatShares, boatSlots, freeSeat } from '../engine/boat.ts';
 import { type Cepo, type Decoy, decoyItem, Traps } from '../engine/traps.ts';
 import { eventList, ExitSchedule, formationOf, groupSize, type GroupDef, parseGroups, parseZoneSensors, recruitMissing, successor, ZoneEvents } from '../engine/groups.ts';
@@ -138,6 +138,9 @@ interface Prop {
   ang: number;
 }
 interface Game {
+  readonly missionWarnings: MissionWarnings | null;
+  readonly missionTexts: ReadonlyMap<string, string>;
+  notice: string | null;
   readonly alarm: Alarm;
   readonly seenAlarmBlasts: WeakSet<object>;
   visionPicking: boolean;
@@ -719,7 +722,13 @@ async function load(introduction = false): Promise<void> {
   }
   sound?.stop();
   sound = new GameSound(sfx, { effect: (name) => bytes(`DATOS/RECURSOS/SONIDO/WAVE/${name.toUpperCase()}`), music: async (name) => { const r = loaded?.music.get(name.toLowerCase()); return r ? new Uint8Array(await r()) : undefined; } }, project);
-  game = { alarm, seenAlarmBlasts: new WeakSet(), visionPicking: false, visionTarget: null, houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders, lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), splashArt: asset('DISPFALL'), stoneArt: asset('CAEPIED'), bombArt: asset('CARTUCHO'), stoneEffects: [], splashes: [], seenSplashes: new WeakSet(), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
+  const missionTexts = new Map<string, string>();
+  const globalStrings = bytes('DATOS/MISIONES/GLOBAL.STR');
+  if (globalStrings) for (const line of new TextDecoder('windows-1252').decode(globalStrings).split(/\r?\n/)) {
+    const m = /^(\S{4})\s+([^#]*)/.exec(line);
+    if (m?.[1] && m[2]) missionTexts.set(m[1], m[2].trim());
+  }
+  game = { missionWarnings: n.toUpperCase() === 'MAPA0000' ? new MissionWarnings() : null, missionTexts, notice: null, alarm, seenAlarmBlasts: new WeakSet(), visionPicking: false, visionTarget: null, houses, tickGroups: () => { for (const tick of groupTicks) tick(); }, nests, ladders, lift: elems.map(parseLift).find((l): l is Lift => l !== null) ?? null, demo, barrelProps: barrelMap, mineProps: mineMap, blastArt: asset('EXPLOS1'), splashArt: asset('DISPFALL'), stoneArt: asset('CAEPIED'), bombArt: asset('CARTUCHO'), stoneEffects: [], splashes: [], seenSplashes: new WeakSet(), vol, wad, order, volOrder, mapSprites: new SpriteCache(wad), mapOpts: {}, escape, won: false, invincible: false, traps: new Traps(), kit, trapProps: new Map(), cursors: loadCursors(), hud: loadHud(units.map((u) => u.unit.token), bag), bag, hudLeft: false, faces: new FaceAnim(), par: parsePar(misText), result: null, lostAt: null, sound, battle, soldiers, mode: null, planting: null, use: null, control: null, packProps: new Map(), packArt: asset('CAJETILL'), props, boat: mainBoat, water, map, units, sectors, selected: 0, camX: p.px, camY: p.py, ticks: 0 };
   // Solo desarrollo (para probar armas y acciones sin morir): arranca invencible; Alt+I lo alterna como en el original.
   if (import.meta.env.DEV) setInvincible(game, true);
   (window as unknown as { __game: unknown }).__game = { vol, wad, game };
@@ -787,6 +796,10 @@ function settle(g: Game): void {
 /** Victoria: todos los objetivos, todos los comandos a bordo y la Zodiac en el sector de huida (Intend00). */
 function checkWin(g: Game): void {
   settle(g);
+  if (!g.won && !g.result) {
+    const code = g.missionWarnings?.next(g.units.map((u) => u.unit), g.boat?.boat ?? null, g.escape, g.sectors, g.demo.objectivesDone);
+    if (code) g.notice = g.missionTexts.get(code) ?? code;
+  }
   const b = g.boat?.boat;
   if (g.won || !b || !g.escape || !g.demo.objectivesDone) return;
   if (escapeReady(g.units.map((u) => u.unit), b, g.escape, g.sectors)) g.won = true;
@@ -876,6 +889,7 @@ function setupStage(): void {
     acc = Math.min(acc + dt, 500);
     last = now;
     while (acc >= TICK) {
+      if (g.notice) { acc = 0; break; }
       if (!g.battle.lost && !g.won) g.battle.tick();
       if (!g.battle.lost && !g.won) g.tickGroups();
       for (const s of g.splashes) s.age++;
@@ -1398,6 +1412,17 @@ function drawHud(ctx: CanvasRenderingContext2D, g: Game): void {
     ctx.fillText('¡El Zodiac tocó una mina y se hundió!', 10, top + 46 + rows * 34);
   }
   if (g.result) drawResult(ctx, g.result);
+  if (g.notice) drawNotice(ctx, g.notice);
+}
+
+/** shortcut: diálogo de intendencia simplificado; faltan la tipografía y los botones originales de 00570350. */
+function drawNotice(ctx: CanvasRenderingContext2D, notice: string): void {
+  const w = Math.min(640, ctx.canvas.width - 40), x = (ctx.canvas.width - w) / 2, y = ctx.canvas.height / 2 - 110;
+  ctx.fillStyle = 'rgba(0,0,0,.9)'; ctx.fillRect(x, y, w, 220);
+  ctx.textAlign = 'center'; ctx.fillStyle = '#eee'; ctx.font = '18px system-ui';
+  notice.split('\\n').forEach((line, i) => { ctx.fillText(line, x + w / 2, y + 42 + i * 24, w - 30); });
+  ctx.fillText('Continuar (Enter)                 Reiniciar (R)', x + w / 2, y + 185, w - 30);
+  ctx.textAlign = 'start';
 }
 
 const stars = (n: number): string => '★'.repeat(n) + '☆'.repeat(3 - n);
@@ -1899,6 +1924,13 @@ function onMouse(e: MouseEvent): void {
   const g = game;
   if (!g || !stage) return;
   const point = canvasPoint(e.clientX, e.clientY, stage.getBoundingClientRect(), [stage.width, stage.height]);
+  if (g.notice) {
+    if (e.button === 0 && point.y >= stage.height / 2 + 50 && point.y <= stage.height / 2 + 100) {
+      if (point.x < stage.width / 2) g.notice = null;
+      else guarded(load)();
+    }
+    return;
+  }
   const z = zoom();
   const v = vp(g);
   const sx = point.x;
@@ -2094,6 +2126,11 @@ window.addEventListener('keydown', (e) => {
   keys.add(k);
   const g = game;
   if (!g || presenting) return;
+  if (g.notice) {
+    if (k === 'enter' || k === 'escape') g.notice = null;
+    else if (k === 'r') guarded(load)();
+    return;
+  }
   if (e.altKey && e.code === 'KeyB') {
     e.preventDefault();
     guarded(openBriefing)();

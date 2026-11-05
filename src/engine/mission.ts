@@ -15,6 +15,26 @@ export function escapeReady(allies: readonly Unit[], boat: Boat, escape: { reado
   return exitSector !== null && sectors.at(boat.x, boat.y) === exitSector;
 }
 
+/** Avisos de Intendencia00 0059B600/0059AB10; el diálogo normal se muestra una sola vez. */
+export class MissionWarnings {
+  private shown = false;
+  next(allies: readonly Unit[], boat: Boat | null, escape: { readonly x: number; readonly y: number } | null, sectors: Pick<SectorMap, 'at'> | null, objectivesDone: boolean): 'AMUC' | 'ALOL' | 'NOO2' | null {
+    if (this.shown || allies.length === 0 || allies.every((unit) => unit.dead)) return null;
+    let code: 'AMUC' | 'ALOL' | 'NOO2' | null = null;
+    if (allies.some((unit) => unit.dead)) code = 'AMUC';
+    else if (boat && escape && sectors) {
+      const exit = sectors.at(escape.x, escape.y);
+      if (exit && sectors.at(boat.x, boat.y) === exit) {
+        const aboard = allies.filter((unit) => unit.boat === boat).length;
+        if (aboard === allies.length && !objectivesDone) code = 'NOO2';
+        else if (aboard > 0 && aboard < allies.length && objectivesDone) code = 'ALOL';
+      }
+    }
+    if (code) this.shown = true;
+    return code;
+  }
+}
+
 export interface AllyDef {
   readonly token: string;
   readonly x: number;
