@@ -276,6 +276,22 @@ describe('minas', () => {
 });
 
 describe('minas: buzo', () => {
+  it('la onda daña la Zodiac y reparte entre pasajeros, pero no atraviesa una obstrucción', () => {
+    const boat = new Boat(20, 0, 0, 0, [{ entry: [0, 0], exit: [0, 0], angle: 0 }], null);
+    boat.share = true;
+    const passenger = unit(20, 0);
+    passenger.board(boat, 0);
+    const blocked = new Demolition([], [], { soldiers: [], commandos: [passenger] }, 0, { boat, blastNav: { blastPath: () => false } });
+    blocked.explode(0, 0, 30);
+    expect(passenger.dead).toBe(false);
+    boat.tick();
+    expect(boat.punctured).toBe(false);
+    const clear = new Demolition([], [], { soldiers: [], commandos: [passenger] }, 0, { boat, blastNav: { blastPath: () => true } });
+    clear.explode(0, 0, 30);
+    expect(passenger.dead).toBe(true);
+    boat.tick();
+    expect(boat.punctured).toBe(true);
+  });
   it('una onda obstruida no activa la mina y traza desde z + 40 hasta el tope de su cilindro', () => {
     const calls: unknown[] = [];
     const d = new Demolition([], [], { soldiers: [], commandos: [] }, 0, { blastNav: { blastPath: (from, to) => { calls.push([from, to]); return false; } } });

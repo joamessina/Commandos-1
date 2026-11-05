@@ -578,7 +578,7 @@ async function load(introduction = false): Promise<void> {
   const bag = bagItems(new Map([...iface].map(([t, c]) => [t, { items: c.items.map((i) => (dynamic.has(i.token) ? { ...i, available: true } : i)) }])));
   for (const u of units) if (iface.get(u.unit.token)?.items.some((i) => i.token === 'IT_TABACO' && i.available)) u.unit.tobacco = 1;
   const { sites, objectives, escape, kills } = parseSites(misText, vol, elems);
-  const demo = new Demolition(sites, objectives, { soldiers: battle.soldiers, commandos: battle.commandos }, bombCount, { sectors, kills, blastNav: sectors ? navFor(sectors) : null });
+  const demo = new Demolition(sites, objectives, { soldiers: battle.soldiers, commandos: battle.commandos }, bombCount, { sectors, kills, blastNav: sectors ? navFor(sectors) : null, boat: mainBoat?.boat ?? null });
   const barrelMap = new Map<Barrel, Prop>();
   const mineMap = new Map<Mine, Prop>();
   for (const e of elems) if (e.macro?.toUpperCase() === 'MINASUB') {

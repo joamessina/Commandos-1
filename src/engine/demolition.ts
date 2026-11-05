@@ -285,12 +285,14 @@ export class Demolition {
   private readonly people: People;
   private readonly sectors: Pick<SectorMap, 'atZ' | 'at'> | null;
   private readonly blastNav: Pick<Nav, 'blastPath'> | null;
+  private boat: Boat | null;
   private readonly kills: ReadonlyMap<string, readonly KillZone[]>;
   private readonly queue: { x: number; y: number; z: number; r: number; tag: Blast['tag']; kind: 'BOMBA' | 'EXPLOSIONMENOR' }[] = [];
 
-  constructor(sites: Site[], objectives: readonly string[], people: People, bombs = 0, opts: { sectors?: Pick<SectorMap, 'atZ' | 'at'> | null; kills?: ReadonlyMap<string, readonly KillZone[]>; blastNav?: Pick<Nav, 'blastPath'> | null } = {}) {
+  constructor(sites: Site[], objectives: readonly string[], people: People, bombs = 0, opts: { sectors?: Pick<SectorMap, 'atZ' | 'at'> | null; kills?: ReadonlyMap<string, readonly KillZone[]>; blastNav?: Pick<Nav, 'blastPath'> | null; boat?: Boat | null } = {}) {
     this.sectors = opts.sectors ?? null;
     this.blastNav = opts.blastNav ?? null;
+    this.boat = opts.boat ?? null;
     this.kills = opts.kills ?? new Map();
     this.sites = sites;
     this.objectives = new Map(objectives.map((o) => [o, false]));
@@ -310,6 +312,7 @@ export class Demolition {
    * shortcut: solo se detectan la Zodiac y los cuatro aliados de M0 (todos con masa 100); faltan otros bichos y el despacho espacial completo.
    */
   tickMines(boat: Boat | null, riders: readonly Unit[]): void {
+    this.boat = boat;
     if (this.mineHitBoat?.punctured) this.boatSunk = true;
     this.mineHitBoat = null;
     for (const m of this.mines) {
@@ -332,11 +335,6 @@ export class Demolition {
       if (--m.fuse > 0) continue;
       m.done = true;
       this.explode(m.x, m.y, MINE_BLAST, 'XPLO', 'EXPLOSIONMENOR', m.z);
-      if (boat && !this.boatSunk && boat.z <= m.z + MINE_BLAST && m.z <= boat.z + 40 && Math.hypot(boat.x - m.x, boat.y - m.y) < MINE_BLAST + boat.radius) {
-        // shortcut: falta el trazado de sectores y volúmenes para la onda de 00571A10.
-        boat.impact(10000);
-        this.mineHitBoat = boat;
-      }
     }
   }
 
@@ -387,8 +385,12 @@ export class Demolition {
 
   private blast(x: number, y: number, z: number, r: number, tag: Blast['tag'], kind: 'BOMBA' | 'EXPLOSIONMENOR'): void {
     this.blasts.push({ x, y, radius: r, tag, ttl: BLAST_CYCLES });
-    // shortcut: falta distribuir impactos a vehículos y trazar los detectores de edificios por 005BC080.
     const reaches = (px: number, py: number, top: number): boolean => this.blastNav?.blastPath({ x, y, z: z + 40 }, { x: px, y: py, z: top }) ?? true;
+    const boat = this.boat;
+    if (boat && !boat.punctured && areaOverlaps(x, y, z, r, { x: boat.x, y: boat.y, z: boat.z, radius: boat.radius, height: 40 }) && reaches(boat.x, boat.y, boat.z + 40)) {
+      boat.impact(tag === 'EBAR' ? 20000 : 10000);
+      this.mineHitBoat = boat;
+    }
     for (const s of this.people.soldiers) if (!s.dead && !s.unit.hidden && areaOverlaps(x, y, z, r, { x: s.x, y: s.y, z: s.unit.z, radius: 10, height: s.unit.eye }) && reaches(s.x, s.y, s.unit.z + s.unit.eye)) s.kill();
     for (const c of this.people.commandos) if (!c.dead && !c.hidden && !c.boat && areaOverlaps(x, y, z, r, { x: c.body.x, y: c.body.y, z: c.z, radius: 10, height: c.eye }) && reaches(c.body.x, c.body.y, c.z + c.eye)) c.wound(tag === 'EBAR' ? 20000 : 10000);
     // AcMina 00483160: cualquier impacto dispara una mina armada; explota en su próxima actualización.

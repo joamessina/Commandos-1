@@ -56,7 +56,7 @@ for (const nombre of ['MINASUB.MAC', 'ZODIAC5.MAC', 'BOMBAACT.MAC']) {
   console.log(nombre, 'MASA', find(nodos, '.MASA'), 'VOLCOLISION', JSON.stringify(find(nodos, '.VOLCOLISION')),
     'LISTAS', JSON.stringify(find(nodos, '.LISTAS')), 'MOTOR', JSON.stringify(find(nodos, '.MOTOR')));
   if (nombre === 'ZODIAC5.MAC') console.log('ZODIAC5_ACCIONES', JSON.stringify(find(nodos, '.ACCIONES')));
-  if (nombre === 'BOMBAACT.MAC') console.log('BOMBAACT_ORGANOS', JSON.stringify(find(nodos, '.ORGANOS')));
+  if (nombre === 'BOMBAACT.MAC') console.log('BOMBAACT_ORGANOS', JSON.stringify(find(nodos, '.ORGANOS')), 'ACCIONES', JSON.stringify(find(nodos, '.ACCIONES')));
 }
 console.log('MACROS_DIRECTAS_AUDITADAS', macrosUsadas.size);
 for (const nombre of macrosUsadas) {
