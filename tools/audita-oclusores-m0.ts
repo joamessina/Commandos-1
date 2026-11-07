@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { entryBytes, parseContainer } from '../src/formats/container.ts';
 import { find, parseClave, type Node } from '../src/formats/clave.ts';
+import { flatten, loadWorld } from '../src/engine/world.ts';
 
 const bytes = new Uint8Array(readFileSync('D:/SteamLibrary/steamapps/common/Commandos Beyond the Call of Duty/WAR_MP.DIR'));
 const entries = parseContainer(bytes);
@@ -28,4 +29,34 @@ for (const [nombre, cantidad] of [...macros].sort(([a], [b]) => a.localeCompare(
   const oclu = find(macro, '.OCLU');
   const flags = find(macro, '.FLAGS');
   if (oclu !== undefined || flags !== undefined) console.log('MACRO', nombre, cantidad, 'OCLU', oclu, 'FLAGS', JSON.stringify(flags));
+}
+
+const misionTexto = (() => {
+  const entry = entries.find((item) => item.path.toUpperCase().endsWith('/MAPA0000.MIS'));
+  if (!entry) throw new Error('Falta MAPA0000.MIS');
+  return decoder.decode(entryBytes(bytes, entry));
+})();
+for (const dificultad of ['FACIL', 'DIFICIL'] as const) {
+  const elementos = flatten(loadWorld(misionTexto, { difficulty: dificultad, macro: (nombre) => {
+    const entry = entries.find((item) => item.path.toUpperCase().endsWith('/' + nombre.toUpperCase() + '.MAC'));
+    return entry ? decoder.decode(entryBytes(bytes, entry)) : undefined;
+  } }));
+  const grupos = new Map<string, string[]>();
+  for (const elemento of elementos) {
+    const oclu = find(elemento.block, '.OCLU');
+    const flags = find(elemento.block, '.FLAGS');
+    const clave = `${elemento.cls}/${elemento.macro ?? '-'} OCLU=${JSON.stringify(oclu ?? null)} FLAGS=${JSON.stringify(flags ?? null)}`;
+    const tokens = grupos.get(clave) ?? [];
+    tokens.push(elemento.token);
+    grupos.set(clave, tokens);
+  }
+  console.log('EXPANSION_PORT', dificultad, 'TOTAL', elementos.length);
+  for (const [clave, tokens] of [...grupos].sort(([a], [b]) => a.localeCompare(b))) {
+    console.log('GRUPO', clave, 'CANTIDAD', tokens.length, 'EJEMPLOS', tokens.slice(0, 5).join(','));
+  }
+  for (const elemento of elementos.filter((item) => find(item.block, '.OCLU') === '1')) {
+    console.log('OCLU_ACTIVO_EN_BLOQUE', elemento.token, 'XYZ', elemento.x, elemento.y, elemento.z,
+      'LISTAS', JSON.stringify(find(elemento.block, '.LISTAS')),
+      'VOLCOLISION', JSON.stringify(find(elemento.block, '.VOLCOLISION')));
+  }
 }
