@@ -74,6 +74,8 @@
 
 **Carga y altura (2026-11-02):** pantalla de carga con recursos originales y barra durante la preparación. Pistola, mirilla y arpón comprueban alcance y desniveles; quedan volúmenes y cuerpos interpuestos (`docs/lectura/carga-armas-altura.md`).
 
+**Trazado de armas de M0 (2026-11-06):** `au-disparar.md` distingue la prueba previa, que rechaza una trayectoria bloqueada, del daño posterior de pistola, mirilla y arpón; un cuerpo interpuesto no recibe automáticamente el impacto. La mirilla usa un origen vertical de 14,5 unidades sobre el tirador. El port aún no reproduce este origen ni la búsqueda de candidatos `OCLU` o los volúmenes originales. La auditoría de MIS/MAC identifica las declaraciones explícitas, pero falta resolver los valores efectivos y estados de todas las instancias.
+
 **Menú e introducción (2026-11-02):** primera versión navegable, guion audiovisual de la primera misión y ficha de objetivos Alt+B conectados, con recursos del jugador y resolución aplicada en menú, presentación y partida. Quedan contraste audiovisual, comandos exclusivos de otros guiones y el resto de opciones; ver atajos en `verificacion-exe.md` y `docs/lectura/intro-briefing.md`.
 
 Última actualización: 2026-10-30 (tras HUD, armas, cursores, balsa, refuerzos y lectura de los 19 .MIS y 96 .MAC). Marcá `[x]` lo que quede hecho. Reglas: nada inventado (lo no leído del exe se marca `shortcut:` en el código), solo commits locales hasta tener algo estable, el usuario hace las pruebas en el juego.
